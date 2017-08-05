@@ -49,7 +49,7 @@ int main(int argc, char **argv)
     while(ros::ok())
     {
         handle_receive_data(sys_powerboard);
-#if 0   // Set LED effect test function
+#if 1   // Set LED effect test function
         sys_powerboard->led_set.color.r = 0x12;
         sys_powerboard->led_set.color.g = 0x34;
         sys_powerboard->led_set.color.b = 0x56;
@@ -71,20 +71,20 @@ int main(int argc, char **argv)
         handle_receive_data(sys_powerboard);
 #endif
 
-#if 0   //Get battery info test function
+#if 1   //Get battery info test function
         sys_powerboard->bat_info.cmd = 1; 
         GetBatteryInfo(sys_powerboard);
         usleep(TEST_WAIT_TIME);
         handle_receive_data(sys_powerboard);
 
 #endif
-#if 0   //Get Current test function
+#if 1   //Get Current test function
         sys_powerboard->current_cmd_frame.cmd = SEND_RATE_SINGLE;
         GetAdcData(sys_powerboard); 
         usleep(TEST_WAIT_TIME);
         handle_receive_data(sys_powerboard);
 #endif
-#if 0   //Get version test function
+#if 1   //Get version test function
         {
             static uint8_t i = 0;
             i++;
@@ -102,12 +102,12 @@ int main(int argc, char **argv)
         }
 #endif
 
-#if 0  //Get system status
+#if 1  //Get system status
         GetSysStatus(sys_powerboard);
         usleep(TEST_WAIT_TIME);
         handle_receive_data(sys_powerboard);
 #endif
-#if 0   //Infrared LED ctrl test funcion
+#if 1   //Infrared LED ctrl test funcion
 
         //sys_powerboard->ir_cmd.cmd = IR_CMD_READ;
         sys_powerboard->ir_cmd.cmd = IR_CMD_WRITE;
@@ -116,13 +116,17 @@ int main(int argc, char **argv)
         usleep(TEST_WAIT_TIME);
         handle_receive_data(sys_powerboard);
 #endif 
-#if 1
+#if 0
         sys_powerboard->module_status_set.module = POWER_12V_EN | POWER_24V_EN; 
         sys_powerboard->module_status_set.on_off = MODULE_CTRL_OFF; 
         SetModulePowerOnOff(sys_powerboard);
         usleep(TEST_WAIT_TIME);
         handle_receive_data(sys_powerboard);
-
+#endif
+#if 1
+        GetModulePowerOnOff(sys_powerboard);
+        usleep(TEST_WAIT_TIME);
+        handle_receive_data(sys_powerboard);
 #endif
         loop_rate.sleep();
     }

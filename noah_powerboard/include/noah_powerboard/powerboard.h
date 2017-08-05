@@ -10,7 +10,7 @@
 #define FRAME_TYPE_LEDS_CONTROL         0x01
 #define FRAME_TYPE_SYS_STATUS           0x02
 #define FRAME_TYPE_BAT_STATUS           0x03
-//#define FRAME_TYPE_MODULE_STATE         0x04
+#define FRAME_TYPE_GET_MODULE_STATE     0x04
 //#define FRAME_TYPE_READ_ERR_CURRENT     0x05//
 #define FRAME_TYPE_MODULE_CONTROL       0x06
 #define FRAME_TYPE_IRLED_CONTROL        0x07
@@ -54,6 +54,7 @@ typedef struct
 #define MODULE_CTRL_ON      1  
 #define MODULE_CTRL_OFF     0 
     uint8_t     on_off;
+#define HW_NO_SUPPORT         0xFFFFFFFF
     uint32_t    module;
 } module_ctrl_t;
 
@@ -276,6 +277,7 @@ void GetVersion(powerboard_t *sys);
 void GetSysStatus(powerboard_t *sys);
 void InfraredLedCtrl(powerboard_t *sys);
 void SetModulePowerOnOff(powerboard_t *sys);
+void GetModulePowerOnOff(powerboard_t *sys);
 
 
 #endif
