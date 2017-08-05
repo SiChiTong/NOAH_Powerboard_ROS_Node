@@ -402,7 +402,10 @@ static void handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf)
             sys->ir_cmd.lightness_percent = frame_buf[3];
             PowerboardInfo("ir lightness is %d",sys->ir_cmd.lightness_percent);
             break;
-
+        case FRAME_TYPE_MODULE_CONTROL:
+           memcpy((uint8_t *)&sys->module_status.module, &frame_buf[6], 4);
+           PowerboardInfo("sys->module_status.module is %04x",sys->module_status.module);
+           break; 
         default :
             break;
     }

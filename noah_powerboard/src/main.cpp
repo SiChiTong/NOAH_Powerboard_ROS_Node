@@ -118,8 +118,9 @@ int main(int argc, char **argv)
 #endif 
 #if 1
         sys_powerboard->module_status_set.module = POWER_12V_EN | POWER_24V_EN; 
-        sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON; 
+        sys_powerboard->module_status_set.on_off = MODULE_CTRL_OFF; 
         SetModulePowerOnOff(sys_powerboard);
+        usleep(TEST_WAIT_TIME);
         handle_receive_data(sys_powerboard);
 
 #endif
