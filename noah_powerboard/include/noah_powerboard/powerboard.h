@@ -266,11 +266,24 @@ typedef enum
 extern powerboard_t    *sys_powerboard;
 
 
-
+class NoahPowerboard
+{
+    public:
+        void PowerboardParamInit(void);
+        void SetLedEffect(powerboard_t *powerboard);
+        void GetBatteryInfo(powerboard_t *sys);
+        void GetAdcData(powerboard_t *sys);
+        void GetVersion(powerboard_t *sys);
+        void GetSysStatus(powerboard_t *sys);
+        void InfraredLedCtrl(powerboard_t *sys);
+        void SetModulePowerOnOff(powerboard_t *sys);
+        void GetModulePowerOnOff(powerboard_t *sys);
+};
+int handle_receive_data(powerboard_t *sys);
+int handle_receive_data(powerboard_t *sys);
+#if 0
 void PowerboardParamInit(void);
-int handle_receive_data(powerboard_t *sys);
 void SetLedEffect(powerboard_t *powerboard);
-int handle_receive_data(powerboard_t *sys);
 void GetBatteryInfo(powerboard_t *sys);
 void GetAdcData(powerboard_t *sys);
 void GetVersion(powerboard_t *sys);
@@ -278,7 +291,7 @@ void GetSysStatus(powerboard_t *sys);
 void InfraredLedCtrl(powerboard_t *sys);
 void SetModulePowerOnOff(powerboard_t *sys);
 void GetModulePowerOnOff(powerboard_t *sys);
-
+#endif
 
 #endif
 

@@ -31,8 +31,7 @@ static unsigned char recv_buf_last[BUF_LEN] = {0};
 powerboard_t    sys_powerboard_ram;
 powerboard_t    *sys_powerboard = &sys_powerboard_ram;
 
-
-void PowerboardParamInit(void)
+void NoahPowerboard::PowerboardParamInit(void)
 {
     char dev_path[] = "/dev/ttyUSB0";
     memcpy(sys_powerboard->dev,dev_path, sizeof(dev_path));
@@ -96,7 +95,7 @@ uint8_t CalCheckSum(uint8_t *data, uint8_t len)
     return sum;  
 }
 
-void SetLedEffect(powerboard_t *powerboard)     // done
+void NoahPowerboard::SetLedEffect(powerboard_t *powerboard)     // done
 {
     powerboard->send_data_buf[0] = PROTOCOL_HEAD;
     powerboard->send_data_buf[1] = 0x0a;
@@ -109,7 +108,7 @@ void SetLedEffect(powerboard_t *powerboard)     // done
     send_serial_data(powerboard);
 
 }
-void GetBatteryInfo(powerboard_t *sys)      // done
+void NoahPowerboard::GetBatteryInfo(powerboard_t *sys)      // done
 {
     sys->send_data_buf[0] = PROTOCOL_HEAD;
     sys->send_data_buf[1] = 6;
@@ -120,7 +119,7 @@ void GetBatteryInfo(powerboard_t *sys)      // done
     send_serial_data(sys);
 
 }
-void SetModulePowerOnOff(powerboard_t *sys)
+void NoahPowerboard::SetModulePowerOnOff(powerboard_t *sys)
 {
     sys->send_data_buf[0] = PROTOCOL_HEAD;
     sys->send_data_buf[1] = 10;
@@ -132,7 +131,7 @@ void SetModulePowerOnOff(powerboard_t *sys)
     send_serial_data(sys);
 }
 
-void GetModulePowerOnOff(powerboard_t *sys)
+void NoahPowerboard::GetModulePowerOnOff(powerboard_t *sys)
 {
     sys->send_data_buf[0] = PROTOCOL_HEAD;
     sys->send_data_buf[1] = 6;
@@ -142,7 +141,7 @@ void GetModulePowerOnOff(powerboard_t *sys)
     sys->send_data_buf[5] = PROTOCOL_TAIL;
     send_serial_data(sys);
 }
-void GetAdcData(powerboard_t *sys)      // done
+void NoahPowerboard::GetAdcData(powerboard_t *sys)      // done
 {
     sys->send_data_buf[0] = PROTOCOL_HEAD;
     sys->send_data_buf[1] = 8;
@@ -155,7 +154,7 @@ void GetAdcData(powerboard_t *sys)      // done
     send_serial_data(sys);
 }
 
-void GetVersion(powerboard_t *sys)      // done
+void NoahPowerboard::GetVersion(powerboard_t *sys)      // done
 {
     sys->send_data_buf[0] = PROTOCOL_HEAD;
     sys->send_data_buf[1] = 6;
@@ -166,7 +165,7 @@ void GetVersion(powerboard_t *sys)      // done
     send_serial_data(sys);
 }
 
-void GetSysStatus(powerboard_t *sys)     // done
+void NoahPowerboard::GetSysStatus(powerboard_t *sys)     // done
 {
     sys->send_data_buf[0] = PROTOCOL_HEAD;
     sys->send_data_buf[1] = 6;
@@ -177,7 +176,7 @@ void GetSysStatus(powerboard_t *sys)     // done
     send_serial_data(sys);
 }
 
-void InfraredLedCtrl(powerboard_t *sys)     // done
+void NoahPowerboard::InfraredLedCtrl(powerboard_t *sys)     // done
 {
     sys->send_data_buf[0] = PROTOCOL_HEAD;
     sys->send_data_buf[1] = 7;

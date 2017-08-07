@@ -20,17 +20,19 @@
 //#include "../include/noah_powerboard/handle_command.h"
 
 #define TEST_WAIT_TIME      30*1000
+class NoahPowerboard;
 int main(int argc, char **argv)
 {
+    NoahPowerboard  powerboard;
     ros::init(argc, argv, "noah_powerboard_node");
     ros::NodeHandle n;
     ros::Publisher noah_power_pub = n.advertise<std_msgs::String>("noah_power_tx", 1000);
-    ros::Rate loop_rate(0.5);
+    ros::Rate loop_rate(2);
     //uint8_t test_data[] = {0x5a, 0x0a ,0x01, 0x04, 0xff, 0xff, 0xff, 0xff, 0x65, 0xa5};
     //uint8_t test_data[] = {0x5a, 0x0a, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0x60, 0xa5};
-    char dev[] = "/dev/ttyUSB0";
-    int fd;
-    PowerboardParamInit();
+    //char dev[] = "/dev/ttyUSB0";
+    //int fd;
+    powerboard.PowerboardParamInit();
     //fd = open_com_device(sys_powerboard->dev);
     //fd = open(dev, O_RDWR);
 
@@ -64,7 +66,7 @@ int main(int argc, char **argv)
             //sys_powerboard->led_set.effect = LIGHTS_MODE_SETTING;
             sys_powerboard->led_set.effect = LIGHTS_MODE_DEFAULT;
         }
-        SetLedEffect(sys_powerboard);
+        powerboard.SetLedEffect(sys_powerboard);
         usleep(TEST_WAIT_TIME);
         //ROS_INFO("start rcv ... ");
         //ROS_INFO("device is %d",sys_powerboard->device);
@@ -73,14 +75,14 @@ int main(int argc, char **argv)
 
 #if 1   //Get battery info test function
         sys_powerboard->bat_info.cmd = 1; 
-        GetBatteryInfo(sys_powerboard);
+        powerboard.GetBatteryInfo(sys_powerboard);
         usleep(TEST_WAIT_TIME);
         handle_receive_data(sys_powerboard);
 
 #endif
 #if 1   //Get Current test function
         sys_powerboard->current_cmd_frame.cmd = SEND_RATE_SINGLE;
-        GetAdcData(sys_powerboard); 
+        powerboard.GetAdcData(sys_powerboard); 
         usleep(TEST_WAIT_TIME);
         handle_receive_data(sys_powerboard);
 #endif
@@ -96,14 +98,14 @@ int main(int argc, char **argv)
             {
                 //sys_powerboard->get_version_type = VERSION_TYPE_PROTOCOL;
             }
-            GetVersion(sys_powerboard);
+            powerboard.GetVersion(sys_powerboard);
             usleep(TEST_WAIT_TIME);
             handle_receive_data(sys_powerboard);
         }
 #endif
 
 #if 1  //Get system status
-        GetSysStatus(sys_powerboard);
+        powerboard.GetSysStatus(sys_powerboard);
         usleep(TEST_WAIT_TIME);
         handle_receive_data(sys_powerboard);
 #endif
@@ -112,7 +114,7 @@ int main(int argc, char **argv)
         //sys_powerboard->ir_cmd.cmd = IR_CMD_READ;
         sys_powerboard->ir_cmd.cmd = IR_CMD_WRITE;
         sys_powerboard->ir_cmd.set_ir_percent = 75;
-        InfraredLedCtrl(sys_powerboard);
+        powerboard.InfraredLedCtrl(sys_powerboard);
         usleep(TEST_WAIT_TIME);
         handle_receive_data(sys_powerboard);
 #endif 
@@ -124,7 +126,7 @@ int main(int argc, char **argv)
         handle_receive_data(sys_powerboard);
 #endif
 #if 1
-        GetModulePowerOnOff(sys_powerboard);
+        powerboard.GetModulePowerOnOff(sys_powerboard);
         usleep(TEST_WAIT_TIME);
         handle_receive_data(sys_powerboard);
 #endif
