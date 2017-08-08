@@ -22,18 +22,10 @@
 class NoahPowerboard;
 int main(int argc, char **argv)
 {
-    NoahPowerboard  powerboard;
     ros::init(argc, argv, "noah_powerboard_node");
-    ros::NodeHandle n;
-    ros::Publisher noah_power_pub = n.advertise<std_msgs::String>("noah_power_tx", 1000);
+    NoahPowerboard  powerboard;
     ros::Rate loop_rate(2);
-    //uint8_t test_data[] = {0x5a, 0x0a ,0x01, 0x04, 0xff, 0xff, 0xff, 0xff, 0x65, 0xa5};
-    //uint8_t test_data[] = {0x5a, 0x0a, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0x60, 0xa5};
-    //char dev[] = "/dev/ttyUSB0";
-    //int fd;
     powerboard.PowerboardParamInit();
-    //fd = open_com_device(sys_powerboard->dev);
-    //fd = open(dev, O_RDWR);
 
     sys_powerboard->device = open_com_device(sys_powerboard->dev);
     if(sys_powerboard->device < 0 )

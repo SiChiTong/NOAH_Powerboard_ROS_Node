@@ -15,7 +15,7 @@ catkin_package(
 ###########
 ## Build ##
 ###########
-
+set (CMAKE_CXX_FLAGS "-std=c++11")
 include_directories(
   ${catkin_INCLUDE_DIRS}
   include/noah_powerboard

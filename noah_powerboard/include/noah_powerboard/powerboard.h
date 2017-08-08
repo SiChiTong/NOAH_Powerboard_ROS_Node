@@ -1,3 +1,7 @@
+#include "ros/ros.h"
+#include "std_msgs/String.h"
+#include "json.hpp"
+using json = nlohmann::json;
 #ifndef LED_H
 #define LED_H
 
@@ -263,11 +267,16 @@ typedef enum
     LIGHTS_MODE_SETTING                 = 0xff,
 }light_mode_t;
 
-
+#define DEV_PATH                "/dev/noah_powerboard"
 extern powerboard_t    *sys_powerboard;
 class NoahPowerboard
 {
     public:
+        NoahPowerboard()
+        {
+            noah_powerboard_pub = n.advertise<std_msgs::String>("tx_noah_powerboard_node",1000);
+            noah_powerboard_sub = n.subscribe("rx_noah_powerboard_node",1000,&NoahPowerboard::FromAppRcvCallback,this);
+        }
         void PowerboardParamInit(void);
         void SetLedEffect(powerboard_t *powerboard);
         void GetBatteryInfo(powerboard_t *sys);
@@ -279,14 +288,15 @@ class NoahPowerboard
         void GetModulePowerOnOff(powerboard_t *sys);
         int send_serial_data(powerboard_t *sys);
         int handle_receive_data(powerboard_t *sys);
+        void FromAppRcvCallback(const std_msgs::String::ConstPtr msg);
 
     private:
         uint8_t CalCheckSum(uint8_t *data, uint8_t len);
- //       ros::NodeHandle n;
-  //      ros::Publisher noah_powerboard_pub;
-   //     ros::Subscriber noah_powerboard_sub;
-
-    //    unsigned int total_receive;
+        void handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf);
+        ros::NodeHandle n;
+        ros::Publisher noah_powerboard_pub;
+        ros::Subscriber noah_powerboard_sub;
+        json j;
 };
 int handle_receive_data(powerboard_t *sys);
 int handle_receive_data(powerboard_t *sys);

@@ -18,6 +18,7 @@
 #include "../include/noah_powerboard/config.h"
 #include "../include/noah_powerboard/powerboard.h"
 
+#include "std_msgs/String.h"
 #define TEST_WAIT_TIME      30*1000
 
 #if 0
@@ -212,7 +213,6 @@ void NoahPowerboard::InfraredLedCtrl(powerboard_t *sys)     // done
 }
 
 
-static void handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf);
 int NoahPowerboard::handle_receive_data(powerboard_t *sys)
 {
     int nread = 0;
@@ -269,7 +269,7 @@ int NoahPowerboard::handle_receive_data(powerboard_t *sys)
                             //PowerboardInfo("rcv buf %d is %2x",j, recv_buf_temp[j]);
                         }
 
-                        handle_rev_frame(sys,recv_buf_temp);
+                        this->handle_rev_frame(sys,recv_buf_temp);
                         i = i+ frame_len;
                     }
                     else
@@ -305,8 +305,11 @@ int NoahPowerboard::handle_receive_data(powerboard_t *sys)
 }
 
 
-
-static void handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf)
+void NoahPowerboard::FromAppRcvCallback(const std_msgs::String::ConstPtr msg)
+{
+    ROS_INFO("Rcv test data");
+}
+void NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf)
 {
     int frame_len = 0;
     int i = 0;
