@@ -263,9 +263,8 @@ typedef enum
     LIGHTS_MODE_SETTING                 = 0xff,
 }light_mode_t;
 
+
 extern powerboard_t    *sys_powerboard;
-
-
 class NoahPowerboard
 {
     public:
@@ -278,8 +277,11 @@ class NoahPowerboard
         void InfraredLedCtrl(powerboard_t *sys);
         void SetModulePowerOnOff(powerboard_t *sys);
         void GetModulePowerOnOff(powerboard_t *sys);
+        int send_serial_data(powerboard_t *sys);
+        int handle_receive_data(powerboard_t *sys);
 
-//    private:
+    private:
+        uint8_t CalCheckSum(uint8_t *data, uint8_t len);
  //       ros::NodeHandle n;
   //      ros::Publisher noah_powerboard_pub;
    //     ros::Subscriber noah_powerboard_sub;

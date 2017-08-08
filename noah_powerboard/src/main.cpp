@@ -19,7 +19,6 @@
 //#include "../include/noah_powerboard/navigation.h"
 //#include "../include/noah_powerboard/handle_command.h"
 
-#define TEST_WAIT_TIME      30*1000
 class NoahPowerboard;
 int main(int argc, char **argv)
 {
@@ -50,7 +49,7 @@ int main(int argc, char **argv)
 
     while(ros::ok())
     {
-        handle_receive_data(sys_powerboard);
+        powerboard.handle_receive_data(sys_powerboard);
 #if 1   // Set LED effect test function
         sys_powerboard->led_set.color.r = 0x12;
         sys_powerboard->led_set.color.g = 0x34;
@@ -67,24 +66,15 @@ int main(int argc, char **argv)
             sys_powerboard->led_set.effect = LIGHTS_MODE_DEFAULT;
         }
         powerboard.SetLedEffect(sys_powerboard);
-        usleep(TEST_WAIT_TIME);
-        //ROS_INFO("start rcv ... ");
-        //ROS_INFO("device is %d",sys_powerboard->device);
-        handle_receive_data(sys_powerboard);
 #endif
 
 #if 1   //Get battery info test function
         sys_powerboard->bat_info.cmd = 1; 
         powerboard.GetBatteryInfo(sys_powerboard);
-        usleep(TEST_WAIT_TIME);
-        handle_receive_data(sys_powerboard);
-
 #endif
 #if 1   //Get Current test function
         sys_powerboard->current_cmd_frame.cmd = SEND_RATE_SINGLE;
         powerboard.GetAdcData(sys_powerboard); 
-        usleep(TEST_WAIT_TIME);
-        handle_receive_data(sys_powerboard);
 #endif
 #if 1   //Get version test function
         {
@@ -99,15 +89,11 @@ int main(int argc, char **argv)
                 //sys_powerboard->get_version_type = VERSION_TYPE_PROTOCOL;
             }
             powerboard.GetVersion(sys_powerboard);
-            usleep(TEST_WAIT_TIME);
-            handle_receive_data(sys_powerboard);
         }
 #endif
 
 #if 1  //Get system status
         powerboard.GetSysStatus(sys_powerboard);
-        usleep(TEST_WAIT_TIME);
-        handle_receive_data(sys_powerboard);
 #endif
 #if 1   //Infrared LED ctrl test funcion
 
@@ -115,8 +101,6 @@ int main(int argc, char **argv)
         sys_powerboard->ir_cmd.cmd = IR_CMD_WRITE;
         sys_powerboard->ir_cmd.set_ir_percent = 75;
         powerboard.InfraredLedCtrl(sys_powerboard);
-        usleep(TEST_WAIT_TIME);
-        handle_receive_data(sys_powerboard);
 #endif 
 #if 0
         sys_powerboard->module_status_set.module = POWER_12V_EN | POWER_24V_EN; 
@@ -127,8 +111,6 @@ int main(int argc, char **argv)
 #endif
 #if 1
         powerboard.GetModulePowerOnOff(sys_powerboard);
-        usleep(TEST_WAIT_TIME);
-        handle_receive_data(sys_powerboard);
 #endif
         loop_rate.sleep();
     }

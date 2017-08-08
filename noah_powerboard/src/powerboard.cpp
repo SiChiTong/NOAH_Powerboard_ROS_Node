@@ -18,6 +18,8 @@
 #include "../include/noah_powerboard/config.h"
 #include "../include/noah_powerboard/powerboard.h"
 
+#define TEST_WAIT_TIME      30*1000
+
 #if 0
 static led_info_t led_info;
 static led_power_sys_t led_sys;
@@ -27,9 +29,9 @@ static int led_over_time_flag = 0;
 static int last_unread_bytes = 0;
 static unsigned char recv_buf_last[BUF_LEN] = {0};
 
-
-powerboard_t    sys_powerboard_ram;
+powerboard_t    sys_powerboard_ram; 
 powerboard_t    *sys_powerboard = &sys_powerboard_ram;
+
 
 void NoahPowerboard::PowerboardParamInit(void)
 {
@@ -40,9 +42,7 @@ void NoahPowerboard::PowerboardParamInit(void)
 }
 
 
-
-
-static int send_serial_data(powerboard_t *sys)
+int NoahPowerboard::send_serial_data(powerboard_t *sys)
 {
     int len = 0;
 
@@ -86,7 +86,7 @@ void CheckAndSend(uint8_t *data, uint8_t len)
 {
 
 }
-uint8_t CalCheckSum(uint8_t *data, uint8_t len)
+uint8_t NoahPowerboard::CalCheckSum(uint8_t *data, uint8_t len)
 {
     uint8_t sum = 0;
     for(uint8_t i = 0; i < len; i++)
@@ -104,10 +104,11 @@ void NoahPowerboard::SetLedEffect(powerboard_t *powerboard)     // done
     powerboard->send_data_buf[3] = powerboard->led_set.effect;
     memcpy(&powerboard->send_data_buf[4], (uint8_t *)&(powerboard->led_set.color), sizeof(color_t));
     powerboard->send_data_buf[7] = powerboard->led_set.period;
-    powerboard->send_data_buf[8] = CalCheckSum(powerboard->send_data_buf, 8);
+    powerboard->send_data_buf[8] = this->CalCheckSum(powerboard->send_data_buf, 8);
     powerboard->send_data_buf[9] = PROTOCOL_TAIL;
-    send_serial_data(powerboard);
-
+    this->send_serial_data(powerboard);
+    usleep(TEST_WAIT_TIME);
+    this->handle_receive_data(powerboard);
 }
 void NoahPowerboard::GetBatteryInfo(powerboard_t *sys)      // done
 {
@@ -115,9 +116,11 @@ void NoahPowerboard::GetBatteryInfo(powerboard_t *sys)      // done
     sys->send_data_buf[1] = 6;
     sys->send_data_buf[2] = FRAME_TYPE_BAT_STATUS;
     sys->send_data_buf[3] = sys->bat_info.cmd;
-    sys->send_data_buf[4] = CalCheckSum(sys->send_data_buf, 4);
+    sys->send_data_buf[4] = this->CalCheckSum(sys->send_data_buf, 4);
     sys->send_data_buf[5] = PROTOCOL_TAIL;
-    send_serial_data(sys);
+    this->send_serial_data(sys);
+    usleep(TEST_WAIT_TIME);
+    this->handle_receive_data(sys);
 
 }
 void NoahPowerboard::SetModulePowerOnOff(powerboard_t *sys)
@@ -127,9 +130,11 @@ void NoahPowerboard::SetModulePowerOnOff(powerboard_t *sys)
     sys->send_data_buf[2] = FRAME_TYPE_MODULE_CONTROL;
     memcpy(&sys->send_data_buf[3],(uint8_t *)&sys->module_status_set.module, 4 );
     sys->send_data_buf[7] = sys->module_status_set.on_off;
-    sys->send_data_buf[8] = CalCheckSum(sys->send_data_buf, 8);
+    sys->send_data_buf[8] = this->CalCheckSum(sys->send_data_buf, 8);
     sys->send_data_buf[9] = PROTOCOL_TAIL;
-    send_serial_data(sys);
+    this->send_serial_data(sys);
+    usleep(TEST_WAIT_TIME);
+    this->handle_receive_data(sys);
 }
 
 void NoahPowerboard::GetModulePowerOnOff(powerboard_t *sys)
@@ -140,7 +145,9 @@ void NoahPowerboard::GetModulePowerOnOff(powerboard_t *sys)
     sys->send_data_buf[3] = 1;
     sys->send_data_buf[4] = CalCheckSum(sys->send_data_buf, 4);
     sys->send_data_buf[5] = PROTOCOL_TAIL;
-    send_serial_data(sys);
+    this->send_serial_data(sys);
+    usleep(TEST_WAIT_TIME);
+    this->handle_receive_data(sys);
 }
 void NoahPowerboard::GetAdcData(powerboard_t *sys)      // done
 {
@@ -150,9 +157,11 @@ void NoahPowerboard::GetAdcData(powerboard_t *sys)      // done
     sys->send_data_buf[3] = 0x01;
     sys->send_data_buf[4] = 0x01;
     sys->send_data_buf[5] = sys->current_cmd_frame.cmd;
-    sys->send_data_buf[6] = CalCheckSum(sys->send_data_buf, 5);
+    sys->send_data_buf[6] = this->CalCheckSum(sys->send_data_buf, 5);
     sys->send_data_buf[7] = PROTOCOL_TAIL;
-    send_serial_data(sys);
+    this->send_serial_data(sys);
+    usleep(TEST_WAIT_TIME);
+    this->handle_receive_data(sys);
 }
 
 void NoahPowerboard::GetVersion(powerboard_t *sys)      // done
@@ -161,9 +170,11 @@ void NoahPowerboard::GetVersion(powerboard_t *sys)      // done
     sys->send_data_buf[1] = 6;
     sys->send_data_buf[2] = FRAME_TYPE_GET_VERSION;
     sys->send_data_buf[3] = sys->get_version_type;
-    sys->send_data_buf[4] = CalCheckSum(sys->send_data_buf, 4);
+    sys->send_data_buf[4] = this->CalCheckSum(sys->send_data_buf, 4);
     sys->send_data_buf[5] = PROTOCOL_TAIL;
-    send_serial_data(sys);
+    this->send_serial_data(sys);
+    usleep(TEST_WAIT_TIME);
+    this->handle_receive_data(sys);
 }
 
 void NoahPowerboard::GetSysStatus(powerboard_t *sys)     // done
@@ -172,9 +183,11 @@ void NoahPowerboard::GetSysStatus(powerboard_t *sys)     // done
     sys->send_data_buf[1] = 6;
     sys->send_data_buf[2] = FRAME_TYPE_SYS_STATUS;
     sys->send_data_buf[3] = 0x00;
-    sys->send_data_buf[4] = CalCheckSum(sys->send_data_buf, 4);
+    sys->send_data_buf[4] = this->CalCheckSum(sys->send_data_buf, 4);
     sys->send_data_buf[5] = PROTOCOL_TAIL;
-    send_serial_data(sys);
+    this->send_serial_data(sys);
+    usleep(TEST_WAIT_TIME);
+    this->handle_receive_data(sys);
 }
 
 void NoahPowerboard::InfraredLedCtrl(powerboard_t *sys)     // done
@@ -191,14 +204,16 @@ void NoahPowerboard::InfraredLedCtrl(powerboard_t *sys)     // done
     {
         sys->send_data_buf[4] = sys->ir_cmd.set_ir_percent;
     }
-    sys->send_data_buf[5] = CalCheckSum(sys->send_data_buf, 5);
+    sys->send_data_buf[5] = this->CalCheckSum(sys->send_data_buf, 5);
     sys->send_data_buf[6] = PROTOCOL_TAIL;
-    send_serial_data(sys);
+    this->send_serial_data(sys);
+    usleep(TEST_WAIT_TIME);
+    this->handle_receive_data(sys);
 }
 
 
 static void handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf);
-int handle_receive_data(powerboard_t *sys)
+int NoahPowerboard::handle_receive_data(powerboard_t *sys)
 {
     int nread = 0;
     int i = 0;
