@@ -297,6 +297,8 @@ class NoahPowerboard
         ros::Publisher noah_powerboard_pub;
         ros::Subscriber noah_powerboard_sub;
         json j;
+        void pub_json_msg_to_app(const nlohmann::json j_msg);
+
 };
 int handle_receive_data(powerboard_t *sys);
 int handle_receive_data(powerboard_t *sys);

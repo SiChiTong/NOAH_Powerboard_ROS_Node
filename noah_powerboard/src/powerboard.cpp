@@ -309,6 +309,17 @@ void NoahPowerboard::FromAppRcvCallback(const std_msgs::String::ConstPtr msg)
 {
     ROS_INFO("Rcv test data");
 }
+void NoahPowerboard::pub_json_msg_to_app( const nlohmann::json j_msg)
+{
+    std_msgs::String pub_json_msg;
+    std::stringstream ss;
+
+    ss.clear();
+    ss << j_msg;
+    pub_json_msg.data = ss.str();
+    this->noah_powerboard_pub.publish(pub_json_msg);
+}
+         
 void NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf)
 {
     int frame_len = 0;
@@ -374,15 +385,29 @@ void NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_bu
 
         case FRAME_TYPE_GET_CURRENT:
             memcpy((uint8_t *)&sys->voltage_info.voltage_data, &frame_buf[4], sizeof(voltage_data_t));
-            PowerboardInfo("12v voltage     is %5d mv",sys->voltage_info.voltage_data._12V_voltage);
-            PowerboardInfo("24v voltage     is %5d mv",sys->voltage_info.voltage_data._24V_voltage);
-            PowerboardInfo("5v voltage      is %5d mv",sys->voltage_info.voltage_data._5V_voltage);
-            PowerboardInfo("bat voltage     is %5d mv",sys->voltage_info.voltage_data.bat_voltage);
+            PowerboardInfo("_12v_voltage     is %5d mv",sys->voltage_info.voltage_data._12V_voltage);
+            PowerboardInfo("_24v_voltage     is %5d mv",sys->voltage_info.voltage_data._24V_voltage);
+            PowerboardInfo("_5v_voltage      is %5d mv",sys->voltage_info.voltage_data._5V_voltage);
+            PowerboardInfo("bat_voltage     is %5d mv",sys->voltage_info.voltage_data.bat_voltage);
             PowerboardInfo("_24V_temp       is %d",sys->voltage_info.voltage_data._24V_temp);
             PowerboardInfo("_12V_temp       is %d",sys->voltage_info.voltage_data._12V_temp);
             PowerboardInfo("_5V_temp        is %d",sys->voltage_info.voltage_data._5V_temp);
             PowerboardInfo("air_temp        is %d",sys->voltage_info.voltage_data.air_temp);
-            PowerboardInfo("send rate       is %d",sys->voltage_info.send_rate);
+            PowerboardInfo("send_rate       is %d",sys->voltage_info.send_rate);
+            this->j.clear();
+            this->j = 
+            {
+               {"_12v_voltage", sys->voltage_info.voltage_data._12V_voltage},
+               {"_24v_voltage", sys->voltage_info.voltage_data._24V_voltage},
+               {"_5v_voltage", sys->voltage_info.voltage_data._5V_voltage},
+               {"bat_voltage", sys->voltage_info.voltage_data.bat_voltage},
+               {"_24V_temp", sys->voltage_info.voltage_data._24V_temp},
+               {"_12V_temp", sys->voltage_info.voltage_data._12V_temp},
+               {"_5V_temp", sys->voltage_info.voltage_data._5V_temp},
+               {"air_temp", sys->voltage_info.voltage_data.air_temp},
+               {"send_rate", sys->voltage_info.send_rate},
+            };
+            this->pub_json_msg_to_app(this->j);
             break;
 
         case FRAME_TYPE_GET_VERSION:
