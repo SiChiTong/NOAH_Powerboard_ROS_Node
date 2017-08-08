@@ -33,7 +33,8 @@ powerboard_t    *sys_powerboard = &sys_powerboard_ram;
 
 void NoahPowerboard::PowerboardParamInit(void)
 {
-    char dev_path[] = "/dev/ttyUSB0";
+    //char dev_path[] = "/dev/ttyUSB0";
+    char dev_path[] = "/dev/noah_powerboard";
     memcpy(sys_powerboard->dev,dev_path, sizeof(dev_path));
     sys_powerboard->led_set.effect = LIGHTS_MODE_DEFAULT;
 }

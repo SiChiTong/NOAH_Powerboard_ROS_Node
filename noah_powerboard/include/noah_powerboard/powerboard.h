@@ -278,6 +278,13 @@ class NoahPowerboard
         void InfraredLedCtrl(powerboard_t *sys);
         void SetModulePowerOnOff(powerboard_t *sys);
         void GetModulePowerOnOff(powerboard_t *sys);
+
+//    private:
+ //       ros::NodeHandle n;
+  //      ros::Publisher noah_powerboard_pub;
+   //     ros::Subscriber noah_powerboard_sub;
+
+    //    unsigned int total_receive;
 };
 int handle_receive_data(powerboard_t *sys);
 int handle_receive_data(powerboard_t *sys);
