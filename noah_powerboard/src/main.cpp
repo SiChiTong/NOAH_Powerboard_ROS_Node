@@ -1,23 +1,17 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include "std_msgs/UInt8MultiArray.h"
-#include "nav_msgs/Odometry.h"
-#include "geometry_msgs/Twist.h"
-#include "geometry_msgs/PoseStamped.h"
-#include "geometry_msgs/TwistStamped.h"
-#include "tf/transform_broadcaster.h"
+//#include "geometry_msgs/Twist.h"
+//#include "geometry_msgs/PoseStamped.h"
+//#include "geometry_msgs/TwistStamped.h"
+//#include "tf/transform_broadcaster.h"
 
-#include <sstream>
-#include <math.h>
+//#include <sstream>
+//#include <math.h>
 #include <stdio.h>
 #include <vector>
 #include <pthread.h>
-#include "../include/noah_powerboard/config.h"
-#include "../include/noah_powerboard/system.h"
-#include "../include/noah_powerboard/report.h"
 #include "../include/noah_powerboard/powerboard.h"
-//#include "../include/noah_powerboard/navigation.h"
-//#include "../include/noah_powerboard/handle_command.h"
 
 class NoahPowerboard;
 int main(int argc, char **argv)

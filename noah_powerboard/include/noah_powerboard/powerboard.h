@@ -10,6 +10,7 @@ using json = nlohmann::json;
 #define PROTOCOL_TAIL               0xa5
 #define POWER_CURRENT_LEN           33
 
+#define BUF_LEN                    256
 
 #define FRAME_TYPE_LEDS_CONTROL         0x01
 #define FRAME_TYPE_SYS_STATUS           0x02
@@ -301,18 +302,9 @@ class NoahPowerboard
 
 };
 int handle_receive_data(powerboard_t *sys);
-int handle_receive_data(powerboard_t *sys);
-#if 0
-void PowerboardParamInit(void);
-void SetLedEffect(powerboard_t *powerboard);
-void GetBatteryInfo(powerboard_t *sys);
-void GetAdcData(powerboard_t *sys);
-void GetVersion(powerboard_t *sys);
-void GetSysStatus(powerboard_t *sys);
-void InfraredLedCtrl(powerboard_t *sys);
-void SetModulePowerOnOff(powerboard_t *sys);
-void GetModulePowerOnOff(powerboard_t *sys);
-#endif
+void set_speed(int fd, int speed);
+int set_parity(int fd,int databits,int stopbits,int parity);
+int open_com_device(char *dev);
 
 #endif
 
