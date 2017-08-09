@@ -18,7 +18,6 @@
 #include "../include/noah_powerboard/config.h"
 #include "../include/noah_powerboard/powerboard.h"
 
-#include "std_msgs/String.h"
 #define TEST_WAIT_TIME      30*1000
 
 #if 0
@@ -362,6 +361,23 @@ void NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_bu
             PowerboardInfo("color.g is %2x",        sys->rcv_serial_leds_frame.color.g);
             PowerboardInfo("color.b is %2x",        sys->rcv_serial_leds_frame.color.b);
             PowerboardInfo("period is %d",          sys->rcv_serial_leds_frame.period);
+
+            this->j.clear();
+            this->j = 
+            {
+                {"sub_name","led_ctrl"},
+                {
+                    "data",
+                    {
+                        {"cur_light_mode",sys->rcv_serial_leds_frame.cur_light_mode},
+                        {"color_r",sys->rcv_serial_leds_frame.color.r},
+                        {"color_g",sys->rcv_serial_leds_frame.color.g},
+                        {"color_b",sys->rcv_serial_leds_frame.color.b},
+                        {"period",sys->rcv_serial_leds_frame.period},
+                    }
+                }
+            };
+            this->pub_json_msg_to_app(this->j);
             break;
 
         case FRAME_TYPE_BAT_STATUS:
@@ -371,6 +387,19 @@ void NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_bu
             {
                 sys->bat_info.bat_info = frame_buf[5]<< 8  | frame_buf[4]; 
                 PowerboardInfo("battery voltage is %d",sys->bat_info.bat_info);
+
+                this->j.clear();
+                this->j = 
+                {
+                    {"sub_name","battery_info"},
+                    {
+                        "data",
+                        {
+                            {"battery_voltage",sys->bat_info.bat_info},
+                        }
+                    }
+                };
+                this->pub_json_msg_to_app(this->j);
             }
             if(sys->bat_info.cmd == CMD_BAT_PERCENT)
             {
@@ -379,7 +408,19 @@ void NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_bu
                 {
                     sys->bat_info.bat_info = 100;
                 }
-                ROS_INFO("battery voltage is %d",sys->bat_info.bat_info);
+                PowerboardInfo("battery voltage is %d",sys->bat_info.bat_info);
+                this->j.clear();
+                this->j = 
+                {
+                    {"sub_name","battery_info"},
+                    {
+                        "data",
+                        {
+                            {"battery_percent",sys->bat_info.bat_info},
+                        }
+                    }
+                };
+                this->pub_json_msg_to_app(this->j);
             }
             break;
 
@@ -394,18 +435,26 @@ void NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_bu
             PowerboardInfo("_5V_temp        is %d",sys->voltage_info.voltage_data._5V_temp);
             PowerboardInfo("air_temp        is %d",sys->voltage_info.voltage_data.air_temp);
             PowerboardInfo("send_rate       is %d",sys->voltage_info.send_rate);
+
             this->j.clear();
             this->j = 
             {
-               {"_12v_voltage", sys->voltage_info.voltage_data._12V_voltage},
-               {"_24v_voltage", sys->voltage_info.voltage_data._24V_voltage},
-               {"_5v_voltage", sys->voltage_info.voltage_data._5V_voltage},
-               {"bat_voltage", sys->voltage_info.voltage_data.bat_voltage},
-               {"_24V_temp", sys->voltage_info.voltage_data._24V_temp},
-               {"_12V_temp", sys->voltage_info.voltage_data._12V_temp},
-               {"_5V_temp", sys->voltage_info.voltage_data._5V_temp},
-               {"air_temp", sys->voltage_info.voltage_data.air_temp},
-               {"send_rate", sys->voltage_info.send_rate},
+                {"sub_name","get_adc_data"},
+                {
+                    "data",
+                    {
+
+                        {"_12v_voltage", sys->voltage_info.voltage_data._12V_voltage},
+                        {"_24v_voltage", sys->voltage_info.voltage_data._24V_voltage},
+                        {"_5v_voltage", sys->voltage_info.voltage_data._5V_voltage},
+                        {"bat_voltage", sys->voltage_info.voltage_data.bat_voltage},
+                        {"_24V_temp", sys->voltage_info.voltage_data._24V_temp},
+                        {"_12V_temp", sys->voltage_info.voltage_data._12V_temp},
+                        {"_5V_temp", sys->voltage_info.voltage_data._5V_temp},
+                        {"air_temp", sys->voltage_info.voltage_data.air_temp},
+                        {"send_rate", sys->voltage_info.send_rate},
+                    }
+                }
             };
             this->pub_json_msg_to_app(this->j);
             break;
@@ -418,13 +467,40 @@ void NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_bu
                 memcpy((uint8_t *)&sys->sw_version,&frame_buf[7], SW_VERSION_SIZE);
                 PowerboardInfo("hw version: %s",sys->hw_version);
                 PowerboardInfo("sw version: %s",sys->sw_version);
+                this->j.clear();
+                this->j = 
+                {
+                    {"sub_name","get_version"},
+                    {
+                        "data",
+                        {
+                            {"hw_version",sys->hw_version},     
+                            {"sw_version",sys->sw_version},     
+                        }
+                    }
+                };
+                this->pub_json_msg_to_app(this->j);
             }
 
             if(sys->get_version_type == VERSION_TYPE_PROTOCOL)
             {
                 memcpy((uint8_t *)&sys->protocol_version,&frame_buf[4], PROTOCOL_VERSION_SIZE);
                 PowerboardInfo("protocol version: %s",sys->protocol_version);
+                this->j.clear();
+                this->j = 
+                {
+                    {"sub_name","get_version"},
+                    {
+                        "data",
+                        {
+                            {"protocol_version",sys->protocol_version},     
+                        }
+                    }
+                };
+                this->pub_json_msg_to_app(this->j);
             }
+
+
             break;
 
         case FRAME_TYPE_SYS_STATUS:
@@ -449,11 +525,39 @@ void NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_bu
                 default:
                     break;
             }
+
+            this->j.clear();
+            this->j = 
+            {
+                {"pub_name","get_sys_status"},
+                {
+                    "data",
+                    {
+                        {"sys_status",sys->sys_status},
+                    }
+                }
+            };
+            this->pub_json_msg_to_app(this->j);
+
             break;
 
         case FRAME_TYPE_IRLED_CONTROL:
             sys->ir_cmd.lightness_percent = frame_buf[3];
             PowerboardInfo("ir lightness is %d",sys->ir_cmd.lightness_percent);
+
+            this->j.clear();
+            this->j = 
+            {
+                {"sub_name","ir_lightness"},
+                {
+                    "data",
+                    {
+                        {"ir_lightness",sys->ir_cmd.lightness_percent},
+                    }
+                }
+            };
+            this->pub_json_msg_to_app(this->j);
+
             break;
         case FRAME_TYPE_MODULE_CONTROL:
             {
@@ -468,6 +572,8 @@ void NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_bu
                 {
                     PowerboardInfo("hard ware not support !");
                 }
+
+
                 break; 
             }
         case FRAME_TYPE_GET_MODULE_STATE:
@@ -483,6 +589,20 @@ void NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_bu
                 {
                     PowerboardInfo("hard ware not support !");
                 }
+
+                this->j.clear();
+                this->j = 
+                {
+                    {"sub_name","get_module_state"},
+                    {
+                       "data",
+                       {
+                           {"module_status",sys->module_status.module},
+                       } 
+                    }
+                };
+                this->pub_json_msg_to_app(this->j);
+
                 break; 
             }
 
