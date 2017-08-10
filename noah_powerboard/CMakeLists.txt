@@ -25,8 +25,6 @@ add_executable( noah_powerboard_node
     src/main.cpp
 	src/uart.cpp
 	src/powerboard.cpp
-	#	src/system.cpp
-#	src/report.cpp
 )
 target_link_libraries(noah_powerboard_node
   ${catkin_LIBRARIES} 

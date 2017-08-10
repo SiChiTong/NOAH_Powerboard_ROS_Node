@@ -276,7 +276,7 @@ class NoahPowerboard
         NoahPowerboard()
         {
             noah_powerboard_pub = n.advertise<std_msgs::String>("tx_noah_powerboard_node",1000);
-            noah_powerboard_sub = n.subscribe("rx_noah_powerboard_node",1000,&NoahPowerboard::FromAppRcvCallback,this);
+            noah_powerboard_sub = n.subscribe("rx_noah_powerboard_node",1000,&NoahPowerboard::from_app_rcv_callback,this);
         }
         void PowerboardParamInit(void);
         void SetLedEffect(powerboard_t *powerboard);
@@ -289,7 +289,7 @@ class NoahPowerboard
         void GetModulePowerOnOff(powerboard_t *sys);
         int send_serial_data(powerboard_t *sys);
         int handle_receive_data(powerboard_t *sys);
-        void FromAppRcvCallback(const std_msgs::String::ConstPtr msg);
+        void from_app_rcv_callback(const std_msgs::String::ConstPtr &msg);
 
     private:
         uint8_t CalCheckSum(uint8_t *data, uint8_t len);

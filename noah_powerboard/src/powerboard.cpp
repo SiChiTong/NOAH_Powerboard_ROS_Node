@@ -28,7 +28,7 @@ static unsigned char recv_buf_last[BUF_LEN] = {0};
 powerboard_t    sys_powerboard_ram; 
 powerboard_t    *sys_powerboard = &sys_powerboard_ram;
 
-
+//extern NoahPowerboard  powerboard;
 void NoahPowerboard::PowerboardParamInit(void)
 {
     //char dev_path[] = "/dev/ttyUSB0";
@@ -284,10 +284,6 @@ int NoahPowerboard::handle_receive_data(powerboard_t *sys)
 }
 
 
-void NoahPowerboard::FromAppRcvCallback(const std_msgs::String::ConstPtr msg)
-{
-    ROS_INFO("Rcv test data");
-}
 void NoahPowerboard::pub_json_msg_to_app( const nlohmann::json j_msg)
 {
     std_msgs::String pub_json_msg;
@@ -567,7 +563,7 @@ void NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_bu
                 }
                 else
                 {
-                    PowerboardInfo("hard ware not support !");
+                    PowerboardInfo("hardware not support !");
                 }
 
                 this->j.clear();
@@ -590,4 +586,40 @@ void NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_bu
             break;
     }
 }
+
+void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg)
+{
+    ROS_INFO("Rcv test data");
+    auto j = json::parse(msg->data.c_str());
+    if(j.find("pub_name") != j.end())
+    {
+        ROS_INFO("find pub_name");
+        if(j["pub_name"] == "set_module_state")
+        {
+            ROS_INFO("find set_module_state");
+            if(j["data"]["dev_name"] == "_24v_printer")
+            {
+                if(j["data"]["set_state"] == true)
+                {
+                    ROS_INFO("set 24v printer on");
+                    sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON;
+                    sys_powerboard->module_status_set.module = POWER_24V_PRINTER; 
+                    this->SetModulePowerOnOff(sys_powerboard);
+                }
+                else if(j["data"]["set_dev"] == false)
+                {
+                    ROS_INFO("set 24v printer off");
+                    sys_powerboard->module_status_set.on_off = MODULE_CTRL_OFF; 
+                    sys_powerboard->module_status_set.module = POWER_24V_PRINTER; 
+                    this->SetModulePowerOnOff(sys_powerboard);
+                }
+
+            }
+        }
+    }
+}
+
+
+
+
 
