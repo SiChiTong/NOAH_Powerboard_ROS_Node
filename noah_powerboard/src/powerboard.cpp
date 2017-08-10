@@ -17,7 +17,7 @@
 
 #include "../include/noah_powerboard/powerboard.h"
 
-#define TEST_WAIT_TIME      30*1000
+#define TEST_WAIT_TIME     50*1000
 
 #define PowerboardInfo     ROS_INFO
 
@@ -589,14 +589,17 @@ void NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_bu
 
 void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg)
 {
-    ROS_INFO("Rcv test data");
+    //ROS_INFO("Rcv test data");
     auto j = json::parse(msg->data.c_str());
     if(j.find("pub_name") != j.end())
     {
-        ROS_INFO("find pub_name");
+        //ROS_INFO("find pub_name");
         if(j["pub_name"] == "set_module_state")
         {
-            ROS_INFO("find set_module_state");
+            //ROS_INFO("find set_module_state");
+
+
+
             if(j["data"]["dev_name"] == "_24v_printer")
             {
                 if(j["data"]["set_state"] == true)
@@ -606,15 +609,76 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                     sys_powerboard->module_status_set.module = POWER_24V_PRINTER; 
                     this->SetModulePowerOnOff(sys_powerboard);
                 }
-                else if(j["data"]["set_dev"] == false)
+                else if(j["data"]["set_state"] == false)
                 {
                     ROS_INFO("set 24v printer off");
                     sys_powerboard->module_status_set.on_off = MODULE_CTRL_OFF; 
                     sys_powerboard->module_status_set.module = POWER_24V_PRINTER; 
                     this->SetModulePowerOnOff(sys_powerboard);
                 }
+            }
+
+
+
+            if(j["data"]["dev_name"] == "_24v_dcdc")
+            {
+                if(j["data"]["set_state"] == true)
+                {
+                    ROS_INFO("set 24v dcdc on");
+                    sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON;
+                    sys_powerboard->module_status_set.module = POWER_24V_EN; 
+                    this->SetModulePowerOnOff(sys_powerboard);
+                }
+                else if(j["data"]["set_state"] == false)
+                {
+                    ROS_INFO("set 24v dcdc off");
+                    sys_powerboard->module_status_set.on_off = MODULE_CTRL_OFF; 
+                    sys_powerboard->module_status_set.module = POWER_24V_EN; 
+                    this->SetModulePowerOnOff(sys_powerboard);
+                }
+            }
+
+
+
+            if(j["data"]["dev_name"] == "_5v_dcdc")
+            {
+                if(j["data"]["set_state"] == true)
+                {
+                    ROS_INFO("set 5v dcdc on");
+                    sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON;
+                    sys_powerboard->module_status_set.module = POWER_5V_EN; 
+                    this->SetModulePowerOnOff(sys_powerboard);
+                }
+                else if(j["data"]["set_state"] == false)
+                {
+                    ROS_INFO("set 5v dcdc off");
+                    sys_powerboard->module_status_set.on_off = MODULE_CTRL_OFF; 
+                    sys_powerboard->module_status_set.module = POWER_5V_EN; 
+                    this->SetModulePowerOnOff(sys_powerboard);
+                }
 
             }
+
+
+            if(j["data"]["dev_name"] == "_12v_dcdc")
+            {
+                if(j["data"]["set_state"] == true)
+                {
+                    ROS_INFO("set 12v dcdc on");
+                    sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON;
+                    sys_powerboard->module_status_set.module = POWER_12V_EN; 
+                    this->SetModulePowerOnOff(sys_powerboard);
+                }
+                else if(j["data"]["set_state"] == false)
+                {
+                    ROS_INFO("set 12v dcdc off");
+                    sys_powerboard->module_status_set.on_off = MODULE_CTRL_OFF; 
+                    sys_powerboard->module_status_set.module = POWER_12V_EN; 
+                    this->SetModulePowerOnOff(sys_powerboard);
+                }
+            }
+
+
         }
     }
 }

@@ -18,7 +18,7 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "noah_powerboard_node");
     NoahPowerboard  powerboard;
-    ros::Rate loop_rate(1);
+    ros::Rate loop_rate(10);
     powerboard.PowerboardParamInit();
 
     sys_powerboard->device = open_com_device(sys_powerboard->dev);
@@ -36,7 +36,6 @@ int main(int argc, char **argv)
     while(ros::ok())
     {
         //powerboard.handle_receive_data(sys_powerboard);
-        ROS_INFO("running ...");
 #if 0   // Set LED effect test function
         sys_powerboard->led_set.color.r = 0x12;
         sys_powerboard->led_set.color.g = 0x34;
