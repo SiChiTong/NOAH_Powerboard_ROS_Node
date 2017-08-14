@@ -16,7 +16,8 @@
 #include <signal.h>
 
 #include "../include/noah_powerboard/powerboard.h"
-
+//#include <boost/thread/thread.hpp>
+//#include <boost/thread/mutex.hpp>
 #define TEST_WAIT_TIME     50*1000
 
 #define PowerboardInfo     ROS_INFO
@@ -117,6 +118,8 @@ void NoahPowerboard::GetBatteryInfo(powerboard_t *sys)      // done
 }
 void NoahPowerboard::SetModulePowerOnOff(powerboard_t *sys)
 {
+    //boost::mutex io_mutex;
+    //boost::mutex::scoped_lock lock(io_mutex);
     sys->send_data_buf[0] = PROTOCOL_HEAD;
     sys->send_data_buf[1] = 10;
     sys->send_data_buf[2] = FRAME_TYPE_MODULE_CONTROL;
@@ -549,6 +552,31 @@ void NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_bu
                     PowerboardInfo("hard ware not support !");
                 }
 
+                this->j.clear();
+                this->j = 
+                {
+                    {"sub_name","get_module_state"},
+                    {
+                       "data",
+                       {
+                           {"module_status",sys->module_status.module},
+                       } 
+                    }
+                };
+                this->pub_json_msg_to_app(this->j);
+
+                this->j.clear();
+                this->j = 
+                {
+                    {"sub_name","get_module_state"},
+                    {
+                       "data",
+                       {
+                           {"_xx_xxx_state",!(bool)(sys->module_status.module & POWER_5V_EN)},
+                       } 
+                    }
+                };
+                this->pub_json_msg_to_app(this->j);
 
                 break; 
             }
@@ -579,6 +607,18 @@ void NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_bu
                 };
                 this->pub_json_msg_to_app(this->j);
 
+                this->j.clear();
+                this->j = 
+                {
+                    {"sub_name","get_module_state"},
+                    {
+                       "data",
+                       {
+                           {"_xx_xxx_state",!(bool)(sys->module_status.module & POWER_5V_EN)},
+                       } 
+                    }
+                };
+                this->pub_json_msg_to_app(this->j);
                 break; 
             }
 
@@ -600,6 +640,23 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
 
 
 
+            if(j["data"]["dev_name"] == "_24v_printer")
+            {
+                if(j["data"]["set_state"] == true)
+                {
+                    ROS_INFO("set 24v printer on");
+                    sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON;
+                    sys_powerboard->module_status_set.module = POWER_24V_PRINTER; 
+                    this->SetModulePowerOnOff(sys_powerboard);
+                }
+                else if(j["data"]["set_state"] == false)
+                {
+                    ROS_INFO("set 24v printer off");
+                    sys_powerboard->module_status_set.on_off = MODULE_CTRL_OFF; 
+                    sys_powerboard->module_status_set.module = POWER_24V_PRINTER; 
+                    this->SetModulePowerOnOff(sys_powerboard);
+                }
+            }
             if(j["data"]["dev_name"] == "_24v_printer")
             {
                 if(j["data"]["set_state"] == true)

@@ -9,7 +9,7 @@ void callback(const std_msgs::String::ConstPtr msg)
     auto j = json::parse(msg->data.c_str());
     if(j.find("sub_name") != j.end())
     {
-        ROS_INFO("find sub_name");
+        //ROS_INFO("find sub_name");
         if(j["sub_name"] == "get_version")
         {
             ROS_INFO("find get_version");
@@ -38,7 +38,22 @@ void callback(const std_msgs::String::ConstPtr msg)
             }
         }
     }
+    if(j.find("sub_name") != j.end())
+    {
+        if(j["sub_name"] == "get_module_state")
+        {
+            ROS_INFO("find get_module_state");
 
+            if(j["data"]["_xx_xxx_state"] == true)
+            {
+                ROS_INFO("_xx_xxx_state is on");
+            }
+            if(j["data"]["_xx_xxx_state"] == false)
+            {
+                ROS_INFO("_xx_xxx_state is off");
+            }
+        }
+    }
 }
 
 int main(int argc, char **argv)
@@ -80,7 +95,7 @@ int main(int argc, char **argv)
 #endif
 
 
-#if 1
+#if 0
             j.clear();
             j = 
             {
@@ -127,7 +142,7 @@ int main(int argc, char **argv)
             usleep(500*1000);
 #endif
 
-#if 1
+#if 0
             j.clear();
             j = 
             {
