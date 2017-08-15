@@ -555,7 +555,7 @@ void NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_bu
                 this->j.clear();
                 this->j = 
                 {
-                    {"sub_name","get_module_state"},
+                    {"sub_name","set_module_state"},
                     {
                        "data",
                        {
@@ -568,7 +568,7 @@ void NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_bu
                 this->j.clear();
                 this->j = 
                 {
-                    {"sub_name","get_module_state"},
+                    {"sub_name","set_module_state"},
                     {
                        "data",
                        {

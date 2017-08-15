@@ -40,7 +40,7 @@ void callback(const std_msgs::String::ConstPtr msg)
     }
     if(j.find("sub_name") != j.end())
     {
-        if(j["sub_name"] == "get_module_state")
+        if(j["sub_name"] == "set_module_state")
         {
             ROS_INFO("find get_module_state");
 
