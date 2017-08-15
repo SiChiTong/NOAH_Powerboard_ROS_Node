@@ -119,7 +119,7 @@ int main(int argc, char **argv)
 #endif
 
 
-#if 1
+#if 0
             j.clear();
             j = 
             {
@@ -165,6 +165,28 @@ int main(int argc, char **argv)
             usleep(500*1000);
 #endif
 
+#if 1
+            j.clear();
+            j = 
+            {
+                {"pub_name","set_module_state"},
+                {
+                    "data",
+                    {
+                        {"dev_name","door_ctrl_state"},
+                        {"set_state",(bool)state},
+                    }
+                },
+            };
+            std_msgs::String pub_json_msg_5;
+            std::stringstream ss_5;
+            ss_5.clear();
+            ss_5 << j;
+            pub_json_msg_5.data.clear();  
+            pub_json_msg_5.data = ss_5.str();
+            test_pub.publish(pub_json_msg_5);
+            usleep(500*1000);
+#endif
 
         }
 

@@ -278,22 +278,22 @@ class NoahPowerboard
             noah_powerboard_pub = n.advertise<std_msgs::String>("tx_noah_powerboard_node",1000);
             noah_powerboard_sub = n.subscribe("rx_noah_powerboard_node",1000,&NoahPowerboard::from_app_rcv_callback,this);
         }
-        void PowerboardParamInit(void);
-        void SetLedEffect(powerboard_t *powerboard);
-        void GetBatteryInfo(powerboard_t *sys);
-        void GetAdcData(powerboard_t *sys);
-        void GetVersion(powerboard_t *sys);
-        void GetSysStatus(powerboard_t *sys);
-        void InfraredLedCtrl(powerboard_t *sys);
-        void SetModulePowerOnOff(powerboard_t *sys);
-        void GetModulePowerOnOff(powerboard_t *sys);
+        int PowerboardParamInit(void);
+        int SetLedEffect(powerboard_t *powerboard);
+        int GetBatteryInfo(powerboard_t *sys);
+        int GetAdcData(powerboard_t *sys);
+        int GetVersion(powerboard_t *sys);
+        int GetSysStatus(powerboard_t *sys);
+        int InfraredLedCtrl(powerboard_t *sys);
+        int SetModulePowerOnOff(powerboard_t *sys);
+        int GetModulePowerOnOff(powerboard_t *sys);
         int send_serial_data(powerboard_t *sys);
         int handle_receive_data(powerboard_t *sys);
         void from_app_rcv_callback(const std_msgs::String::ConstPtr &msg);
 
     private:
         uint8_t CalCheckSum(uint8_t *data, uint8_t len);
-        void handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf);
+        int handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf);
         ros::NodeHandle n;
         ros::Publisher noah_powerboard_pub;
         ros::Subscriber noah_powerboard_sub;
