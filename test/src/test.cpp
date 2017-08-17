@@ -62,7 +62,7 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
     ros::Publisher test_pub = n.advertise<std_msgs::String>("rx_noah_powerboard_node",1000);
     ros::Subscriber test_sub = n.subscribe("tx_noah_powerboard_node", 1000, &callback);
-    ros::Rate loop_rate(0.3);
+    ros::Rate loop_rate(2);
     json j;
     static uint32_t cnt = 0;
     while(ros::ok())

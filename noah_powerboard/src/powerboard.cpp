@@ -141,7 +141,7 @@ int NoahPowerboard::SetModulePowerOnOff(powerboard_t *sys)
     if(error < 0)
     {
 
-        if(sys->module_status_set.module & POWER_12V_EXTEND)
+        if(sys->module_status_set.module & POWER_VSYS_24V_NV)
         {
 
             this->j.clear();
@@ -152,7 +152,7 @@ int NoahPowerboard::SetModulePowerOnOff(powerboard_t *sys)
                     "data",
                     {
                         //{"_xx_xxx_state",!(bool)(sys->module_status.module & POWER_5V_EN)},
-                        {"door_ctrl_state",(bool)(sys->module_status.module & POWER_12V_EXTEND)},
+                        {"door_ctrl_state",(bool)(sys->module_status.module & POWER_VSYS_24V_NV)},
                         {"error_code", error},
                     } 
                 }
@@ -163,7 +163,7 @@ int NoahPowerboard::SetModulePowerOnOff(powerboard_t *sys)
     else 
     {
         
-        if(sys->module_status_set.module & POWER_12V_EXTEND)
+        if(sys->module_status_set.module & POWER_VSYS_24V_NV)
         {
             
             this->j.clear();
@@ -174,7 +174,7 @@ int NoahPowerboard::SetModulePowerOnOff(powerboard_t *sys)
                     "data",
                     {
                         //{"_xx_xxx_state",!(bool)(sys->module_status.module & POWER_5V_EN)},
-                        {"door_ctrl_state",(bool)(sys->module_status.module & POWER_12V_EXTEND)},
+                        {"door_ctrl_state",(bool)(sys->module_status.module & POWER_VSYS_24V_NV)},
                         {"error_code", error},
                     } 
                 }
@@ -852,14 +852,14 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                 {
                     ROS_INFO("set door ctrl  on");
                     sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON;
-                    sys_powerboard->module_status_set.module = POWER_12V_EXTEND; 
+                    sys_powerboard->module_status_set.module = POWER_VSYS_24V_NV; 
                     this->SetModulePowerOnOff(sys_powerboard);
                 }
                 else if(j["data"]["set_state"] == false)
                 {
                     ROS_INFO("set door ctrl off");
                     sys_powerboard->module_status_set.on_off = MODULE_CTRL_OFF; 
-                    sys_powerboard->module_status_set.module = POWER_12V_EXTEND; 
+                    sys_powerboard->module_status_set.module = POWER_VSYS_24V_NV; 
                     this->SetModulePowerOnOff(sys_powerboard);
                 }
             }
