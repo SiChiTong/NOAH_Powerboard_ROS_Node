@@ -32,6 +32,9 @@ static unsigned char recv_buf_last[BUF_LEN] = {0};
 
 //20170706,Zero
 unsigned char baseStateData[7]={0};
+static void loadMotorCMD(uint8_t cmd);
+unsigned char loadFlag = 0;
+unsigned char loadCMD = 0 ;
 
 static void handle_rev_frame(move_sys_t *sys,unsigned char * frame_buf)
 {
@@ -147,12 +150,18 @@ ROS_DEBUG("move receive:%02x",frame_buf[i]);
                 baseStateData[1] = frame_buf[20];//right
                 baseStateData[2] = frame_buf[21];//status
                 baseStateData[3] = frame_buf[22];//collision state
+				baseStateData[4] = frame_buf[26];//load motor
+				baseStateData[5] = frame_buf[25];//load state
+				baseStateData[6] = frame_buf[23];//load switchs
+				
+
 				break;
 			case 0x69:
                 for(j=0; j<HANDSPIKE_STATUS_NUM; j++)
 				{
                     sys->handspike_status[j] = frame_buf[3+j]; 
-                     baseStateData[4+j] = frame_buf[3+j]; // 4 -- loadmotor  5 -- working state  6 -- swutchs state
+                    baseStateData[4+j] = frame_buf[3+j]; // 4 -- loadmotor  5 -- working state  6 -- swutchs state
+//					ROS_INFO("baseStateData[%d] = %x" ,j,baseStateData[4+j]);
 				}
 				break;
            /*
@@ -984,7 +993,13 @@ void *movebase_thread_start(void *)
     
     while(ros::ok()) 
     {  
-        if(0 == move_sys.upgrade_status)
+	
+		if(1 == loadFlag )
+		{
+			loadMotorCMD(loadCMD);
+			loadFlag = 0;
+		}
+        else if(0 == move_sys.upgrade_status)
         {
             update_system_state(&move_sys);
             handle_receive_data(&move_sys);
@@ -1006,6 +1021,7 @@ void *movebase_thread_start(void *)
 				 flag = 0;
              }		 
 		}
+
         ros::spinOnce();
         loop_rate.sleep(); 
     }
@@ -1090,19 +1106,22 @@ int get_movebase_upgrade_status(void)
 
 
 //20170815,Zero
-void loadMotorCMD(uint8_t cmd)
+static void loadMotorCMD(uint8_t cmd)
 {
   uint8_t txData[6];
   txData[0] = 0x5A;
-  txData[1] = 0x69;
-  txData[2] = 0x06;
+  txData[1] = 0x06;
+  txData[2] = 0x69;
   txData[3] = cmd;
+  txData[4] = 0x00;
   for(int i =0 ; i < 4 ; i++)
   {
     txData[4] += txData[i] ;
   }
   txData[5] = 0xA5 ;
-
+	
+  for(int i = 0 ; i< 6; i++)
+	ROS_INFO("txData[%d] = %x" ,i,txData[i]);
   send_serial(txData,&move_sys);
   usleep(MOVE_SLEEP_TIME);
   handle_receive_data(&move_sys);

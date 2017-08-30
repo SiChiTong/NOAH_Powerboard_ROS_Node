@@ -39,3 +39,27 @@ target_link_libraries(noah_powerboard_node
 ## Testing ##
 #############
 
+
+install(TARGETS noah_powerboard_node
+        ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+## Install project namespaced headers
+install(DIRECTORY include/${PROJECT_NAME}/
+        DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+        FILES_MATCHING PATTERN "*.h"
+        PATTERN ".svn" EXCLUDE)
+install(FILES
+    launch/noah_powerboard.launch
+
+    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+    )
+
+
+
+
+
+
+
+

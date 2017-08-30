@@ -83,7 +83,9 @@ extern int get_movebase_upgrade_status(void);
 extern int get_movebase_upgrade_result(void);
 
 extern unsigned char baseStateData[];
+extern unsigned char loadFlag ;
+extern unsigned char loadCMD ;
 //20170815,Zero
-void loadMotorCMD(uint8_t cmd);
+//void loadMotorCMD(uint8_t cmd);
 
 #endif

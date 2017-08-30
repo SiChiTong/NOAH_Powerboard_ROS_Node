@@ -102,9 +102,12 @@ void pub_baseState(ros::Publisher &basestate_pub )
 //20170815,Zero,for load motor
 void loadMotorCallback(std_msgs::UInt8MultiArray app_data)
 {
-  uint8_t cmdData ;
-  cmdData =app_data.data[0];
-  loadMotorCMD(cmdData);
+//  uint8_t cmdData ;
+//  cmdData =app_data.data[0];
+	loadCMD = app_data.data[0];
+	loadFlag = 1;
+//  ROS_INFO("cmdData = %d " ,cmdData );
+//  loadMotorCMD(cmdData);
 }
 
 int main(int argc, char **argv)
@@ -141,6 +144,7 @@ int main(int argc, char **argv)
     ros::Rate loop_rate(g_system.control_freq);
     while (ros::ok())
     {
+
 		//get version from robot_state_keeper by parameter server
         get_system_version_code(&g_system);
 

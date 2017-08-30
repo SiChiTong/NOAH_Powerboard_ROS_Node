@@ -144,29 +144,36 @@ void pub_hall_msg(const nlohmann::json j_msg)
 }
 static void pub_hall_data(sensor_sys_t *sys)
 {
-#if 0
-    sys->hall_data.header.stamp = ros::Time::now();
-    sys->hall_data.header.frame_id = "hall";
-	sys->hall_data.radiation_type = HALL;
-    for(int i = 0; i < HALL_NUM; i++ )
-    {
-        sys->hall_data.range.push_back(sys->hall_state[i]);
-    }
-    sys->sensor_pub.publish(sys->hall_data);
-    sys->hall_data.range.clear();
-#endif
-    json j;
-    j.clear();
-    j = 
-    {
-        {"sensor_name","hall_sensor"},
-        {"data",{
-                    {"hall_1", (bool)sys->hall_state[0]},
-                    {"hall_2", (bool)sys->hall_state[1]},
-                },
-        },
-    };
-    pub_hall_msg(j);
+	static bool state[2] = {false, false};
+	json j;
+	//static uint8_t flag = 0;
+	//if(flag == 0)
+	{
+		//state[0] = false;
+		//state[1] = false;
+		//flag = 1;
+	}
+	
+	if((state[0] != sys->hall_state[0]) || (state[1] != sys->hall_state[1]))
+	{
+		state[0] = (bool)sys->hall_state[0];
+		state[1] = (bool)sys->hall_state[1];
+
+		j.clear();
+		j = 
+		{
+			{"sensor_name","hall_sensor"},
+				{"data",{
+
+					{"hall_1", (bool)sys->hall_state[0]},
+					{"hall_2", (bool)sys->hall_state[1]},
+				},
+			},
+		};
+		pub_hall_msg(j);
+	}
+	
+    
 }
 
 static void handle_rev_frame(sensor_sys_t *sys,unsigned char * frame_buf)
@@ -234,7 +241,7 @@ static void handle_rev_frame(sensor_sys_t *sys,unsigned char * frame_buf)
                     //if((frame_buf[3+SONAR_NUM+LASER_NUM+j] == 1)&& (frame_buf[3+SONAR_NUM+LASER_NUM+j] == 0))
                     {
                         sys->hall_state[j] = frame_buf[3+SONAR_NUM+LASER_NUM+j];
-//                        ROS_INFO("hall %d state is %d",j, frame_buf[3+SONAR_NUM+LASER_NUM+j]);
+                        ROS_INFO("hall %d state is %d",j, frame_buf[3+SONAR_NUM+LASER_NUM+j]);
                     }
                 }
                 pub_hall_data(sys);
@@ -298,7 +305,7 @@ static int handle_receive_data(sensor_sys_t *sys)
 
 	struct stat file_info;
 
-//    ROS_INFO("in FUNC   !!!!");
+    ROS_INFO("in FUNC   !!!!");
     
     if(NULL == sys)
     {
@@ -328,7 +335,7 @@ static int handle_receive_data(sensor_sys_t *sys)
 
         while(i<data_Len)
         {
-//            ROS_INFO("rcv_buf[%d]:%2x",i,recv_buf_complete[i]);
+            ROS_INFO("rcv_buf[%d]:%2x",i,recv_buf_complete[i]);
             if(0x5A == recv_buf_complete [i])
             {
                 
@@ -341,7 +348,7 @@ static int handle_receive_data(sensor_sys_t *sys)
                            for(j=0;j<frame_len;j++)
                            {
                                recv_buf_temp[j] = recv_buf_complete[i+j];
-//                               ROS_INFO("recv_buf_temp:%x",recv_buf_temp[j]);
+                               ROS_INFO("recv_buf_temp:%x",recv_buf_temp[j]);
                            }
                            handle_rev_frame(sys,recv_buf_temp);
                            i = i+ frame_len;
@@ -489,6 +496,7 @@ static void update_system_state(sensor_sys_t *sys)
         ROS_INFO("sys NULL!");
         return;
     }
+    
     switch(sys->com_state)
     {
         case COM_OPENING:
@@ -831,10 +839,7 @@ static void get_sensor_send_frame()
 	data[4] = data[0]+data[1]+data[2]+data[3];
 	data[5] = 0xA5;
 
-	if(send_serial(data,&sensor_sys) < 0)
-    {
-        ROS_ERROR("send error");
-    }
+	send_serial(data,&sensor_sys);
     ROS_INFO("get_sensor_data");
 }
 
@@ -902,14 +907,14 @@ void *sensor_thread_start(void *)
 
     update_system_state(&sensor_sys);
     double temp_estop_limit = 0;
-    if((sensor_sys.sensor_freq <= 0) || (sensor_sys.sensor_freq > 50.0))
+    //if((sensor_sys.sensor_freq <= 0) || (sensor_sys.sensor_freq > 50.0))
     {
-        sensor_sys.sensor_freq = 10;
+        sensor_sys.sensor_freq = 20;
     }
     ros::Rate loop_rate(sensor_sys.sensor_freq);
     sensor_sys.lasercloud_pub = nh.advertise<sensor_msgs::PointCloud2>("lasercloud", 50, true);
 	sensor_sys.sensor_pub = nh.advertise<SensorMsg>("sensor_msg", 2, true);
-    hall_pub = nh.advertise<std_msgs::String>("hall_msg",2);
+    hall_pub = nh.advertise<std_msgs::String>("hall_msg",20);
 
     while(ros::ok()) 
     {  
