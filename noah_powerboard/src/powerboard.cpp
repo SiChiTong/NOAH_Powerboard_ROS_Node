@@ -14,7 +14,11 @@
 #include <string.h>
 #include <time.h>
 #include <signal.h>
-
+#include "iostream"
+#include "stdlib.h"
+#include "cstdlib"
+#include "string"
+#include "sstream"
 #include "../include/noah_powerboard/powerboard.h"
 //#include <boost/thread/thread.hpp>
 //#include <boost/thread/mutex.hpp>
@@ -198,6 +202,11 @@ int NoahPowerboard::SetModulePowerOnOff(powerboard_t *sys)
                 }
             };
             this->pub_json_msg_to_app(this->j);
+        }
+        
+        if(sys->module_status_set.module & POWER_24V_EXTEND)
+        {
+            
         }
     }
     return error;
@@ -872,3 +881,39 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
 
 
 
+void NoahPowerboard:: from_navigation_rcv_callback(const std_msgs::String::ConstPtr &msg)
+{
+    int value = atoi(msg->data.c_str());
+    ROS_INFO("value is %d",value);
+    ROS_INFO("%s",msg->data.c_str());
+    switch(value)
+    {
+        case 0:
+            ROS_INFO("get 00"); 
+            sys_powerboard->module_status_set.on_off = MODULE_CTRL_OFF; 
+            sys_powerboard->module_status_set.module = POWER_24V_PRINTER; 
+            this->SetModulePowerOnOff(sys_powerboard);
+            break;
+        case 1:
+            ROS_INFO("get 01"); 
+            sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON; 
+            sys_powerboard->module_status_set.module = POWER_24V_PRINTER; 
+            this->SetModulePowerOnOff(sys_powerboard);
+            break;
+        case 10:
+            ROS_INFO("get 10"); 
+            sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON; 
+            sys_powerboard->module_status_set.module = POWER_24V_PRINTER; 
+            this->SetModulePowerOnOff(sys_powerboard);
+            break;
+        case 11:
+            ROS_INFO("get 11"); 
+            sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON; 
+            sys_powerboard->module_status_set.module = POWER_24V_PRINTER; 
+            this->SetModulePowerOnOff(sys_powerboard);
+            break;
+        default :
+            break;
+
+    }
+}

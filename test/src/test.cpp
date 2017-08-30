@@ -61,8 +61,9 @@ int main(int argc, char **argv)
     ros::init(argc, argv,"test_node");
     ros::NodeHandle n;
     ros::Publisher test_pub = n.advertise<std_msgs::String>("rx_noah_powerboard_node",1000);
+    ros::Publisher test_navigation_pub = n.advertise<std_msgs::String>("lane_follower_node/camera_using_n",1000);
     ros::Subscriber test_sub = n.subscribe("tx_noah_powerboard_node", 1000, &callback);
-    ros::Rate loop_rate(8);
+    ros::Rate loop_rate(1);
     json j;
     static uint32_t cnt = 0;
     while(ros::ok())
@@ -74,6 +75,31 @@ int main(int argc, char **argv)
             std::stringstream ss;
             state = cnt % 2 == 1 ? true:false;
             cnt++;
+
+#if 1
+
+            std_msgs::String led;
+            if(cnt % 4 == 0)
+            {
+                led.data = "00";
+            }
+            if(cnt % 4 == 1)
+            {
+                led.data = "01";
+            }
+            if(cnt % 4 == 2)
+            {
+                led.data = "10";
+            }
+            if(cnt % 4 == 3)
+            {
+                led.data = "11";
+            }
+            test_navigation_pub.publish(led);
+
+#endif
+
+
 #if 0
             j.clear();
             j = 
@@ -165,7 +191,7 @@ int main(int argc, char **argv)
             usleep(500*1000);
 #endif
 
-#if 1
+#if 0
             j.clear();
             j = 
             {
