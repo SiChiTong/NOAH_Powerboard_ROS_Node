@@ -286,6 +286,10 @@ int NoahPowerboard::GetSysStatus(powerboard_t *sys)     // done
     {
         
     }
+    else
+    {
+        
+    }
     return error;
 }
 
@@ -599,7 +603,7 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
 
         case FRAME_TYPE_SYS_STATUS:
             sys->sys_status = frame_buf[4];
-            switch(sys->sys_status)
+            switch(sys->sys_status & 0x0f)
             {
                 case SYS_STATUS_OFF:
                     PowerboardInfo("system status: off");
@@ -618,6 +622,14 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                     break;
                 default:
                     break;
+            }
+            if(sys->sys_status & STATE_IS_CHARGER_IN)
+            {
+                ROS_INFO("charger plug in");
+            }
+            else
+            {
+                ROS_INFO("charger not plug in");
             }
 
             this->j.clear();

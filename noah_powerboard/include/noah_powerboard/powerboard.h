@@ -243,6 +243,11 @@ typedef struct
 #define SYS_STATUS_ON               2
 #define SYS_STATUS_TURNING_OFF      3
 #define SYS_STATUS_ERR              4
+#define                 STATE_IS_CHARGING       0x10
+#define                 STATE_IS_LOW_POWER      0x20
+#define                 STATE_IS_AUTO_UPLOAD    0x40
+#define                 STATE_IS_CHARGER_IN     0x80
+#define                 SYSTEM_IS_SLEEP         0x00 //set 0x00 to no use
     uint8_t                     sys_status;
 
     ir_cmd_t                    ir_cmd;
