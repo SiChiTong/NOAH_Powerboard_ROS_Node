@@ -1,7 +1,6 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
-
-#include <sstream>
+#include "std_msgs/UInt8MultiArray.h" 
 #include <math.h>
 #include <stdio.h>     
 #include <stdlib.h>     
@@ -288,7 +287,6 @@ int NoahPowerboard::GetSysStatus(powerboard_t *sys)     // done
     }
     else
     {
-        
     }
     return error;
 }
@@ -929,3 +927,18 @@ void NoahPowerboard:: from_navigation_rcv_callback(const std_msgs::String::Const
 
     }
 }
+
+void NoahPowerboard::PubPower(void)
+{
+    unsigned char power = 0;
+    power = sys_powerboard->sys_status;
+    unsigned char status = sys_powerboard->bat_info.bat_info;
+    //std_msgs::Int8 msg;
+    //msg.data=power;
+    std_msgs::UInt8MultiArray bytes_msg;
+
+    bytes_msg.data.push_back(power);
+    bytes_msg.data.push_back(status);
+    power_pub.publish(bytes_msg);
+}
+

@@ -335,7 +335,7 @@ static int handle_receive_data(sensor_sys_t *sys)
 
         while(i<data_Len)
         {
-            ROS_INFO("rcv_buf[%d]:%2x",i,recv_buf_complete[i]);
+//            ROS_INFO("rcv_buf[%d]:%2x",i,recv_buf_complete[i]);
             if(0x5A == recv_buf_complete [i])
             {
                 

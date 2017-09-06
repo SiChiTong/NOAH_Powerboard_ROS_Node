@@ -282,6 +282,7 @@ class NoahPowerboard
         {
             noah_powerboard_pub = n.advertise<std_msgs::String>("tx_noah_powerboard_node",1000);
             resp_navigation_camera_leds = n.advertise<std_msgs::String>("resp_lane_follower_node/camera_using_n",1000);
+            power_pub = n.advertise<std_msgs::UInt8MultiArray>("power",1);
 
             noah_powerboard_sub = n.subscribe("rx_noah_powerboard_node",1000,&NoahPowerboard::from_app_rcv_callback,this);
             sub_navigation_camera_leds = n.subscribe("lane_follower_node/camera_using_n",1000,&NoahPowerboard::from_navigation_rcv_callback,this);
@@ -300,7 +301,7 @@ class NoahPowerboard
         int handle_receive_data(powerboard_t *sys);
         void from_app_rcv_callback(const std_msgs::String::ConstPtr &msg);
         void from_navigation_rcv_callback(const std_msgs::String::ConstPtr &msg);
-        
+        void PubPower(void);
 
     private:
         uint8_t CalCheckSum(uint8_t *data, uint8_t len);
@@ -310,6 +311,7 @@ class NoahPowerboard
         ros::Subscriber noah_powerboard_sub;
         ros::Subscriber sub_navigation_camera_leds;
         ros::Publisher resp_navigation_camera_leds;
+        ros::Publisher power_pub;
         json j;
         void pub_json_msg_to_app(const nlohmann::json j_msg);
 

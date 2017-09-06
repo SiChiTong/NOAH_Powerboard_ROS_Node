@@ -5,6 +5,7 @@
 //#include "geometry_msgs/PoseStamped.h"
 //#include "geometry_msgs/TwistStamped.h"
 //#include "tf/transform_broadcaster.h"
+#include <signal.h>
 
 //#include <sstream>
 //#include <math.h>
@@ -14,11 +15,17 @@
 #include "../include/noah_powerboard/powerboard.h"
 
 class NoahPowerboard;
+void sigintHandler(int sig)
+{
+    ROS_INFO("killing on exit");
+    ros::shutdown();
+}
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "noah_powerboard_node");
     NoahPowerboard  powerboard;
-    ros::Rate loop_rate(10);
+    ros::Rate loop_rate(5);
     powerboard.PowerboardParamInit();
 
     sys_powerboard->device = open_com_device(sys_powerboard->dev);
@@ -32,7 +39,7 @@ int main(int argc, char **argv)
         set_parity(sys_powerboard->device,8,1,'N');  
         ROS_INFO("Open %s OK.",sys_powerboard->dev);
     }
-
+    signal(SIGINT, sigintHandler);
     while(ros::ok())
     {
         //powerboard.handle_receive_data(sys_powerboard);
@@ -54,9 +61,10 @@ int main(int argc, char **argv)
         powerboard.SetLedEffect(sys_powerboard);
 #endif
 
-#if 0   //Get battery info test function
-        sys_powerboard->bat_info.cmd = 1; 
+#if 1   //Get battery info test function
+        sys_powerboard->bat_info.cmd = 2; 
         powerboard.GetBatteryInfo(sys_powerboard);
+        usleep(100*1000);
 #endif
 #if 0   //Get Current test function
         sys_powerboard->current_cmd_frame.cmd = SEND_RATE_SINGLE;
@@ -78,8 +86,10 @@ int main(int argc, char **argv)
         }
 #endif
 
-#if 0  //Get system status
+#if 1  //Get system status
         powerboard.GetSysStatus(sys_powerboard);
+        usleep(50*1000);
+        powerboard.PubPower();
 #endif
 #if 0   //Infrared LED ctrl test funcion
 
