@@ -25,7 +25,8 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "noah_powerboard_node");
     NoahPowerboard  powerboard;
-    ros::Rate loop_rate(5);
+    ros::Rate loop_rate(10);
+    uint32_t cnt = 0;
     powerboard.PowerboardParamInit();
 
     sys_powerboard->device = open_com_device(sys_powerboard->dev);
@@ -40,8 +41,25 @@ int main(int argc, char **argv)
         ROS_INFO("Open %s OK.",sys_powerboard->dev);
     }
     signal(SIGINT, sigintHandler);
+
+//    powerboard.handle_receive_data(sys_powerboard);
     while(ros::ok())
     {
+        cnt++;
+        if(cnt % 20 == 10)
+        {
+            
+#if 1   //Get battery info test function
+            sys_powerboard->bat_info.cmd = 2; 
+            powerboard.GetBatteryInfo(sys_powerboard);
+            usleep(10*1000);
+#endif
+#if 1  //Get system status
+            powerboard.GetSysStatus(sys_powerboard);
+            usleep(50*1000);
+            powerboard.PubPower();
+#endif
+        }
         //powerboard.handle_receive_data(sys_powerboard);
 #if 0   // Set LED effect test function
         sys_powerboard->led_set.color.r = 0x12;
@@ -61,11 +79,6 @@ int main(int argc, char **argv)
         powerboard.SetLedEffect(sys_powerboard);
 #endif
 
-#if 1   //Get battery info test function
-        sys_powerboard->bat_info.cmd = 2; 
-        powerboard.GetBatteryInfo(sys_powerboard);
-        usleep(100*1000);
-#endif
 #if 0   //Get Current test function
         sys_powerboard->current_cmd_frame.cmd = SEND_RATE_SINGLE;
         powerboard.GetAdcData(sys_powerboard); 
@@ -86,11 +99,6 @@ int main(int argc, char **argv)
         }
 #endif
 
-#if 1  //Get system status
-        powerboard.GetSysStatus(sys_powerboard);
-        usleep(50*1000);
-        powerboard.PubPower();
-#endif
 #if 0   //Infrared LED ctrl test funcion
 
         //sys_powerboard->ir_cmd.cmd = IR_CMD_READ;

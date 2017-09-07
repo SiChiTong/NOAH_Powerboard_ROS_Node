@@ -22,6 +22,8 @@ using json = nlohmann::json;
 #define FRAME_TYPE_GET_CURRENT          0x0a
 #define FRAME_TYPE_GET_VERSION          0x0e
 
+#define COM_ERR_REPEAT_TIME             3 
+
 typedef enum
 {
     POWER_5V_MOTOR            = 0x00000001,
@@ -60,7 +62,7 @@ typedef struct
 #define MODULE_CTRL_OFF     0 
     uint8_t     on_off;
 #define HW_NO_SUPPORT         0xFFFFFFFF
-    uint32_t    module;
+    volatile uint32_t    module;
 } module_ctrl_t;
 
 typedef struct

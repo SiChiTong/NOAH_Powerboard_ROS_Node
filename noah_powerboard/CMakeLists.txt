@@ -50,10 +50,11 @@ install(DIRECTORY include/${PROJECT_NAME}/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
         FILES_MATCHING PATTERN "*.h"
         PATTERN ".svn" EXCLUDE)
-install(FILES
-    launch/noah_powerboard.launch
+
+install(DIRECTORY launch
 
     DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+    USE_SOURCE_PERMISSIONS
     )
 
 

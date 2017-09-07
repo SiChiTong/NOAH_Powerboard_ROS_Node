@@ -19,9 +19,9 @@
 #include "string"
 #include "sstream"
 #include "../include/noah_powerboard/powerboard.h"
-//#include <boost/thread/thread.hpp>
-//#include <boost/thread/mutex.hpp>
-#define TEST_WAIT_TIME     80*1000
+#include <boost/thread/thread.hpp>
+#include <boost/thread/mutex.hpp>
+#define TEST_WAIT_TIME     90*1000
 
 #define PowerboardInfo     ROS_INFO
 
@@ -45,6 +45,8 @@ int NoahPowerboard::PowerboardParamInit(void)
 
 int NoahPowerboard::send_serial_data(powerboard_t *sys)
 {
+    boost::mutex io_mutex;
+    boost::mutex::scoped_lock lock(io_mutex);
     int len = 0;
 
     int send_buf_len = 0;
@@ -128,9 +130,11 @@ int NoahPowerboard::GetBatteryInfo(powerboard_t *sys)      // done
 }
 int NoahPowerboard::SetModulePowerOnOff(powerboard_t *sys)
 {
-    int error = -1;
-    //boost::mutex io_mutex;
-    //boost::mutex::scoped_lock lock(io_mutex);
+begin:
+    static uint8_t err_cnt = 0;
+    int error = -1; 
+    boost::mutex io_mutex;
+    boost::mutex::scoped_lock lock(io_mutex);
     sys->send_data_buf[0] = PROTOCOL_HEAD;
     sys->send_data_buf[1] = 10;
     sys->send_data_buf[2] = FRAME_TYPE_MODULE_CONTROL;
@@ -143,7 +147,12 @@ int NoahPowerboard::SetModulePowerOnOff(powerboard_t *sys)
     error = this->handle_receive_data(sys);
     if(error < 0)
     {
-
+        if(err_cnt++ < COM_ERR_REPEAT_TIME)
+        {
+            usleep(20*100); 
+            goto begin; 
+        }
+        ROS_ERROR("com error");
         if(sys->module_status_set.module & POWER_VSYS_24V_NV)
         {
 
@@ -165,10 +174,13 @@ int NoahPowerboard::SetModulePowerOnOff(powerboard_t *sys)
     }
     else 
     {
+        err_cnt = 0;
         
         if(sys->module_status_set.module & POWER_VSYS_24V_NV)
         {
-            
+
+            ROS_INFO("module %d",sys->module_status_set.module);
+
             this->j.clear();
             this->j = 
             {
@@ -195,7 +207,7 @@ int NoahPowerboard::SetModulePowerOnOff(powerboard_t *sys)
                     "data",
                     {
                         //{"_xx_xxx_state",!(bool)(sys->module_status.module & POWER_5V_EN)},
-                        {"elevator_led_state",!(bool)(sys->module_status.module & POWER_24V_PRINTER)},
+                        {"elevator_led_state",(bool)(sys->module_status.module & POWER_24V_PRINTER)},
                         {"error_code", error},
                     } 
                 }
@@ -347,6 +359,10 @@ int NoahPowerboard::handle_receive_data(powerboard_t *sys)
         memcpy(recv_buf_complete+last_unread_bytes,recv_buf,nread);
         data_Len = last_unread_bytes + nread;
         last_unread_bytes = 0;
+//        for(i = 0; i < data_Len; i++)
+//        {
+//            PowerboardInfo("rcv buf %2x ", recv_buf_complete[last_unread_bytes + i]);
+//        }
 
         while(i<data_Len)
         {
@@ -432,7 +448,7 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
         PowerboardInfo("led receive frame check error");
         return -1;
     }
-    //PowerboardInfo("Powrboard recieve data check OK.");
+//    PowerboardInfo("Powrboard recieve data check OK.");
 #if 0
     for(i =0;i<frame_len;i++)
     {
@@ -454,7 +470,7 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
             PowerboardInfo("color.g is %2x",        sys->rcv_serial_leds_frame.color.g);
             PowerboardInfo("color.b is %2x",        sys->rcv_serial_leds_frame.color.b);
             PowerboardInfo("period is %d",          sys->rcv_serial_leds_frame.period);
-
+#if 0
             this->j.clear();
             this->j = 
             {
@@ -471,17 +487,18 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                 }
             };
             this->pub_json_msg_to_app(this->j);
+#endif
             error = FRAME_TYPE_LEDS_CONTROL;
             break;
 
         case FRAME_TYPE_BAT_STATUS:
             sys->bat_info.cmd = frame_buf[3];
-            PowerboardInfo("sys->bat_info.cmd is %d",sys->bat_info.cmd);
+            //PowerboardInfo("sys->bat_info.cmd is %d",sys->bat_info.cmd);
             if(sys->bat_info.cmd == CMD_BAT_VOLTAGE)
             {
                 sys->bat_info.bat_info = frame_buf[5]<< 8  | frame_buf[4]; 
-                PowerboardInfo("battery voltage is %d",sys->bat_info.bat_info);
-
+                //PowerboardInfo("battery voltage is %d",sys->bat_info.bat_info);
+#if 0
                 this->j.clear();
                 this->j = 
                 {
@@ -494,6 +511,7 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                     }
                 };
                 this->pub_json_msg_to_app(this->j);
+#endif
             }
             if(sys->bat_info.cmd == CMD_BAT_PERCENT)
             {
@@ -502,7 +520,8 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                 {
                     sys->bat_info.bat_info = 100;
                 }
-                PowerboardInfo("battery voltage is %d",sys->bat_info.bat_info);
+                //PowerboardInfo("battery voltage is %d",sys->bat_info.bat_info);
+#if 0
                 this->j.clear();
                 this->j = 
                 {
@@ -515,6 +534,7 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                     }
                 };
                 this->pub_json_msg_to_app(this->j);
+#endif
             }
             error = FRAME_TYPE_BAT_STATUS;
             break;
@@ -530,7 +550,7 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
             PowerboardInfo("_5V_temp        is %d",sys->voltage_info.voltage_data._5V_temp);
             PowerboardInfo("air_temp        is %d",sys->voltage_info.voltage_data.air_temp);
             PowerboardInfo("send_rate       is %d",sys->voltage_info.send_rate);
-
+#if 0
             this->j.clear();
             this->j = 
             {
@@ -552,6 +572,7 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                 }
             };
             this->pub_json_msg_to_app(this->j);
+#endif
             error = FRAME_TYPE_GET_CURRENT;
             break;
 
@@ -563,6 +584,7 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                 memcpy((uint8_t *)&sys->sw_version,&frame_buf[7], SW_VERSION_SIZE);
                 PowerboardInfo("hw version: %s",sys->hw_version);
                 PowerboardInfo("sw version: %s",sys->sw_version);
+#if 0
                 this->j.clear();
                 this->j = 
                 {
@@ -576,12 +598,14 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                     }
                 };
                 this->pub_json_msg_to_app(this->j);
+#endif 
             }
 
             if(sys->get_version_type == VERSION_TYPE_PROTOCOL)
             {
                 memcpy((uint8_t *)&sys->protocol_version,&frame_buf[4], PROTOCOL_VERSION_SIZE);
                 PowerboardInfo("protocol version: %s",sys->protocol_version);
+#if 0
                 this->j.clear();
                 this->j = 
                 {
@@ -594,6 +618,7 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                     }
                 };
                 this->pub_json_msg_to_app(this->j);
+#endif
             }
 
             error = FRAME_TYPE_GET_VERSION;
@@ -604,32 +629,33 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
             switch(sys->sys_status & 0x0f)
             {
                 case SYS_STATUS_OFF:
-                    PowerboardInfo("system status: off");
+                    //PowerboardInfo("system status: off");
                     break;
                 case SYS_STATUS_TURNING_ON:
-                    PowerboardInfo("system status: turning on...");
+                    //PowerboardInfo("system status: turning on...");
                     break;
                 case SYS_STATUS_ON:
-                    PowerboardInfo("system status: on");
+                    //PowerboardInfo("system status: on");
                     break;
                 case SYS_STATUS_TURNING_OFF:
-                    PowerboardInfo("system status:turning off...");
+                    //PowerboardInfo("system status:turning off...");
                     break;
                 case SYS_STATUS_ERR:
-                    PowerboardInfo("system status:error");
+                    //PowerboardInfo("system status:error");
                     break;
                 default:
                     break;
             }
             if(sys->sys_status & STATE_IS_CHARGER_IN)
             {
-                ROS_INFO("charger plug in");
+                //ROS_INFO("charger plug in");
             }
             else
             {
-                ROS_INFO("charger not plug in");
+                //ROS_INFO("charger not plug in");
             }
 
+#if 0
             this->j.clear();
             this->j = 
             {
@@ -642,13 +668,14 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                 }
             };
             this->pub_json_msg_to_app(this->j);
+#endif 
             error = FRAME_TYPE_SYS_STATUS;
             break;
 
         case FRAME_TYPE_IRLED_CONTROL:
             sys->ir_cmd.lightness_percent = frame_buf[3];
             PowerboardInfo("ir lightness is %d",sys->ir_cmd.lightness_percent);
-
+#if 0
             this->j.clear();
             this->j = 
             {
@@ -661,6 +688,7 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                 }
             };
             this->pub_json_msg_to_app(this->j);
+#endif
             error = FRAME_TYPE_IRLED_CONTROL;
             break;
         case FRAME_TYPE_MODULE_CONTROL:
@@ -720,7 +748,7 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                 {
                     PowerboardInfo("hardware not support !");
                 }
-
+#if 0
                 this->j.clear();
                 this->j = 
                 {
@@ -733,7 +761,8 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                     }
                 };
                 this->pub_json_msg_to_app(this->j);
-
+#endif
+#if 0
                 this->j.clear();
                 this->j = 
                 {
@@ -747,6 +776,7 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                     }
                 };
                 this->pub_json_msg_to_app(this->j);
+#endif
                 error = FRAME_TYPE_GET_MODULE_STATE;
                 break; 
             }

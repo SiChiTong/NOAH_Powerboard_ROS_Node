@@ -17,8 +17,8 @@
 
 #include "../include/starline/json.hpp"
 #include "std_msgs/String.h"
-static std::string laser_frames[LASER_NUM] = {"laser_frame_0","laser_frame_1","laser_frame_2","laser_frame_3","laser_frame_4","laser_frame_5",
-										      "laser_frame_6","laser_frame_7","laser_frame_8","laser_frame_9","laser_frame_10","laser_frame_11","laser_frame_12"};
+static std::string laser_frames[LASER_NUM - 3] = {"laser_frame_0","laser_frame_1","laser_frame_2","laser_frame_3","laser_frame_4","laser_frame_5",
+										      "laser_frame_6","laser_frame_7","laser_frame_8","laser_frame_9"};
 
 
 using json = nlohmann::json;
@@ -103,11 +103,15 @@ sensor_msgs::PointCloud2 cloud_out;
 
 	for(int i=0;i<LASER_NUM;i++)
 	{
-	    cloud_out.header.frame_id = laser_frames[i];
-	    float *pstep = (float*)&cloud_out.data[0];
-		pstep[0] = (float)sys->laser_len[i];
-		pstep[1] = 0.0;
-		sys->lasercloud_pub.publish(cloud_out);
+		if(i < LASER_NUM - 3)//bu yao dong
+		{
+			cloud_out.header.frame_id = laser_frames[i];
+			float *pstep = (float*)&cloud_out.data[0];
+			pstep[0] = (float)sys->laser_len[i];
+			pstep[1] = 0.0;
+			sys->lasercloud_pub.publish(cloud_out);
+		}	    
+				
 		sys->laser_data.range.push_back(sys->laser_len[i]);
 	}
 	sys->sensor_pub.publish(sys->laser_data);
