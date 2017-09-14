@@ -57,7 +57,7 @@ int main(int argc, char **argv)
 #if 1  //Get system status
             powerboard.GetSysStatus(sys_powerboard);
             usleep(50*1000);
-            powerboard.PubPower();
+            //powerboard.PubPower();
 #endif
         }
         //powerboard.handle_receive_data(sys_powerboard);

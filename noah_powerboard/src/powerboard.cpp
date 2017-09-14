@@ -149,7 +149,7 @@ begin:
     {
         if(err_cnt++ < COM_ERR_REPEAT_TIME)
         {
-            usleep(20*100); 
+            usleep(50*100); 
             goto begin; 
         }
         ROS_ERROR("com error");
@@ -520,7 +520,7 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                 {
                     sys->bat_info.bat_info = 100;
                 }
-                //PowerboardInfo("battery voltage is %d",sys->bat_info.bat_info);
+               // PowerboardInfo("battery voltage is %d",sys->bat_info.bat_info);
 #if 0
                 this->j.clear();
                 this->j = 
@@ -961,14 +961,22 @@ void NoahPowerboard:: from_navigation_rcv_callback(const std_msgs::String::Const
 void NoahPowerboard::PubPower(void)
 {
     unsigned char power = 0;
-    power = sys_powerboard->sys_status;
-    unsigned char status = sys_powerboard->bat_info.bat_info;
-    //std_msgs::Int8 msg;
+    power = sys_powerboard->bat_info.bat_info;
+    unsigned char status = sys_powerboard->sys_status;    //std_msgs::Int8 msg;
     //msg.data=power;
     std_msgs::UInt8MultiArray bytes_msg;
 
     bytes_msg.data.push_back(power);
     bytes_msg.data.push_back(status);
-    power_pub.publish(bytes_msg);
+    power_pub_to_app.publish(bytes_msg);
 }
-
+void NoahPowerboard::power_from_app_rcv_callback(std_msgs::UInt8MultiArray data)
+{
+   uint8_t value = data.data[0]; 
+   ROS_INFO("power_from_app_rcv_callback");
+   ROS_INFO("data is %d",value);
+   if(value == 0)
+   {
+    this->PubPower();
+   }
+}
