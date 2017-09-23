@@ -52,7 +52,14 @@ typedef enum
     POWER_RECHARGE_LED        = 0x00040000,
     POWER_SLAM                = 0x00080000,
 
-    POWER_ALL                 = 0x001FFFFF,
+
+    POWER_LED_MCU             = 0x00100000,
+    POWER_CHARGE_FAN          = 0x00200000,
+    POWER_POLE_MOTOR          = 0x00400000,
+    POWER_5V_KEYPAD           = 0x00800000,
+    POWER_CAMERA_LED          = 0x01000000,
+
+    POWER_ALL                 = 0x0FFFFFFF,
 
 } module_ctrl_e;
 
@@ -275,7 +282,7 @@ typedef enum
     LIGHTS_MODE_SETTING                 = 0xff,
 }light_mode_t;
 
-#define DEV_PATH                "/dev/noah_powerboard"
+//#define DEV_PATH                "/dev/noah_powerboard"
 extern powerboard_t    *sys_powerboard;
 class NoahPowerboard
 {

@@ -76,6 +76,7 @@ int main(int argc, char **argv)
             //sys_powerboard->led_set.effect = LIGHTS_MODE_SETTING;
             sys_powerboard->led_set.effect = LIGHTS_MODE_DEFAULT;
         }
+        ROS_INFO("Set leds effect is %d",sys_powerboard->led_set.effect);
         powerboard.SetLedEffect(sys_powerboard);
 #endif
 
@@ -129,6 +130,9 @@ int main(int argc, char **argv)
         loop_rate.sleep();
     }
     //close(fd);
-    close(sys_powerboard->device);
+    if(close(sys_powerboard->device) > 0)
+    {
+       // ROS_INFO("Close 
+    }
 
 }

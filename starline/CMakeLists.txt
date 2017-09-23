@@ -30,8 +30,8 @@ generate_messages(
 catkin_package(
     INCLUDE_DIRS
         include
-    LIBRARIES
-        map_server_image_loader
+#    LIBRARIES
+#        map_server_image_loader
     CATKIN_DEPENDS
         roscpp
 		message_runtime

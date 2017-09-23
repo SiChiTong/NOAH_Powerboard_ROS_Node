@@ -97,6 +97,9 @@ uint8_t NoahPowerboard::CalCheckSum(uint8_t *data, uint8_t len)
 
 int NoahPowerboard::SetLedEffect(powerboard_t *powerboard)     // done
 {
+begin:
+    static uint8_t err_cnt = 0;
+
     int error = -1;
     powerboard->send_data_buf[0] = PROTOCOL_HEAD;
     powerboard->send_data_buf[1] = 0x0a;
@@ -111,6 +114,17 @@ int NoahPowerboard::SetLedEffect(powerboard_t *powerboard)     // done
     if((error = this->handle_receive_data(powerboard)) < 0)
     {
         
+        if(err_cnt++ < COM_ERR_REPEAT_TIME)
+        {
+            usleep(500*1000); 
+            ROS_ERROR("Set leds effect start to resend");
+            goto begin; 
+        }
+        ROS_ERROR("Set Leds Effecct : com error !");
+    }
+    else
+    {
+        err_cnt = 0;
     }
     return error;
 }
@@ -149,7 +163,7 @@ begin:
     {
         if(err_cnt++ < COM_ERR_REPEAT_TIME)
         {
-            usleep(50*100); 
+            usleep(50*1000); 
             goto begin; 
         }
         ROS_ERROR("com error");
@@ -465,7 +479,7 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
         case FRAME_TYPE_LEDS_CONTROL:
             //rcv_serial_leds_frame_t rcv_serial_led_frame;
             memcpy((uint8_t *)&sys->rcv_serial_leds_frame, &frame_buf[3], sizeof(rcv_serial_leds_frame_t) );
-            PowerboardInfo("cur_light_mode is %d", sys->rcv_serial_leds_frame.cur_light_mode );
+            PowerboardInfo("Get leds mode is %d", sys->rcv_serial_leds_frame.cur_light_mode );
             PowerboardInfo("color.r is %2x",       sys->rcv_serial_leds_frame.color.r);
             PowerboardInfo("color.g is %2x",        sys->rcv_serial_leds_frame.color.g);
             PowerboardInfo("color.b is %2x",        sys->rcv_serial_leds_frame.color.b);
@@ -924,32 +938,32 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
 void NoahPowerboard:: from_navigation_rcv_callback(const std_msgs::String::ConstPtr &msg)
 {
     int value = atoi(msg->data.c_str());
-    ROS_INFO("value is %d",value);
+    ROS_INFO("camera led ctrl:value is %d",value);
     ROS_INFO("%s",msg->data.c_str());
     switch(value)
     {
         case 0:
-            ROS_INFO("get 00"); 
+            ROS_INFO("camera led ctrl:get 00"); 
             sys_powerboard->module_status_set.on_off = MODULE_CTRL_OFF; 
-            sys_powerboard->module_status_set.module = POWER_24V_PRINTER; 
+            sys_powerboard->module_status_set.module = POWER_CAMERA_LED; 
             this->SetModulePowerOnOff(sys_powerboard);
             break;
         case 1:
-            ROS_INFO("get 01"); 
+            ROS_INFO("camera led ctrl:get 01"); 
             sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON; 
-            sys_powerboard->module_status_set.module = POWER_24V_PRINTER; 
+            sys_powerboard->module_status_set.module = POWER_CAMERA_LED; 
             this->SetModulePowerOnOff(sys_powerboard);
             break;
         case 10:
-            ROS_INFO("get 10"); 
+            ROS_INFO("camera led ctrl:get 10"); 
             sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON; 
-            sys_powerboard->module_status_set.module = POWER_24V_PRINTER; 
+            sys_powerboard->module_status_set.module = POWER_CAMERA_LED; 
             this->SetModulePowerOnOff(sys_powerboard);
             break;
         case 11:
-            ROS_INFO("get 11"); 
+            ROS_INFO("camera led ctrl:get 11"); 
             sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON; 
-            sys_powerboard->module_status_set.module = POWER_24V_PRINTER; 
+            sys_powerboard->module_status_set.module = POWER_CAMERA_LED; 
             this->SetModulePowerOnOff(sys_powerboard);
             break;
         default :

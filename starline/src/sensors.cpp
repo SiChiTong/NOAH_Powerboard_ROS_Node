@@ -17,6 +17,7 @@
 
 #include "../include/starline/json.hpp"
 #include "std_msgs/String.h"
+#include "std_msgs/UInt8MultiArray.h" 
 static std::string laser_frames[LASER_NUM - 3] = {"laser_frame_0","laser_frame_1","laser_frame_2","laser_frame_3","laser_frame_4","laser_frame_5",
 										      "laser_frame_6","laser_frame_7","laser_frame_8","laser_frame_9"};
 
@@ -28,6 +29,8 @@ static int sensor_over_time_flag = 0;
 static int last_unread_bytes = 0;
 static unsigned char recv_buf_last[BUF_LEN] = {0};
 ros::Publisher hall_pub;
+ros::Subscriber sub_from_sensor;
+ros::Subscriber sub_from_hall;
 //laser data:mm to m
 static inline double restore_laser_len(unsigned char *buf)
 {
@@ -96,9 +99,6 @@ sensor_msgs::PointCloud2 cloud_out;
 	cloud_out.row_step   = cloud_out.point_step * cloud_out.width;
 	cloud_out.data.resize (cloud_out.row_step   * cloud_out.height);
 	cloud_out.is_dense = false;
-
-
-
 
 
 	for(int i=0;i<LASER_NUM;i++)
@@ -901,7 +901,37 @@ static int check_com_rssi(int send_num,sensor_sys_t *sys)
     }
     return 0;
 }
+void sub_from_hall_cb(std_msgs::UInt8MultiArray data)
+{
+    uint8_t j;
+    for(j = 0; j < HALL_NUM; j++)
+    {
+        //if((frame_buf[3+SONAR_NUM+LASER_NUM+j] == 1)&& (frame_buf[3+SONAR_NUM+LASER_NUM+j] == 0))
+        {
+            sensor_sys.hall_state[j] = data.data[j];
+            ROS_INFO("hall %d state is %d",j, data.data[j]);
+        }
+    }
+    pub_hall_data(&sensor_sys);
+}
+void sub_from_sensor_cb(std_msgs::UInt8MultiArray data)
+{
+    uint8_t j;
+    sensor_sys.infrared_flag = 0;// ?????????????????? 
 
+    ROS_INFO("sensor 0x03!!!!!");
+    for(j = 0;j < LASER_NUM;j++)
+    {
+        sensor_sys.laser_len[j] = restore_sensor_data(&data.data[j]);
+        //ROS_INFO("sensor receive:%d",sys->laser_len[j]);
+    }
+    pub_laser_data(&sensor_sys);
+    for(j = 0;j < SONAR_NUM;j++)
+    {
+        sensor_sys.sonar_len[j] = restore_sensor_data(&data.data[LASER_NUM+j]);
+    }
+    pub_sonar_data(&sensor_sys);
+}
 void *sensor_thread_start(void *)
 {
     int send_num = 0;
@@ -919,7 +949,8 @@ void *sensor_thread_start(void *)
     sensor_sys.lasercloud_pub = nh.advertise<sensor_msgs::PointCloud2>("lasercloud", 50, true);
 	sensor_sys.sensor_pub = nh.advertise<SensorMsg>("sensor_msg", 2, true);
     hall_pub = nh.advertise<std_msgs::String>("hall_msg",20);
-
+    sub_from_sensor = nh.subscribe("sensor_to_starline_node",1000,sub_from_sensor_cb);
+    sub_from_hall = nh.subscribe("hall_to_starline_node",1000,sub_from_hall_cb);
     while(ros::ok()) 
     {  
         ROS_INFO("ros OK!!");
