@@ -309,7 +309,7 @@ static int handle_receive_data(sensor_sys_t *sys)
 
 	struct stat file_info;
 
-    ROS_INFO("in FUNC   !!!!");
+    //ROS_INFO("in FUNC   !!!!");
     
     if(NULL == sys)
     {
@@ -318,7 +318,7 @@ static int handle_receive_data(sensor_sys_t *sys)
     }
     if(COM_RUN_OK != sys->com_state && COM_CHECK_VERSION != sys->com_state)
     {
-        ROS_INFO("sensor_handle_receive_data: com_state != COM_RUN_OK && COM_CHECK_VERSION");
+        //ROS_INFO("sensor_handle_receive_data: com_state != COM_RUN_OK && COM_CHECK_VERSION");
         return -1;
     }
     if(0 != last_unread_bytes)
@@ -512,7 +512,7 @@ static void update_system_state(sensor_sys_t *sys)
             {
                 if(-1 != last_file_flag)
                 {
-                    ROS_INFO("sensors com device does not exist\n");
+                    //ROS_INFO("sensors com device does not exist\n");
                 }
                 last_file_flag = i;
                 return;
@@ -906,7 +906,7 @@ void sub_from_hall_cb(std_msgs::UInt8MultiArray data)
     uint8_t j;
     for(j = 0; j < HALL_NUM; j++)
     {
-        //if((frame_buf[3+SONAR_NUM+LASER_NUM+j] == 1)&& (frame_buf[3+SONAR_NUM+LASER_NUM+j] == 0))
+        //if((frame_buf[3+SONAR_NUM+LASER_NUM+j] == 1) || (frame_buf[3+SONAR_NUM+LASER_NUM+j] == 0))
         {
             sensor_sys.hall_state[j] = data.data[j];
             ROS_INFO("hall %d state is %d",j, data.data[j]);
@@ -953,10 +953,10 @@ void *sensor_thread_start(void *)
     sub_from_hall = nh.subscribe("hall_to_starline_node",1000,sub_from_hall_cb);
     while(ros::ok()) 
     {  
-        ROS_INFO("ros OK!!");
+        //ROS_INFO("ros OK!!");
         if(0 == sensor_sys.upgrade_status)
         {
-            update_system_state(&sensor_sys);
+            update_system_state(&sensor_sys);//
             handle_receive_data(&sensor_sys);
             if(COM_RUN_OK == sensor_sys.com_state)
             {
