@@ -130,7 +130,7 @@ begin:
 }
 int NoahPowerboard::GetBatteryInfo(powerboard_t *sys)      // done
 {
-    int error = -1;
+    int error = 0;
     sys->send_data_buf[0] = PROTOCOL_HEAD;
     sys->send_data_buf[1] = 6;
     sys->send_data_buf[2] = FRAME_TYPE_BAT_STATUS;
@@ -138,8 +138,10 @@ int NoahPowerboard::GetBatteryInfo(powerboard_t *sys)      // done
     sys->send_data_buf[4] = this->CalCheckSum(sys->send_data_buf, 4);
     sys->send_data_buf[5] = PROTOCOL_TAIL;
     this->send_serial_data(sys);
+#if 0
     usleep(TEST_WAIT_TIME);
     error = this->handle_receive_data(sys);
+#endif
     return error;
 }
 int NoahPowerboard::SetModulePowerOnOff(powerboard_t *sys)
@@ -297,7 +299,7 @@ int NoahPowerboard::GetVersion(powerboard_t *sys)      // done
 
 int NoahPowerboard::GetSysStatus(powerboard_t *sys)     // done
 {
-    int error = -1;
+    int error = 0;
     sys->send_data_buf[0] = PROTOCOL_HEAD;
     sys->send_data_buf[1] = 6;
     sys->send_data_buf[2] = FRAME_TYPE_SYS_STATUS;
@@ -305,6 +307,7 @@ int NoahPowerboard::GetSysStatus(powerboard_t *sys)     // done
     sys->send_data_buf[4] = this->CalCheckSum(sys->send_data_buf, 4);
     sys->send_data_buf[5] = PROTOCOL_TAIL;
     this->send_serial_data(sys);
+#if 0
     usleep(TEST_WAIT_TIME);
     error = this->handle_receive_data(sys);
     if(error < 0)
@@ -314,6 +317,7 @@ int NoahPowerboard::GetSysStatus(powerboard_t *sys)     // done
     else
     {
     }
+#endif
     return error;
 }
 
@@ -639,7 +643,8 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
             break;
 
         case FRAME_TYPE_SYS_STATUS:
-            sys->sys_status = frame_buf[4];
+            sys->sys_status = (frame_buf[4]) | (frame_buf[5] << 8);
+            ROS_INFO("sys_status is :%04x",sys->sys_status);
             switch(sys->sys_status & 0x0f)
             {
                 case SYS_STATUS_OFF:
@@ -660,13 +665,24 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                 default:
                     break;
             }
-            if(sys->sys_status & STATE_IS_CHARGER_IN)
+            if(sys->sys_status & STATE_IS_CHARGER_IN )
             {
-                //ROS_INFO("charger plug in");
+                ROS_INFO("charger plug in");
             }
             else
             {
-                //ROS_INFO("charger not plug in");
+                ROS_INFO("charger not plug in");
+            }
+
+            if(sys->sys_status & STATE_IS_RECHARGE_IN )
+            {
+                ROS_INFO("recharger plug in");
+                this->PubChargeStatus(1);
+            }
+            else
+            {
+                ROS_INFO("recharger not plug in");
+                this->PubChargeStatus(0);
             }
 
 #if 0
@@ -994,3 +1010,21 @@ void NoahPowerboard::power_from_app_rcv_callback(std_msgs::UInt8MultiArray data)
     this->PubPower();
    }
 }
+
+void NoahPowerboard::PubChargeStatus(uint8_t status)
+{
+    static uint8_t last_status = 0;
+    std_msgs::UInt8MultiArray data;
+    if(last_status != status)
+    {
+        data.data.push_back(status);
+        pub_charge_status_to_move_base.publish(data);
+        last_status = status;
+    }
+
+}
+
+
+
+
+

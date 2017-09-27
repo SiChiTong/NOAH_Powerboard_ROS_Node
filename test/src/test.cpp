@@ -64,7 +64,7 @@ int main(int argc, char **argv)
     ros::Publisher test_navigation_pub = n.advertise<std_msgs::String>("lane_follower_node/camera_using_n",1000);
     ros::Subscriber test_sub = n.subscribe("tx_noah_powerboard_node", 1000, &callback);
     ros::Publisher test_power_pub = n.advertise<std_msgs::UInt8MultiArray>("app_pub_power",1000);
-    ros::Rate loop_rate(0.3);
+    ros::Rate loop_rate(2);
     json j;
     static uint32_t cnt = 0;
     static uint8_t flag = 0;
@@ -83,7 +83,7 @@ int main(int argc, char **argv)
 
                // flag = 1;
 
-#if 0
+#if 1
 
                 std_msgs::String led;
                 if(cnt % 4 == 0)

@@ -257,7 +257,10 @@ typedef struct
 #define                 STATE_IS_AUTO_UPLOAD    0x40
 #define                 STATE_IS_CHARGER_IN     0x80
 #define                 SYSTEM_IS_SLEEP         0x00 //set 0x00 to no use
-    uint8_t                     sys_status;
+
+#define                 STATE_IS_RECHARGE_IN    0x0100
+
+    uint16_t                     sys_status;
 
     ir_cmd_t                    ir_cmd;
     module_ctrl_t               module_status_set;
@@ -290,6 +293,7 @@ class NoahPowerboard
         NoahPowerboard()
         {
             noah_powerboard_pub = n.advertise<std_msgs::String>("tx_noah_powerboard_node",1000);
+            pub_charge_status_to_move_base = n.advertise<std_msgs::UInt8MultiArray>("charge_status_to_move_base",1000);
             resp_navigation_camera_leds = n.advertise<std_msgs::String>("resp_lane_follower_node/camera_using_n",1000);
             power_pub_to_app = n.advertise<std_msgs::UInt8MultiArray>("app_sub_power",1);
             power_sub_from_app = n.subscribe("app_pub_power",1000,&NoahPowerboard::power_from_app_rcv_callback,this);
@@ -312,6 +316,7 @@ class NoahPowerboard
         void from_navigation_rcv_callback(const std_msgs::String::ConstPtr &msg);
         void power_from_app_rcv_callback(std_msgs::UInt8MultiArray data);
         void PubPower(void);
+        void PubChargeStatus(uint8_t status);
 
     private:
         uint8_t CalCheckSum(uint8_t *data, uint8_t len);
@@ -323,6 +328,7 @@ class NoahPowerboard
         ros::Publisher resp_navigation_camera_leds;
         ros::Publisher power_pub_to_app;
         ros::Subscriber power_sub_from_app;
+        ros::Publisher pub_charge_status_to_move_base;
         json j;
         void pub_json_msg_to_app(const nlohmann::json j_msg);
 
