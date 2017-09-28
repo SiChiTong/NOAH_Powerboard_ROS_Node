@@ -515,7 +515,7 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
             if(sys->bat_info.cmd == CMD_BAT_VOLTAGE)
             {
                 sys->bat_info.bat_info = frame_buf[5]<< 8  | frame_buf[4]; 
-                //PowerboardInfo("battery voltage is %d",sys->bat_info.bat_info);
+                PowerboardInfo("battery voltage is %d",sys->bat_info.bat_info);
 #if 0
                 this->j.clear();
                 this->j = 
@@ -538,7 +538,7 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                 {
                     sys->bat_info.bat_info = 100;
                 }
-               // PowerboardInfo("battery voltage is %d",sys->bat_info.bat_info);
+                PowerboardInfo("battery voltage is %d",sys->bat_info.bat_info);
 #if 0
                 this->j.clear();
                 this->j = 
