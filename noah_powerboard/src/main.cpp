@@ -25,7 +25,7 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "noah_powerboard_node");
     NoahPowerboard  powerboard;
-    ros::Rate loop_rate(10);
+    ros::Rate loop_rate(100);
     uint32_t cnt = 0;
     powerboard.PowerboardParamInit();
 
@@ -46,18 +46,19 @@ int main(int argc, char **argv)
     while(ros::ok())
     {
         cnt++;
-        if(cnt % 20 == 10)
+        powerboard.handle_receive_data(sys_powerboard);
+        if(cnt % 200 == 50)
         {
             
 #if 1   //Get battery info test function
             sys_powerboard->bat_info.cmd = 2; 
             powerboard.GetBatteryInfo(sys_powerboard);
-            usleep(10*1000);
 #endif
+        }
+        if(cnt % 200 == 150)
+        {
 #if 1  //Get system status
             powerboard.GetSysStatus(sys_powerboard);
-            usleep(50*1000);
-            //powerboard.PubPower();
 #endif
         }
         //powerboard.handle_receive_data(sys_powerboard);
@@ -76,6 +77,7 @@ int main(int argc, char **argv)
             //sys_powerboard->led_set.effect = LIGHTS_MODE_SETTING;
             sys_powerboard->led_set.effect = LIGHTS_MODE_DEFAULT;
         }
+        ROS_INFO("Set leds effect is %d",sys_powerboard->led_set.effect);
         powerboard.SetLedEffect(sys_powerboard);
 #endif
 
@@ -129,6 +131,9 @@ int main(int argc, char **argv)
         loop_rate.sleep();
     }
     //close(fd);
-    close(sys_powerboard->device);
+    if(close(sys_powerboard->device) > 0)
+    {
+       // ROS_INFO("Close 
+    }
 
 }
