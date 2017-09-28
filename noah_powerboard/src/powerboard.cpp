@@ -97,9 +97,6 @@ uint8_t NoahPowerboard::CalCheckSum(uint8_t *data, uint8_t len)
 
 int NoahPowerboard::SetLedEffect(powerboard_t *powerboard)     // done
 {
-begin:
-    static uint8_t err_cnt = 0;
-
     int error = -1;
     powerboard->send_data_buf[0] = PROTOCOL_HEAD;
     powerboard->send_data_buf[1] = 0x0a;
@@ -114,23 +111,12 @@ begin:
     if((error = this->handle_receive_data(powerboard)) < 0)
     {
         
-        if(err_cnt++ < COM_ERR_REPEAT_TIME)
-        {
-            usleep(500*1000); 
-            ROS_ERROR("Set leds effect start to resend");
-            goto begin; 
-        }
-        ROS_ERROR("Set Leds Effecct : com error !");
-    }
-    else
-    {
-        err_cnt = 0;
     }
     return error;
 }
 int NoahPowerboard::GetBatteryInfo(powerboard_t *sys)      // done
 {
-    int error = 0;
+    int error = -1;
     sys->send_data_buf[0] = PROTOCOL_HEAD;
     sys->send_data_buf[1] = 6;
     sys->send_data_buf[2] = FRAME_TYPE_BAT_STATUS;
@@ -138,10 +124,8 @@ int NoahPowerboard::GetBatteryInfo(powerboard_t *sys)      // done
     sys->send_data_buf[4] = this->CalCheckSum(sys->send_data_buf, 4);
     sys->send_data_buf[5] = PROTOCOL_TAIL;
     this->send_serial_data(sys);
-#if 0
     usleep(TEST_WAIT_TIME);
     error = this->handle_receive_data(sys);
-#endif
     return error;
 }
 int NoahPowerboard::SetModulePowerOnOff(powerboard_t *sys)
@@ -165,7 +149,7 @@ begin:
     {
         if(err_cnt++ < COM_ERR_REPEAT_TIME)
         {
-            usleep(50*1000); 
+            usleep(50*100); 
             goto begin; 
         }
         ROS_ERROR("com error");
@@ -299,7 +283,7 @@ int NoahPowerboard::GetVersion(powerboard_t *sys)      // done
 
 int NoahPowerboard::GetSysStatus(powerboard_t *sys)     // done
 {
-    int error = 0;
+    int error = -1;
     sys->send_data_buf[0] = PROTOCOL_HEAD;
     sys->send_data_buf[1] = 6;
     sys->send_data_buf[2] = FRAME_TYPE_SYS_STATUS;
@@ -307,7 +291,6 @@ int NoahPowerboard::GetSysStatus(powerboard_t *sys)     // done
     sys->send_data_buf[4] = this->CalCheckSum(sys->send_data_buf, 4);
     sys->send_data_buf[5] = PROTOCOL_TAIL;
     this->send_serial_data(sys);
-#if 0
     usleep(TEST_WAIT_TIME);
     error = this->handle_receive_data(sys);
     if(error < 0)
@@ -317,7 +300,6 @@ int NoahPowerboard::GetSysStatus(powerboard_t *sys)     // done
     else
     {
     }
-#endif
     return error;
 }
 
@@ -483,7 +465,7 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
         case FRAME_TYPE_LEDS_CONTROL:
             //rcv_serial_leds_frame_t rcv_serial_led_frame;
             memcpy((uint8_t *)&sys->rcv_serial_leds_frame, &frame_buf[3], sizeof(rcv_serial_leds_frame_t) );
-            PowerboardInfo("Get leds mode is %d", sys->rcv_serial_leds_frame.cur_light_mode );
+            PowerboardInfo("cur_light_mode is %d", sys->rcv_serial_leds_frame.cur_light_mode );
             PowerboardInfo("color.r is %2x",       sys->rcv_serial_leds_frame.color.r);
             PowerboardInfo("color.g is %2x",        sys->rcv_serial_leds_frame.color.g);
             PowerboardInfo("color.b is %2x",        sys->rcv_serial_leds_frame.color.b);
@@ -515,7 +497,7 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
             if(sys->bat_info.cmd == CMD_BAT_VOLTAGE)
             {
                 sys->bat_info.bat_info = frame_buf[5]<< 8  | frame_buf[4]; 
-                PowerboardInfo("battery voltage is %d",sys->bat_info.bat_info);
+                //PowerboardInfo("battery voltage is %d",sys->bat_info.bat_info);
 #if 0
                 this->j.clear();
                 this->j = 
@@ -538,7 +520,7 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                 {
                     sys->bat_info.bat_info = 100;
                 }
-                PowerboardInfo("battery voltage is %d",sys->bat_info.bat_info);
+               // PowerboardInfo("battery voltage is %d",sys->bat_info.bat_info);
 #if 0
                 this->j.clear();
                 this->j = 
@@ -643,8 +625,7 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
             break;
 
         case FRAME_TYPE_SYS_STATUS:
-            sys->sys_status = (frame_buf[4]) | (frame_buf[5] << 8);
-            ROS_INFO("sys_status is :%04x",sys->sys_status);
+            sys->sys_status = frame_buf[4];
             switch(sys->sys_status & 0x0f)
             {
                 case SYS_STATUS_OFF:
@@ -665,24 +646,13 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                 default:
                     break;
             }
-            if(sys->sys_status & STATE_IS_CHARGER_IN )
+            if(sys->sys_status & STATE_IS_CHARGER_IN)
             {
-                ROS_INFO("charger plug in");
+                //ROS_INFO("charger plug in");
             }
             else
             {
-                ROS_INFO("charger not plug in");
-            }
-
-            if(sys->sys_status & STATE_IS_RECHARGE_IN )
-            {
-                ROS_INFO("recharger plug in");
-                this->PubChargeStatus(1);
-            }
-            else
-            {
-                ROS_INFO("recharger not plug in");
-                this->PubChargeStatus(0);
+                //ROS_INFO("charger not plug in");
             }
 
 #if 0
@@ -954,32 +924,32 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
 void NoahPowerboard:: from_navigation_rcv_callback(const std_msgs::String::ConstPtr &msg)
 {
     int value = atoi(msg->data.c_str());
-    ROS_INFO("camera led ctrl:value is %d",value);
+    ROS_INFO("value is %d",value);
     ROS_INFO("%s",msg->data.c_str());
     switch(value)
     {
         case 0:
-            ROS_INFO("camera led ctrl:get 00"); 
+            ROS_INFO("get 00"); 
             sys_powerboard->module_status_set.on_off = MODULE_CTRL_OFF; 
-            sys_powerboard->module_status_set.module = POWER_CAMERA_LED; 
+            sys_powerboard->module_status_set.module = POWER_24V_PRINTER; 
             this->SetModulePowerOnOff(sys_powerboard);
             break;
         case 1:
-            ROS_INFO("camera led ctrl:get 01"); 
+            ROS_INFO("get 01"); 
             sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON; 
-            sys_powerboard->module_status_set.module = POWER_CAMERA_LED; 
+            sys_powerboard->module_status_set.module = POWER_24V_PRINTER; 
             this->SetModulePowerOnOff(sys_powerboard);
             break;
         case 10:
-            ROS_INFO("camera led ctrl:get 10"); 
+            ROS_INFO("get 10"); 
             sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON; 
-            sys_powerboard->module_status_set.module = POWER_CAMERA_LED; 
+            sys_powerboard->module_status_set.module = POWER_24V_PRINTER; 
             this->SetModulePowerOnOff(sys_powerboard);
             break;
         case 11:
-            ROS_INFO("camera led ctrl:get 11"); 
+            ROS_INFO("get 11"); 
             sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON; 
-            sys_powerboard->module_status_set.module = POWER_CAMERA_LED; 
+            sys_powerboard->module_status_set.module = POWER_24V_PRINTER; 
             this->SetModulePowerOnOff(sys_powerboard);
             break;
         default :
@@ -1010,21 +980,3 @@ void NoahPowerboard::power_from_app_rcv_callback(std_msgs::UInt8MultiArray data)
     this->PubPower();
    }
 }
-
-void NoahPowerboard::PubChargeStatus(uint8_t status)
-{
-    static uint8_t last_status = 0;
-    std_msgs::UInt8MultiArray data;
-    if(last_status != status)
-    {
-        data.data.push_back(status);
-        pub_charge_status_to_move_base.publish(data);
-        last_status = status;
-    }
-
-}
-
-
-
-
-
