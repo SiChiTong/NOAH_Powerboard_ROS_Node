@@ -23,7 +23,6 @@ include_directories(
 
 add_executable( noah_powerboard_node
     src/main.cpp
-	src/uart.cpp
 	src/powerboard.cpp
 )
 target_link_libraries(noah_powerboard_node
