@@ -1,6 +1,7 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include "std_msgs/UInt8MultiArray.h" 
+#include "pthread.h"
 #include <math.h>
 #include <stdio.h>     
 #include <stdlib.h>     
@@ -13,7 +14,8 @@
 #include <string.h>
 #include <time.h>
 #include <signal.h>
-#include "iostream"
+#include <iostream>
+#include <vector>
 #include "stdlib.h"
 #include "cstdlib"
 #include "string"
@@ -21,6 +23,10 @@
 #include "../include/noah_powerboard/powerboard.h"
 #include <boost/thread/thread.hpp>
 #include <boost/thread/mutex.hpp>
+#include <mrobot_driver_msgs/vci_can.h>
+//#include <roscan/can_long_frame.h>
+#include <can_long_frame.h>
+
 #define TEST_WAIT_TIME     90*1000
 
 #define PowerboardInfo     ROS_INFO
@@ -29,10 +35,54 @@ static int led_over_time_flag = 0;
 static int last_unread_bytes = 0;
 static unsigned char recv_buf_last[BUF_LEN] = {0};
 
-//powerboard_t    sys_powerboard_ram; 
-//powerboard_t    *sys_powerboard = &sys_powerboard_ram;
 
-//extern NoahPowerboard  powerboard;
+vector<module_ctrl_t> module_set_vector(10);
+void test_fun(void)
+{
+    module_ctrl_t param;  
+    static uint8_t cnt = 0;
+    param.module = POWER_5V_EN;
+    param.group_num = 1;
+    if(cnt++ % 2)
+    {
+        param.on_off = 0;
+    }
+    else
+    {
+        param.on_off = 1;
+    }
+
+    module_set_vector.push_back(param);
+}
+
+class NoahPowerboard;
+//extern NoahPowerboard powerboard;
+void *CanProtocolProcess(void* arg)
+{
+    
+    while(ros::ok())
+    {
+        if(!module_set_vector.empty()) 
+        {   
+            auto a = module_set_vector.begin(); 
+            module_ctrl_t module_set;
+            module_set = *a;
+           // powerboard_t    sys_powerboard;
+            module_set_vector.erase(module_set_vector.begin());
+            ROS_INFO("get set module cmd");
+            ROS_INFO("module_set_param.module = %x",module_set.module);
+            ROS_INFO("module_set_param.group_num = %d",module_set.group_num);
+            ROS_INFO("module_set_param.on_off = %d",module_set.on_off);
+            (*(NoahPowerboard*)arg).sys_powerboard->module_status_set.module = module_set.module;
+            (*(NoahPowerboard*)arg).sys_powerboard->module_status_set.on_off = module_set.on_off;
+            (*(NoahPowerboard*)arg).sys_powerboard->module_status_set.module = module_set.module;
+            (*(NoahPowerboard*)arg).SetModulePowerOnOff((*(NoahPowerboard*)arg).sys_powerboard);
+        }
+        usleep(5000);
+    }
+}
+
+
 int NoahPowerboard::PowerboardParamInit(void)
 {
     sys_powerboard->led_set.effect = LIGHTS_MODE_DEFAULT;
@@ -110,18 +160,34 @@ int NoahPowerboard::SetModulePowerOnOff(powerboard_t *sys)
 begin:
     static uint8_t err_cnt = 0;
     int error = -1; 
-    uint8_t   send_data_buf[SEND_DATA_BUF_LEN];
-//    boost::mutex io_mutex;
-//    boost::mutex::scoped_lock lock(io_mutex);
-    send_data_buf[0] = PROTOCOL_HEAD;
-    send_data_buf[1] = 10;
-    send_data_buf[2] = FRAME_TYPE_MODULE_CONTROL;
-    memcpy(&sys->send_data_buf[3],(uint8_t *)&sys->module_status_set.module, 4 );
-    send_data_buf[7] = sys->module_status_set.on_off;
-    send_data_buf[8] = this->CalCheckSum(sys->send_data_buf, 8);
-    send_data_buf[9] = PROTOCOL_TAIL;
-    this->send_serial_data(sys);
-    usleep(TEST_WAIT_TIME);
+
+
+
+    mrobot_driver_msgs::vci_can can_msg;
+    CAN_ID_UNION id;
+    memset(&id, 0x0, sizeof(CAN_ID_UNION));
+    id.CanID_Struct.SourceID = CAN_SOURCE_ID_SET_MODULE_STATE;
+    id.CanID_Struct.SrcMACID = 0;//CAN_SUB_PB_SRC_ID;
+    id.CanID_Struct.DestMACID = NOAH_POWERBOARD_CAN_SRCMAC_ID;
+    id.CanID_Struct.FUNC_ID = 0x02;
+    id.CanID_Struct.ACK = 0;
+    id.CanID_Struct.res = 0;
+
+    //    ROS_INFO("Set Module State id: 0x%08x", id.CANx_ID);
+    can_msg.ID = id.CANx_ID;
+    can_msg.DataLen = 8;
+    can_msg.Data.resize(8);
+    can_msg.Data[0] = 0x00;
+    can_msg.Data[1] = 0;//reserve
+    can_msg.Data[2] = 1;///group_num;
+    uint32_t state = sys->module_status_set.module;
+    *(uint32_t *)&can_msg.Data[3] = state;
+    can_msg.Data[7] = sys->module_status_set.on_off;   
+    this->pub_to_can_node_pub.publish(can_msg);
+
+
+#if 0
+
     error = this->handle_receive_data(sys);
     if(error < 0)
     {
@@ -198,6 +264,7 @@ begin:
             
         }
     }
+#endif
     return error;
 }
 

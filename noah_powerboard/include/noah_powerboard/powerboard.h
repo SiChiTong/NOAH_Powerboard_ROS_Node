@@ -1,6 +1,8 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include "json.hpp"
+#include <mrobot_driver_msgs/vci_can.h>
+
 using json = nlohmann::json;
 #ifndef LED_H
 #define LED_H
@@ -23,6 +25,30 @@ using json = nlohmann::json;
 #define FRAME_TYPE_GET_VERSION          0x0e
 
 #define COM_ERR_REPEAT_TIME             3 
+
+
+
+#define NOAH_POWERBOARD_CAN_SRCMAC_ID   0x52
+
+//////  function id define  //////
+#define CAN_FUN_ID_RESET        0x06
+#define CAN_FUN_ID_WRITE        0x01
+#define CAN_FUN_ID_READ         0x02
+#define CAN_FUN_ID_TRIGGER      0x03
+
+
+//////  source id define  //////
+#define CAN_SOURCE_ID_READ_VERSION      0x01
+
+#define CAN_SOURCE_ID_SET_MODULE_STATE      0x81
+#define CAN_SOURCE_ID_GET_MODULE_STATE      0x82
+#define CAN_SOURCE_ID_GET_SYS_STATE         0x83
+#define CAN_SOURCE_ID_GET_ERR_STATE         0x84
+#define CAN_SOURCE_ID_GET_BAT_STATE         0x85
+#define CAN_SOURCE_ID_GET_ADC_DATA          0x86
+#define CAN_SOURCE_ID_SET_IR_LED_LIGHTNESS  0x87
+#define CAN_SOURCE_ID_GET_IR_LED_LIGHTNESS  0x88
+
 
 typedef enum
 {
@@ -68,6 +94,7 @@ typedef struct
 #define MODULE_CTRL_ON      1  
 #define MODULE_CTRL_OFF     0 
     uint8_t     on_off;
+    uint8_t     group_num;
 #define HW_NO_SUPPORT         0xFFFFFFFF
     volatile uint32_t    module;
 } module_ctrl_t;
@@ -300,6 +327,7 @@ class NoahPowerboard
             noah_powerboard_sub = n.subscribe("rx_noah_powerboard_node",1000,&NoahPowerboard::from_app_rcv_callback,this);
             sub_navigation_camera_leds = n.subscribe("lane_follower_node/camera_using_n",1000,&NoahPowerboard::from_navigation_rcv_callback,this);
             
+            pub_to_can_node_pub = n.advertise<mrobot_driver_msgs::vci_can>("noah_powerboard_to_can", 1000);
         sys_powerboard = &sys_powerboard_ram;
         }
         int PowerboardParamInit(void);
@@ -318,6 +346,8 @@ class NoahPowerboard
         void power_from_app_rcv_callback(std_msgs::UInt8MultiArray data);
         void PubPower(void);
         void PubChargeStatus(uint8_t status);
+        
+
         powerboard_t    *sys_powerboard;
 
     private:
@@ -331,6 +361,7 @@ class NoahPowerboard
         ros::Publisher power_pub_to_app;
         ros::Subscriber power_sub_from_app;
         ros::Publisher pub_charge_status_to_move_base;
+        ros::Publisher pub_to_can_node_pub;//publish to roscan node
         json j;
         void pub_json_msg_to_app(const nlohmann::json j_msg);
         powerboard_t    sys_powerboard_ram; 
@@ -338,6 +369,17 @@ class NoahPowerboard
 };
 int handle_receive_data(powerboard_t *sys);
 
+void *CanProtocolProcess(void* arg);
+
+void test_fun(void);
+
+typedef struct
+{
+    uint8_t reserve;
+    uint8_t group_num;
+    uint8_t module;
+    uint8_t on_off;
+}module_set_t;
 #endif
 
 
