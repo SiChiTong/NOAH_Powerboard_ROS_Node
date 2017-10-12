@@ -2,6 +2,7 @@
 #include "std_msgs/String.h"
 #include "json.hpp"
 #include <mrobot_driver_msgs/vci_can.h>
+#include <can_long_frame.h>
 
 using json = nlohmann::json;
 #ifndef LED_H
@@ -327,7 +328,8 @@ class NoahPowerboard
             noah_powerboard_sub = n.subscribe("rx_noah_powerboard_node",1000,&NoahPowerboard::from_app_rcv_callback,this);
             sub_navigation_camera_leds = n.subscribe("lane_follower_node/camera_using_n",1000,&NoahPowerboard::from_navigation_rcv_callback,this);
             
-            pub_to_can_node_pub = n.advertise<mrobot_driver_msgs::vci_can>("noah_powerboard_to_can", 1000);
+            pub_to_can_node = n.advertise<mrobot_driver_msgs::vci_can>("noah_powerboard_to_can", 1000);
+            sub_from_can_node = n.subscribe("can_to_noah_powerboard", 1000, &NoahPowerboard::rcv_from_can_node_callback, this);
         sys_powerboard = &sys_powerboard_ram;
         }
         int PowerboardParamInit(void);
@@ -346,9 +348,12 @@ class NoahPowerboard
         void power_from_app_rcv_callback(std_msgs::UInt8MultiArray data);
         void PubPower(void);
         void PubChargeStatus(uint8_t status);
+
+        void rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::ConstPtr &c_msg);
         
 
         powerboard_t    *sys_powerboard;
+        can_long_frame  long_frame;
 
     private:
         uint8_t CalCheckSum(uint8_t *data, uint8_t len);
@@ -361,7 +366,8 @@ class NoahPowerboard
         ros::Publisher power_pub_to_app;
         ros::Subscriber power_sub_from_app;
         ros::Publisher pub_charge_status_to_move_base;
-        ros::Publisher pub_to_can_node_pub;//publish to roscan node
+        ros::Publisher pub_to_can_node;//publish to roscan node
+        ros::Subscriber sub_from_can_node;
         json j;
         void pub_json_msg_to_app(const nlohmann::json j_msg);
         powerboard_t    sys_powerboard_ram; 

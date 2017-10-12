@@ -37,20 +37,6 @@ int main(int argc, char **argv)
     {
         if(cnt++ % (uint32_t)rate == (uint32_t)rate/2)
         {
-#if 0
-            //protocol test 
-            static uint8_t i = 0;
-            if(i++ % 2)
-            {
-                powerboard.sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON;
-            }
-            else
-            {
-                powerboard.sys_powerboard->module_status_set.on_off = MODULE_CTRL_OFF;
-            }
-            powerboard.sys_powerboard->module_status_set.module = POWER_12V_EN|POWER_5V_EN;
-            powerboard.SetModulePowerOnOff(powerboard.sys_powerboard);
-#endif
             test_fun(); 
         }
         ros::spinOnce();

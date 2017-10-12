@@ -36,12 +36,14 @@ static int last_unread_bytes = 0;
 static unsigned char recv_buf_last[BUF_LEN] = {0};
 
 
-vector<module_ctrl_t> module_set_vector(10);
+vector<module_ctrl_t> module_set_vector;
+vector<module_ctrl_t> module_set_ack_vector;
+
 void test_fun(void)
 {
     module_ctrl_t param;  
     static uint8_t cnt = 0;
-    param.module = POWER_5V_EN;
+    param.module = POWER_5V_EN | POWER_12V_EN;
     param.group_num = 1;
     if(cnt++ % 2)
     {
@@ -56,10 +58,10 @@ void test_fun(void)
 }
 
 class NoahPowerboard;
-//extern NoahPowerboard powerboard;
+#define MODULE_SET_TIME_OUT     1000//ms
 void *CanProtocolProcess(void* arg)
 {
-    
+    NoahPowerboard *pNoahPowerboard =  (NoahPowerboard*)arg;
     while(ros::ok())
     {
         if(!module_set_vector.empty()) 
@@ -67,17 +69,47 @@ void *CanProtocolProcess(void* arg)
             auto a = module_set_vector.begin(); 
             module_ctrl_t module_set;
             module_set = *a;
-           // powerboard_t    sys_powerboard;
-            module_set_vector.erase(module_set_vector.begin());
+            pNoahPowerboard->sys_powerboard->module_status_set = *a;
+            uint8_t flag = 0;
+            uint32_t time_out_cnt = 0;
+
+            module_set_vector.erase(a);
             ROS_INFO("get set module cmd");
-            ROS_INFO("module_set_param.module = %x",module_set.module);
-            ROS_INFO("module_set_param.group_num = %d",module_set.group_num);
-            ROS_INFO("module_set_param.on_off = %d",module_set.on_off);
-            (*(NoahPowerboard*)arg).sys_powerboard->module_status_set.module = module_set.module;
-            (*(NoahPowerboard*)arg).sys_powerboard->module_status_set.on_off = module_set.on_off;
-            (*(NoahPowerboard*)arg).sys_powerboard->module_status_set.module = module_set.module;
-            (*(NoahPowerboard*)arg).SetModulePowerOnOff((*(NoahPowerboard*)arg).sys_powerboard);
+            ROS_INFO("module_set_param.module = 0x%x",pNoahPowerboard->sys_powerboard->module_status_set.module);
+            ROS_INFO("module_set_param.group_num = %d",pNoahPowerboard->sys_powerboard->module_status_set.group_num);
+            ROS_INFO("module_set_param.on_off = %d",pNoahPowerboard->sys_powerboard->module_status_set.on_off);
+
+            pNoahPowerboard->SetModulePowerOnOff((*(NoahPowerboard*)arg).sys_powerboard);
+
+            while(time_out_cnt < MODULE_SET_TIME_OUT/5)
+            {
+                time_out_cnt++;
+                if(!module_set_ack_vector.empty())
+                {
+                    auto b = module_set_ack_vector.begin();
+                    module_ctrl_t module_set_ack = *a;
+                    ROS_INFO("get module_set_ack_vector data");
+                    if(module_set_ack.module == module_set.module)
+                    {
+                        ROS_INFO("get right module ack, module is 0x%x",module_set_ack.module);
+                        break;
+                    }
+                }
+                else
+                {
+                    usleep(5*1000);
+                }
+            }
+            if(time_out_cnt < MODULE_SET_TIME_OUT/5)
+            {
+                ROS_INFO("module ctrl flow OK");
+            }
+            else
+            {
+                ROS_ERROR("module ctrl time out");
+            }
         }
+
         usleep(5000);
     }
 }
@@ -183,7 +215,7 @@ begin:
     uint32_t state = sys->module_status_set.module;
     *(uint32_t *)&can_msg.Data[3] = state;
     can_msg.Data[7] = sys->module_status_set.on_off;   
-    this->pub_to_can_node_pub.publish(can_msg);
+    this->pub_to_can_node.publish(can_msg);
 
 
 #if 0
@@ -1053,7 +1085,39 @@ void NoahPowerboard::PubChargeStatus(uint8_t status)
 
 }
 
+void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::ConstPtr &c_msg)
+{
+    mrobot_driver_msgs::vci_can can_msg;
+    mrobot_driver_msgs::vci_can long_msg;
+    CAN_ID_UNION id;
 
+    long_msg = this->long_frame.frame_construct(c_msg);
+    mrobot_driver_msgs::vci_can* msg = &long_msg;
+    if( msg->ID == 0 ) 
+    {
+        return;
+    }
+
+    can_msg.ID = msg->ID;
+    id.CANx_ID = can_msg.ID;
+    can_msg.DataLen = msg->DataLen;
+    if(id.CanID_Struct.SrcMACID != NOAH_POWERBOARD_CAN_SRCMAC_ID)
+    {
+        return ;
+    }
+
+    can_msg.Data.resize(can_msg.DataLen);
+    if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_SET_MODULE_STATE)
+    {
+        ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_SET_MODULE_STATE");
+        module_ctrl_t module_ctrl_ack;
+        module_ctrl_ack.module = *(uint32_t *)&msg->Data[2];
+        module_ctrl_ack.group_num = msg->Data[1];
+        module_set_ack_vector.push_back(module_ctrl_ack);
+
+    }
+
+}
 
 
 
