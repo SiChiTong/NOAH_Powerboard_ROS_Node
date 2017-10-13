@@ -102,6 +102,43 @@ typedef struct
 
 typedef struct
 {
+#define MODULE_CTRL_ON      1  
+#define MODULE_CTRL_OFF     0 
+    uint8_t     on_off;
+    uint8_t     group_num;
+#define HW_NO_SUPPORT         0xFFFFFFFF
+    volatile uint32_t    module;
+    volatile uint32_t    module_status_ack;
+} module_ctrl_ack_t;
+
+
+
+typedef struct
+{
+    uint8_t reserve;
+}get_bat_info_t;
+
+typedef struct
+{
+    uint8_t reserve;
+    uint16_t bat_percent;
+    uint16_t bat_vol;
+}get_bat_info_ack_t;
+
+
+typedef struct 
+{
+    uint8_t reserve;
+}get_sys_status_t;
+
+typedef struct 
+{
+    uint8_t reserve;
+    uint16_t sys_status;
+}get_sys_status_ack_t;
+
+typedef struct
+{
     uint8_t r;
     uint8_t g;
     uint8_t b;
@@ -221,10 +258,10 @@ typedef struct
 
 typedef struct
 {
-#define CMD_BAT_PERCENT     2
-#define CMD_BAT_VOLTAGE     1
     uint8_t cmd;
     uint16_t bat_info;
+    uint16_t bat_vol;
+    uint16_t bat_percent;
 }bat_info_t;
 
 typedef struct _recTestCurrentCmdFrame_t 
@@ -346,7 +383,7 @@ class NoahPowerboard
         void from_app_rcv_callback(const std_msgs::String::ConstPtr &msg);
         void from_navigation_rcv_callback(const std_msgs::String::ConstPtr &msg);
         void power_from_app_rcv_callback(std_msgs::UInt8MultiArray data);
-        void PubPower(void);
+        void PubPower(powerboard_t *sys);
         void PubChargeStatus(uint8_t status);
 
         void rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::ConstPtr &c_msg);

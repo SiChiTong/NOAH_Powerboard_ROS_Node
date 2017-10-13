@@ -37,13 +37,22 @@ static unsigned char recv_buf_last[BUF_LEN] = {0};
 
 
 vector<module_ctrl_t> module_set_vector;
-vector<module_ctrl_t> module_set_ack_vector;
+vector<module_ctrl_ack_t> module_set_ack_vector;
+
+
+vector<get_bat_info_t> get_bat_info_vector;
+vector<get_bat_info_ack_t> get_bat_info_ack_vector;
+
+vector<get_sys_status_t> get_sys_status_vector;
+vector<get_sys_status_ack_t> get_sys_status_ack_vector;
+
+
 
 void test_fun(void)
 {
     module_ctrl_t param;  
     static uint8_t cnt = 0;
-    param.module = POWER_5V_EN | POWER_12V_EN;
+    param.module = POWER_5V_EN | POWER_12V_EN | POWER_LED_MCU;
     param.group_num = 1;
     if(cnt++ % 2)
     {
@@ -58,7 +67,9 @@ void test_fun(void)
 }
 
 class NoahPowerboard;
-#define MODULE_SET_TIME_OUT     1000//ms
+#define MODULE_SET_TIME_OUT         1000//ms
+#define GET_BAT_INFO_TIME_OUT       1000//ms
+#define GET_SYS_STSTUS_TIME_OUT     1000//ms
 void *CanProtocolProcess(void* arg)
 {
     NoahPowerboard *pNoahPowerboard =  (NoahPowerboard*)arg;
@@ -69,17 +80,23 @@ void *CanProtocolProcess(void* arg)
             auto a = module_set_vector.begin(); 
             module_ctrl_t module_set;
             module_set = *a;
-            pNoahPowerboard->sys_powerboard->module_status_set = *a;
             uint8_t flag = 0;
             uint32_t time_out_cnt = 0;
+            static uint8_t err_cnt = 0;
 
             module_set_vector.erase(a);
             ROS_INFO("get set module cmd");
-            ROS_INFO("module_set_param.module = 0x%x",pNoahPowerboard->sys_powerboard->module_status_set.module);
-            ROS_INFO("module_set_param.group_num = %d",pNoahPowerboard->sys_powerboard->module_status_set.group_num);
-            ROS_INFO("module_set_param.on_off = %d",pNoahPowerboard->sys_powerboard->module_status_set.on_off);
+            ROS_INFO("module_set_param.module = 0x%x",module_set.module);
+            ROS_INFO("module_set_param.group_num = %d",module_set.group_num);
+            ROS_INFO("module_set_param.on_off = %d",module_set.on_off);
 
-            pNoahPowerboard->SetModulePowerOnOff((*(NoahPowerboard*)arg).sys_powerboard);
+            module_set_ack_vector.clear();
+module_set_restart:
+            //memcpy((uint8_t *)(pNoahPowerboard->sys_powerboard->module_status_set),(uint8_t *)&module_set, sizeof(module_ctrl_t));
+            pNoahPowerboard->sys_powerboard->module_status_set.module = module_set.module;
+            pNoahPowerboard->sys_powerboard->module_status_set.group_num = module_set.group_num;
+            pNoahPowerboard->sys_powerboard->module_status_set.on_off = module_set.on_off;
+            pNoahPowerboard->SetModulePowerOnOff(pNoahPowerboard->sys_powerboard);
 
             while(time_out_cnt < MODULE_SET_TIME_OUT/5)
             {
@@ -87,7 +104,7 @@ void *CanProtocolProcess(void* arg)
                 if(!module_set_ack_vector.empty())
                 {
                     auto b = module_set_ack_vector.begin();
-                    module_ctrl_t module_set_ack = *a;
+                    module_ctrl_ack_t module_set_ack = *b;
                     ROS_INFO("get module_set_ack_vector data");
                     if(module_set_ack.module == module_set.module)
                     {
@@ -103,10 +120,103 @@ void *CanProtocolProcess(void* arg)
             if(time_out_cnt < MODULE_SET_TIME_OUT/5)
             {
                 ROS_INFO("module ctrl flow OK");
+                err_cnt = 0;
+                time_out_cnt = 0;
             }
             else
             {
                 ROS_ERROR("module ctrl time out");
+                time_out_cnt = 0;
+                if(err_cnt++ < 3)
+                {
+                    ROS_ERROR("module ctrl start to resend msg....");
+                    goto module_set_restart;
+                }
+                ROS_ERROR("CAN NOT COMMUNICATE with powerboard mcu, module ctrl failed !");
+                err_cnt = 0;
+            }
+        }
+
+        if(!get_bat_info_vector.empty()) 
+        {   
+            auto a = get_bat_info_vector.begin(); 
+
+            uint8_t flag = 0;
+            uint32_t time_out_cnt = 0;
+
+            get_bat_info_vector.erase(a);
+            ROS_INFO("get get bat info cmd");
+
+            get_bat_info_ack_vector.clear();
+
+            pNoahPowerboard->GetBatteryInfo(pNoahPowerboard->sys_powerboard);
+
+            while(time_out_cnt < GET_BAT_INFO_TIME_OUT/5)
+            {
+                time_out_cnt++;
+                if(!get_bat_info_ack_vector.empty())
+                {
+                    auto b = get_bat_info_ack_vector.begin();
+                    get_bat_info_ack_t get_bat_info_ack = *b;
+                    ROS_INFO("get get_bat_info_ack_vector data");
+                    ROS_INFO("get bat voltage %d",get_bat_info_ack.bat_vol);
+                    ROS_INFO("get bat percent %d",get_bat_info_ack.bat_percent);
+                    break;
+                }
+                else
+                {
+                    usleep(5*1000);
+                }
+            }
+            if(time_out_cnt < GET_BAT_INFO_TIME_OUT/5)
+            {
+                ROS_INFO("get bat info flow OK");
+            }
+            else
+            {
+                ROS_ERROR("get bat info time out");
+            }
+        }
+
+
+
+        if(!get_sys_status_vector.empty()) 
+        {   
+            auto a = get_sys_status_vector.begin(); 
+
+            uint8_t flag = 0;
+            uint32_t time_out_cnt = 0;
+            
+            get_sys_status_vector.erase(a);
+            ROS_INFO("get get bat info cmd");
+
+            get_sys_status_ack_vector.clear();
+
+            pNoahPowerboard->GetSysStatus(pNoahPowerboard->sys_powerboard);
+
+            while(time_out_cnt < GET_SYS_STSTUS_TIME_OUT/5)
+            {
+                time_out_cnt++;
+                if(!get_sys_status_ack_vector.empty())
+                {
+                    auto b = get_sys_status_ack_vector.begin();
+                    get_sys_status_ack_t get_sys_status_ack = *b;
+                    ROS_INFO("get get_sys_status_ack_vector data");
+                    ROS_INFO("sys status is  %d",get_sys_status_ack.sys_status);
+                    break;
+                }
+                else
+                {
+                    usleep(5*1000);
+                }
+            }
+            if(time_out_cnt < GET_SYS_STSTUS_TIME_OUT/5)
+            {
+                ROS_INFO("get bat info flow OK");
+            }
+            else
+            {
+                ROS_ERROR("get bat info time out");
             }
         }
 
@@ -173,23 +283,27 @@ begin:
 }
 int NoahPowerboard::GetBatteryInfo(powerboard_t *sys)      // done
 {
-    int error = 0;
-    sys->send_data_buf[0] = PROTOCOL_HEAD;
-    sys->send_data_buf[1] = 6;
-    sys->send_data_buf[2] = FRAME_TYPE_BAT_STATUS;
-    sys->send_data_buf[3] = sys->bat_info.cmd;
-    sys->send_data_buf[4] = this->CalCheckSum(sys->send_data_buf, 4);
-    sys->send_data_buf[5] = PROTOCOL_TAIL;
-    this->send_serial_data(sys);
-#if 0
-    usleep(TEST_WAIT_TIME);
-    error = this->handle_receive_data(sys);
-#endif
+    int error = -1; 
+    mrobot_driver_msgs::vci_can can_msg;
+    CAN_ID_UNION id;
+    memset(&id, 0x0, sizeof(CAN_ID_UNION));
+    id.CanID_Struct.SourceID = CAN_SOURCE_ID_GET_BAT_STATE;
+    id.CanID_Struct.SrcMACID = 0;//CAN_SUB_PB_SRC_ID;
+    id.CanID_Struct.DestMACID = NOAH_POWERBOARD_CAN_SRCMAC_ID;
+    id.CanID_Struct.FUNC_ID = 0x02;
+    id.CanID_Struct.ACK = 0;
+    id.CanID_Struct.res = 0;
+
+    can_msg.ID = id.CANx_ID;
+    can_msg.DataLen = 2;
+    can_msg.Data.resize(2);
+    can_msg.Data[0] = 0x00;
+    can_msg.Data[1] = 0;//reserve
+    this->pub_to_can_node.publish(can_msg);
     return error;
 }
 int NoahPowerboard::SetModulePowerOnOff(powerboard_t *sys)
 {
-begin:
     static uint8_t err_cnt = 0;
     int error = -1; 
 
@@ -252,44 +366,6 @@ begin:
     {
         err_cnt = 0;
         
-        if(sys->module_status_set.module & POWER_VSYS_24V_NV)
-        {
-
-            ROS_INFO("module %d",sys->module_status_set.module);
-
-            this->j.clear();
-            this->j = 
-            {
-                {"sub_name","set_module_state"},
-                {
-                    "data",
-                    {
-                        //{"_xx_xxx_state",!(bool)(sys->module_status.module & POWER_5V_EN)},
-                        {"door_ctrl_state",(bool)(sys->module_status.module & POWER_VSYS_24V_NV)},
-                        {"error_code", error},
-                    } 
-                }
-            };
-            this->pub_json_msg_to_app(this->j);
-        }
-        if(sys->module_status_set.module & POWER_24V_PRINTER)
-        {
-            
-            this->j.clear();
-            this->j = 
-            {
-                {"sub_name","set_module_state"},
-                {
-                    "data",
-                    {
-                        //{"_xx_xxx_state",!(bool)(sys->module_status.module & POWER_5V_EN)},
-                        {"elevator_led_state",(bool)(sys->module_status.module & POWER_24V_PRINTER)},
-                        {"error_code", error},
-                    } 
-                }
-            };
-            this->pub_json_msg_to_app(this->j);
-        }
         
         if(sys->module_status_set.module & POWER_24V_EXTEND)
         {
@@ -360,25 +436,23 @@ int NoahPowerboard::GetVersion(powerboard_t *sys)      // done
 
 int NoahPowerboard::GetSysStatus(powerboard_t *sys)     // done
 {
-    int error = 0;
-    sys->send_data_buf[0] = PROTOCOL_HEAD;
-    sys->send_data_buf[1] = 6;
-    sys->send_data_buf[2] = FRAME_TYPE_SYS_STATUS;
-    sys->send_data_buf[3] = 0x00;
-    sys->send_data_buf[4] = this->CalCheckSum(sys->send_data_buf, 4);
-    sys->send_data_buf[5] = PROTOCOL_TAIL;
-    this->send_serial_data(sys);
-#if 0
-    usleep(TEST_WAIT_TIME);
-    error = this->handle_receive_data(sys);
-    if(error < 0)
-    {
-        
-    }
-    else
-    {
-    }
-#endif
+    int error = 0; 
+    mrobot_driver_msgs::vci_can can_msg;
+    CAN_ID_UNION id;
+    memset(&id, 0x0, sizeof(CAN_ID_UNION));
+    id.CanID_Struct.SourceID = CAN_SOURCE_ID_GET_SYS_STATE;
+    id.CanID_Struct.SrcMACID = 0;//CAN_SUB_PB_SRC_ID;
+    id.CanID_Struct.DestMACID = NOAH_POWERBOARD_CAN_SRCMAC_ID;
+    id.CanID_Struct.FUNC_ID = 0x02;
+    id.CanID_Struct.ACK = 0;
+    id.CanID_Struct.res = 0;
+
+    can_msg.ID = id.CANx_ID;
+    can_msg.DataLen = 2;
+    can_msg.Data.resize(2);
+    can_msg.Data[0] = 0x00;
+    can_msg.Data[1] = 0;//reserve
+    this->pub_to_can_node.publish(can_msg);
     return error;
 }
 
@@ -528,16 +602,6 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
         return -1;
     }
 //    PowerboardInfo("Powrboard recieve data check OK.");
-#if 0
-    for(i =0;i<frame_len;i++)
-    {
-        //PowerboardInfo("led receive:%02x",frame_buf[i]);
-    }
-    if(2 != sys->work_normal)
-    {
-        sys->work_normal = 2;
-    }
-#endif
     cmd_type = frame_buf[2];
     switch(cmd_type)
     {
@@ -549,48 +613,17 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
             PowerboardInfo("color.g is %2x",        sys->rcv_serial_leds_frame.color.g);
             PowerboardInfo("color.b is %2x",        sys->rcv_serial_leds_frame.color.b);
             PowerboardInfo("period is %d",          sys->rcv_serial_leds_frame.period);
-#if 0
-            this->j.clear();
-            this->j = 
-            {
-                {"sub_name","led_ctrl"},
-                {
-                    "data",
-                    {
-                        {"cur_light_mode",sys->rcv_serial_leds_frame.cur_light_mode},
-                        {"color_r",sys->rcv_serial_leds_frame.color.r},
-                        {"color_g",sys->rcv_serial_leds_frame.color.g},
-                        {"color_b",sys->rcv_serial_leds_frame.color.b},
-                        {"period",sys->rcv_serial_leds_frame.period},
-                    }
-                }
-            };
-            this->pub_json_msg_to_app(this->j);
-#endif
             error = FRAME_TYPE_LEDS_CONTROL;
             break;
 
         case FRAME_TYPE_BAT_STATUS:
             sys->bat_info.cmd = frame_buf[3];
             //PowerboardInfo("sys->bat_info.cmd is %d",sys->bat_info.cmd);
+            #if 0
             if(sys->bat_info.cmd == CMD_BAT_VOLTAGE)
             {
                 sys->bat_info.bat_info = frame_buf[5]<< 8  | frame_buf[4]; 
                 PowerboardInfo("battery voltage is %d",sys->bat_info.bat_info);
-#if 0
-                this->j.clear();
-                this->j = 
-                {
-                    {"sub_name","battery_info"},
-                    {
-                        "data",
-                        {
-                            {"battery_voltage",sys->bat_info.bat_info},
-                        }
-                    }
-                };
-                this->pub_json_msg_to_app(this->j);
-#endif
             }
             if(sys->bat_info.cmd == CMD_BAT_PERCENT)
             {
@@ -600,21 +633,8 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                     sys->bat_info.bat_info = 100;
                 }
                 PowerboardInfo("battery voltage is %d",sys->bat_info.bat_info);
-#if 0
-                this->j.clear();
-                this->j = 
-                {
-                    {"sub_name","battery_info"},
-                    {
-                        "data",
-                        {
-                            {"battery_percent",sys->bat_info.bat_info},
-                        }
-                    }
-                };
-                this->pub_json_msg_to_app(this->j);
-#endif
             }
+            #endif
             error = FRAME_TYPE_BAT_STATUS;
             break;
 
@@ -629,29 +649,6 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
             PowerboardInfo("_5V_temp        is %d",sys->voltage_info.voltage_data._5V_temp);
             PowerboardInfo("air_temp        is %d",sys->voltage_info.voltage_data.air_temp);
             PowerboardInfo("send_rate       is %d",sys->voltage_info.send_rate);
-#if 0
-            this->j.clear();
-            this->j = 
-            {
-                {"sub_name","get_adc_data"},
-                {
-                    "data",
-                    {
-
-                        {"_12v_voltage", sys->voltage_info.voltage_data._12V_voltage},
-                        {"_24v_voltage", sys->voltage_info.voltage_data._24V_voltage},
-                        {"_5v_voltage", sys->voltage_info.voltage_data._5V_voltage},
-                        {"bat_voltage", sys->voltage_info.voltage_data.bat_voltage},
-                        {"_24V_temp", sys->voltage_info.voltage_data._24V_temp},
-                        {"_12V_temp", sys->voltage_info.voltage_data._12V_temp},
-                        {"_5V_temp", sys->voltage_info.voltage_data._5V_temp},
-                        {"air_temp", sys->voltage_info.voltage_data.air_temp},
-                        {"send_rate", sys->voltage_info.send_rate},
-                    }
-                }
-            };
-            this->pub_json_msg_to_app(this->j);
-#endif
             error = FRAME_TYPE_GET_CURRENT;
             break;
 
@@ -663,41 +660,12 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                 memcpy((uint8_t *)&sys->sw_version,&frame_buf[7], SW_VERSION_SIZE);
                 PowerboardInfo("hw version: %s",sys->hw_version);
                 PowerboardInfo("sw version: %s",sys->sw_version);
-#if 0
-                this->j.clear();
-                this->j = 
-                {
-                    {"sub_name","get_version"},
-                    {
-                        "data",
-                        {
-                            {"hw_version",sys->hw_version},     
-                            {"sw_version",sys->sw_version},     
-                        }
-                    }
-                };
-                this->pub_json_msg_to_app(this->j);
-#endif 
             }
 
             if(sys->get_version_type == VERSION_TYPE_PROTOCOL)
             {
                 memcpy((uint8_t *)&sys->protocol_version,&frame_buf[4], PROTOCOL_VERSION_SIZE);
                 PowerboardInfo("protocol version: %s",sys->protocol_version);
-#if 0
-                this->j.clear();
-                this->j = 
-                {
-                    {"sub_name","get_version"},
-                    {
-                        "data",
-                        {
-                            {"protocol_version",sys->protocol_version},     
-                        }
-                    }
-                };
-                this->pub_json_msg_to_app(this->j);
-#endif
             }
 
             error = FRAME_TYPE_GET_VERSION;
@@ -746,40 +714,12 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                 this->PubChargeStatus(0);
             }
 
-#if 0
-            this->j.clear();
-            this->j = 
-            {
-                {"pub_name","get_sys_status"},
-                {
-                    "data",
-                    {
-                        {"sys_status",sys->sys_status},
-                    }
-                }
-            };
-            this->pub_json_msg_to_app(this->j);
-#endif 
             error = FRAME_TYPE_SYS_STATUS;
             break;
 
         case FRAME_TYPE_IRLED_CONTROL:
             sys->ir_cmd.lightness_percent = frame_buf[3];
             PowerboardInfo("ir lightness is %d",sys->ir_cmd.lightness_percent);
-#if 0
-            this->j.clear();
-            this->j = 
-            {
-                {"sub_name","ir_lightness"},
-                {
-                    "data",
-                    {
-                        {"ir_lightness",sys->ir_cmd.lightness_percent},
-                    }
-                }
-            };
-            this->pub_json_msg_to_app(this->j);
-#endif
             error = FRAME_TYPE_IRLED_CONTROL;
             break;
         case FRAME_TYPE_MODULE_CONTROL:
@@ -795,34 +735,6 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                 {
                     PowerboardInfo("hard ware not support !");
                 }
-#if 0
-                this->j.clear();
-                this->j = 
-                {
-                    {"sub_name","set_module_state"},
-                    {
-                        "data",
-                        {
-                            {"module_status",sys->module_status.module},
-                        } 
-                    }
-                };
-                this->pub_json_msg_to_app(this->j);
-
-                this->j.clear();
-                this->j = 
-                {
-                    {"sub_name","set_module_state"},
-                    {
-                        "data",
-                        {
-                            //{"_xx_xxx_state",!(bool)(sys->module_status.module & POWER_5V_EN)},
-                            {"door_ctrl_state",!(bool)(sys->module_status.module & POWER_12V_EXTEND)},
-                        } 
-                    }
-                };
-                this->pub_json_msg_to_app(this->j);
-#endif
                 error = FRAME_TYPE_MODULE_CONTROL;
                 break; 
             }
@@ -839,35 +751,6 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
                 {
                     PowerboardInfo("hardware not support !");
                 }
-#if 0
-                this->j.clear();
-                this->j = 
-                {
-                    {"sub_name","get_module_state"},
-                    {
-                       "data",
-                       {
-                           {"module_status",sys->module_status.module},
-                       } 
-                    }
-                };
-                this->pub_json_msg_to_app(this->j);
-#endif
-#if 0
-                this->j.clear();
-                this->j = 
-                {
-                    {"sub_name","get_module_state"},
-                    {
-                       "data",
-                       {
-                           //{"_xx_xxx_state",!(bool)(sys->module_status.module & POWER_5V_EN)},
-                           {"door_ctrl_state",!(bool)(sys->module_status.module & POWER_12V_EXTEND)},
-                       } 
-                    }
-                };
-                this->pub_json_msg_to_app(this->j);
-#endif
                 error = FRAME_TYPE_GET_MODULE_STATE;
                 break; 
             }
@@ -884,6 +767,7 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
     auto j = json::parse(msg->data.c_str());
     if(j.find("pub_name") != j.end())
     {
+
         //ROS_INFO("find pub_name");
         if(j["pub_name"] == "set_module_state")
         {
@@ -896,33 +780,20 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                 if(j["data"]["set_state"] == true)
                 {
                     ROS_INFO("set 24v printer on");
-                    sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON;
-                    sys_powerboard->module_status_set.module = POWER_24V_PRINTER; 
-                    this->SetModulePowerOnOff(sys_powerboard);
+                    module_ctrl_t param;  
+                    param.group_num = 1;
+                    param.module = POWER_24V_PRINTER;    
+                    param.on_off = MODULE_CTRL_ON;
+                    module_set_vector.push_back(param);
                 }
                 else if(j["data"]["set_state"] == false)
                 {
                     ROS_INFO("set 24v printer off");
-                    sys_powerboard->module_status_set.on_off = MODULE_CTRL_OFF; 
-                    sys_powerboard->module_status_set.module = POWER_24V_PRINTER; 
-                    this->SetModulePowerOnOff(sys_powerboard);
-                }
-            }
-            if(j["data"]["dev_name"] == "_24v_printer")
-            {
-                if(j["data"]["set_state"] == true)
-                {
-                    ROS_INFO("set 24v printer on");
-                    sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON;
-                    sys_powerboard->module_status_set.module = POWER_24V_PRINTER; 
-                    this->SetModulePowerOnOff(sys_powerboard);
-                }
-                else if(j["data"]["set_state"] == false)
-                {
-                    ROS_INFO("set 24v printer off");
-                    sys_powerboard->module_status_set.on_off = MODULE_CTRL_OFF; 
-                    sys_powerboard->module_status_set.module = POWER_24V_PRINTER; 
-                    this->SetModulePowerOnOff(sys_powerboard);
+                    module_ctrl_t param;  
+                    param.group_num = 1;
+                    param.module = POWER_24V_PRINTER;    
+                    param.on_off = MODULE_CTRL_OFF;
+                    module_set_vector.push_back(param);
                 }
             }
 
@@ -933,16 +804,20 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                 if(j["data"]["set_state"] == true)
                 {
                     ROS_INFO("set 24v dcdc on");
-                    sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON;
-                    sys_powerboard->module_status_set.module = POWER_24V_EN; 
-                    this->SetModulePowerOnOff(sys_powerboard);
+                    module_ctrl_t param;  
+                    param.group_num = 1;
+                    param.module = POWER_24V_EN;    
+                    param.on_off = MODULE_CTRL_ON;
+                    module_set_vector.push_back(param);
                 }
                 else if(j["data"]["set_state"] == false)
                 {
                     ROS_INFO("set 24v dcdc off");
-                    sys_powerboard->module_status_set.on_off = MODULE_CTRL_OFF; 
-                    sys_powerboard->module_status_set.module = POWER_24V_EN; 
-                    this->SetModulePowerOnOff(sys_powerboard);
+                    module_ctrl_t param;  
+                    param.group_num = 1;
+                    param.module = POWER_24V_EN;    
+                    param.on_off = MODULE_CTRL_OFF;
+                    module_set_vector.push_back(param);
                 }
             }
 
@@ -953,16 +828,20 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                 if(j["data"]["set_state"] == true)
                 {
                     ROS_INFO("set 5v dcdc on");
-                    sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON;
-                    sys_powerboard->module_status_set.module = POWER_5V_EN; 
-                    this->SetModulePowerOnOff(sys_powerboard);
+                    module_ctrl_t param;  
+                    param.group_num = 1;
+                    param.module = POWER_5V_EN;    
+                    param.on_off = MODULE_CTRL_ON;
+                    module_set_vector.push_back(param);
                 }
                 else if(j["data"]["set_state"] == false)
                 {
                     ROS_INFO("set 5v dcdc off");
-                    sys_powerboard->module_status_set.on_off = MODULE_CTRL_OFF; 
-                    sys_powerboard->module_status_set.module = POWER_5V_EN; 
-                    this->SetModulePowerOnOff(sys_powerboard);
+                    module_ctrl_t param;  
+                    param.group_num = 1;
+                    param.module = POWER_5V_EN;    
+                    param.on_off = MODULE_CTRL_OFF;
+                    module_set_vector.push_back(param);
                 }
 
             }
@@ -973,34 +852,43 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                 if(j["data"]["set_state"] == true)
                 {
                     ROS_INFO("set 12v dcdc on");
-                    sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON;
-                    sys_powerboard->module_status_set.module = POWER_12V_EN; 
-                    this->SetModulePowerOnOff(sys_powerboard);
+                    module_ctrl_t param;  
+                    param.group_num = 1;
+                    param.module = POWER_12V_EN;    
+                    param.on_off = MODULE_CTRL_ON;
+                    module_set_vector.push_back(param);
                 }
                 else if(j["data"]["set_state"] == false)
                 {
                     ROS_INFO("set 12v dcdc off");
-                    sys_powerboard->module_status_set.on_off = MODULE_CTRL_OFF; 
-                    sys_powerboard->module_status_set.module = POWER_12V_EN; 
-                    this->SetModulePowerOnOff(sys_powerboard);
+                    module_ctrl_t param;  
+                    param.group_num = 1;
+                    param.module = POWER_12V_EN;    
+                    param.on_off = MODULE_CTRL_OFF;
+                    module_set_vector.push_back(param);
                 }
             }
 
             if(j["data"]["dev_name"] == "door_ctrl_state")
             {
+
                 if(j["data"]["set_state"] == true)
                 {
                     ROS_INFO("set door ctrl  on");
-                    sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON;
-                    sys_powerboard->module_status_set.module = POWER_VSYS_24V_NV; 
-                    this->SetModulePowerOnOff(sys_powerboard);
+                    module_ctrl_t param;  
+                    param.group_num = 1;
+                    param.module = POWER_VSYS_24V_NV;    
+                    param.on_off = MODULE_CTRL_ON;
+                    module_set_vector.push_back(param);
                 }
                 else if(j["data"]["set_state"] == false)
                 {
                     ROS_INFO("set door ctrl off");
-                    sys_powerboard->module_status_set.on_off = MODULE_CTRL_OFF; 
-                    sys_powerboard->module_status_set.module = POWER_VSYS_24V_NV; 
-                    this->SetModulePowerOnOff(sys_powerboard);
+                    module_ctrl_t param;  
+                    param.group_num = 1;
+                    param.module = POWER_VSYS_24V_NV;    
+                    param.on_off = MODULE_CTRL_OFF;
+                    module_set_vector.push_back(param);
                 }
             }
 
@@ -1015,33 +903,37 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
 void NoahPowerboard:: from_navigation_rcv_callback(const std_msgs::String::ConstPtr &msg)
 {
     int value = atoi(msg->data.c_str());
+
+    module_ctrl_t param;  
+    param.group_num = 1;
+
     ROS_INFO("camera led ctrl:value is %d",value);
     ROS_INFO("%s",msg->data.c_str());
     switch(value)
     {
         case 0:
             ROS_INFO("camera led ctrl:get 00"); 
-            sys_powerboard->module_status_set.on_off = MODULE_CTRL_OFF; 
-            sys_powerboard->module_status_set.module = POWER_CAMERA_LED; 
-            this->SetModulePowerOnOff(sys_powerboard);
+            param.module = POWER_CAMERA_LED;    
+            param.on_off = MODULE_CTRL_OFF;
+            module_set_vector.push_back(param);
             break;
         case 1:
             ROS_INFO("camera led ctrl:get 01"); 
-            sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON; 
-            sys_powerboard->module_status_set.module = POWER_CAMERA_LED; 
-            this->SetModulePowerOnOff(sys_powerboard);
+            param.module = POWER_CAMERA_LED;    
+            param.on_off = MODULE_CTRL_ON;
+            module_set_vector.push_back(param);
             break;
         case 10:
             ROS_INFO("camera led ctrl:get 10"); 
-            sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON; 
-            sys_powerboard->module_status_set.module = POWER_CAMERA_LED; 
-            this->SetModulePowerOnOff(sys_powerboard);
+            param.module = POWER_CAMERA_LED;    
+            param.on_off = MODULE_CTRL_ON;
+            module_set_vector.push_back(param);
             break;
         case 11:
             ROS_INFO("camera led ctrl:get 11"); 
-            sys_powerboard->module_status_set.on_off = MODULE_CTRL_ON; 
-            sys_powerboard->module_status_set.module = POWER_CAMERA_LED; 
-            this->SetModulePowerOnOff(sys_powerboard);
+            param.module = POWER_CAMERA_LED;    
+            param.on_off = MODULE_CTRL_ON;
+            module_set_vector.push_back(param);
             break;
         default :
             break;
@@ -1049,12 +941,11 @@ void NoahPowerboard:: from_navigation_rcv_callback(const std_msgs::String::Const
     }
 }
 
-void NoahPowerboard::PubPower(void)
+void NoahPowerboard::PubPower(powerboard_t *sys)
 {
     unsigned char power = 0;
-    power = sys_powerboard->bat_info.bat_info;
-    unsigned char status = sys_powerboard->sys_status;    //std_msgs::Int8 msg;
-    //msg.data=power;
+    power = sys->bat_info.bat_percent;
+    unsigned char status = sys->sys_status;    //std_msgs::Int8 msg;
     std_msgs::UInt8MultiArray bytes_msg;
 
     bytes_msg.data.push_back(power);
@@ -1068,7 +959,14 @@ void NoahPowerboard::power_from_app_rcv_callback(std_msgs::UInt8MultiArray data)
    ROS_INFO("data is %d",value);
    if(value == 0)
    {
-    this->PubPower();
+    //this->PubPower();
+        get_bat_info_t  get_bat_info;
+        get_bat_info.reserve = 0;
+        get_bat_info_vector.push_back(get_bat_info);
+        usleep(10*1000);
+        get_sys_status_t get_sys_status;
+        get_sys_status.reserve = 0;
+        get_sys_status_vector.push_back(get_sys_status);
    }
 }
 
@@ -1097,7 +995,10 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
     {
         return;
     }
-
+    for(uint8_t i = 0; i < msg->DataLen; i++)
+    {
+        ROS_INFO("msg->Data[%d] = 0x%x",i,msg->Data[i]);
+    }
     can_msg.ID = msg->ID;
     id.CANx_ID = can_msg.ID;
     can_msg.DataLen = msg->DataLen;
@@ -1106,17 +1007,70 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
         return ;
     }
 
-    can_msg.Data.resize(can_msg.DataLen);
+    //can_msg.Data.resize(can_msg.DataLen);
     if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_SET_MODULE_STATE)
     {
         ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_SET_MODULE_STATE");
-        module_ctrl_t module_ctrl_ack;
+        module_ctrl_ack_t module_ctrl_ack;
         module_ctrl_ack.module = *(uint32_t *)&msg->Data[2];
         module_ctrl_ack.group_num = msg->Data[1];
+        module_ctrl_ack.module_status_ack  = *(uint32_t *)&msg->Data[6];
+        
         module_set_ack_vector.push_back(module_ctrl_ack);
+
+        ROS_INFO("receive module : 0x%x",module_ctrl_ack.module);
+        ROS_INFO("receive module state : 0x%x",module_ctrl_ack.module_status_ack);
+
+
+        if(module_ctrl_ack.module & POWER_VSYS_24V_NV)
+        {
+
+            ROS_INFO("module %d",module_ctrl_ack.module);
+
+            this->j.clear();
+            this->j = 
+            {
+                {"sub_name","set_module_state"},
+                {
+                    "data",
+                    {
+                        {"door_ctrl_state",(bool)(module_ctrl_ack.module_status_ack & POWER_VSYS_24V_NV)},
+                        {"error_code", CAN_SOURCE_ID_SET_MODULE_STATE},
+                    } 
+                }
+            };
+            this->pub_json_msg_to_app(this->j);
+        }
 
     }
 
+    if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_GET_BAT_STATE)
+    {
+        ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_BAT_STATE");
+        get_bat_info_ack_t get_bat_info_ack;
+        get_bat_info_ack.bat_vol = *(uint16_t *)&msg->Data[1];
+        get_bat_info_ack.bat_percent = *(uint16_t *)&msg->Data[3];
+        
+        get_bat_info_ack_vector.push_back(get_bat_info_ack);
+
+        ROS_INFO("receive bat vol : %d",get_bat_info_ack.bat_vol);
+        ROS_INFO("receive bat percent : %d",get_bat_info_ack.bat_percent);
+        this->sys_powerboard->bat_info.bat_vol = get_bat_info_ack.bat_vol;
+        this->sys_powerboard->bat_info.bat_percent = get_bat_info_ack.bat_percent;
+        //this->PubPower(this->sys_powerboard);
+    }
+ 
+    if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_GET_SYS_STATE)
+    {
+        ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_SYS_STATE");
+        get_sys_status_ack_t get_sys_status_ack;
+        get_sys_status_ack.sys_status = *(uint16_t *)&msg->Data[1];
+        
+        get_sys_status_ack_vector.push_back(get_sys_status_ack);
+
+        this->sys_powerboard->sys_status = get_sys_status_ack.sys_status;
+        this->PubPower(this->sys_powerboard);
+    }
 }
 
 
