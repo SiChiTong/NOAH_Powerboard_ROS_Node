@@ -1,3 +1,10 @@
+/* 
+*  powerboard.cpp 
+*  Communicate Protocol.
+*  Author: Kaka Xie 
+*  Date:2017/10/13
+*/
+
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include "std_msgs/UInt8MultiArray.h" 
@@ -36,18 +43,6 @@ static int last_unread_bytes = 0;
 static unsigned char recv_buf_last[BUF_LEN] = {0};
 
 
-vector<module_ctrl_t> module_set_vector;
-vector<module_ctrl_ack_t> module_set_ack_vector;
-
-
-vector<get_bat_info_t> get_bat_info_vector;
-vector<get_bat_info_ack_t> get_bat_info_ack_vector;
-
-vector<get_sys_status_t> get_sys_status_vector;
-vector<get_sys_status_ack_t> get_sys_status_ack_vector;
-
-
-
 void test_fun(void)
 {
     module_ctrl_t param;  
@@ -63,7 +58,7 @@ void test_fun(void)
         param.on_off = 1;
     }
 
-    module_set_vector.push_back(param);
+//    module_set_vector.push_back(param);
 }
 
 class NoahPowerboard;
@@ -72,52 +67,97 @@ class NoahPowerboard;
 #define GET_SYS_STSTUS_TIME_OUT     1000//ms
 void *CanProtocolProcess(void* arg)
 {
+    module_ctrl_t module_set;
+
+
     NoahPowerboard *pNoahPowerboard =  (NoahPowerboard*)arg;
+
+    bool module_flag = 0;
     while(ros::ok())
     {
-        if(!module_set_vector.empty()) 
+        do
+        {
+            boost::mutex::scoped_lock(mtx);
+            if(!pNoahPowerboard->module_set_vector.empty())
+            {
+                auto a = pNoahPowerboard->module_set_vector.begin(); 
+                module_set = *a;
+                if((module_set.module <= POWER_ALL ) && (module_set.on_off <= 1) && (module_set.group_num <= 2))
+                {
+                    module_flag = 1;            
+                }
+
+                pNoahPowerboard->module_set_vector.erase(a);
+
+            }
+
+        }while(0);
+
+        if(module_flag == 1)
         {   
-            auto a = module_set_vector.begin(); 
-            module_ctrl_t module_set;
-            module_set = *a;
             uint8_t flag = 0;
             uint32_t time_out_cnt = 0;
             static uint8_t err_cnt = 0;
 
-            module_set_vector.erase(a);
+            module_flag = 0;
             ROS_INFO("get set module cmd");
             ROS_INFO("module_set_param.module = 0x%x",module_set.module);
             ROS_INFO("module_set_param.group_num = %d",module_set.group_num);
             ROS_INFO("module_set_param.on_off = %d",module_set.on_off);
-
-            module_set_ack_vector.clear();
+            do
+            {
+                boost::mutex::scoped_lock(mtx);
+                pNoahPowerboard->module_set_ack_vector.clear();
+            }while(0);
 module_set_restart:
-            //memcpy((uint8_t *)(pNoahPowerboard->sys_powerboard->module_status_set),(uint8_t *)&module_set, sizeof(module_ctrl_t));
             pNoahPowerboard->sys_powerboard->module_status_set.module = module_set.module;
             pNoahPowerboard->sys_powerboard->module_status_set.group_num = module_set.group_num;
             pNoahPowerboard->sys_powerboard->module_status_set.on_off = module_set.on_off;
+            ROS_INFO("module ctrl:send cmd to mcu");
             pNoahPowerboard->SetModulePowerOnOff(pNoahPowerboard->sys_powerboard);
-
-            while(time_out_cnt < MODULE_SET_TIME_OUT/5)
+            bool module_ack_flag = 0;
+            module_ctrl_ack_t module_set_ack;
+            while(time_out_cnt < MODULE_SET_TIME_OUT/10)
             {
                 time_out_cnt++;
-                if(!module_set_ack_vector.empty())
+                do
                 {
-                    auto b = module_set_ack_vector.begin();
-                    module_ctrl_ack_t module_set_ack = *b;
+                    boost::mutex::scoped_lock(mtx);
+                    if(!pNoahPowerboard->module_set_ack_vector.empty())
+                    {
+                        ROS_INFO("module_set_ack_vector is not empty");
+                        auto b = pNoahPowerboard->module_set_ack_vector.begin();
+
+                        module_set_ack = *b;
+
+                        pNoahPowerboard->module_set_ack_vector.erase(b);
+                        //if((module_set_ack.module <= POWER_ALL ) && (module_set_ack.on_off <= 1) && (module_set_ack.group_num <= 2))
+                        {
+                            module_ack_flag = 1;
+                            ROS_INFO("get right module ctrl ack");
+                        }
+                    }
+                }while(0);
+                if(module_ack_flag == 1)
+                {
+                    module_ack_flag = 0;
                     ROS_INFO("get module_set_ack_vector data");
                     if(module_set_ack.module == module_set.module)
                     {
                         ROS_INFO("get right module ack, module is 0x%x",module_set_ack.module);
                         break;
                     }
+                    else
+                    {
+                        usleep(10*1000);
+                    }
                 }
                 else
                 {
-                    usleep(5*1000);
+                    usleep(10*1000);
                 }
             }
-            if(time_out_cnt < MODULE_SET_TIME_OUT/5)
+            if(time_out_cnt < MODULE_SET_TIME_OUT/10)
             {
                 ROS_INFO("module ctrl flow OK");
                 err_cnt = 0;
@@ -135,28 +175,29 @@ module_set_restart:
                 ROS_ERROR("CAN NOT COMMUNICATE with powerboard mcu, module ctrl failed !");
                 err_cnt = 0;
             }
+
         }
 
-        if(!get_bat_info_vector.empty()) 
+        if(!pNoahPowerboard->get_bat_info_vector.empty()) 
         {   
-            auto a = get_bat_info_vector.begin(); 
+            auto a = pNoahPowerboard->get_bat_info_vector.begin(); 
 
             uint8_t flag = 0;
             uint32_t time_out_cnt = 0;
 
-            get_bat_info_vector.erase(a);
+            pNoahPowerboard->get_bat_info_vector.erase(a);
             ROS_INFO("get get bat info cmd");
 
-            get_bat_info_ack_vector.clear();
+            pNoahPowerboard->get_bat_info_ack_vector.clear();
 
             pNoahPowerboard->GetBatteryInfo(pNoahPowerboard->sys_powerboard);
 
             while(time_out_cnt < GET_BAT_INFO_TIME_OUT/5)
             {
                 time_out_cnt++;
-                if(!get_bat_info_ack_vector.empty())
+                if(!pNoahPowerboard->get_bat_info_ack_vector.empty())
                 {
-                    auto b = get_bat_info_ack_vector.begin();
+                    auto b = pNoahPowerboard->get_bat_info_ack_vector.begin();
                     get_bat_info_ack_t get_bat_info_ack = *b;
                     ROS_INFO("get get_bat_info_ack_vector data");
                     ROS_INFO("get bat voltage %d",get_bat_info_ack.bat_vol);
@@ -180,26 +221,26 @@ module_set_restart:
 
 
 
-        if(!get_sys_status_vector.empty()) 
+        if(!pNoahPowerboard->get_sys_status_vector.empty()) 
         {   
-            auto a = get_sys_status_vector.begin(); 
+            auto a = pNoahPowerboard->get_sys_status_vector.begin(); 
 
             uint8_t flag = 0;
             uint32_t time_out_cnt = 0;
             
-            get_sys_status_vector.erase(a);
+            pNoahPowerboard->get_sys_status_vector.erase(a);
             ROS_INFO("get get bat info cmd");
 
-            get_sys_status_ack_vector.clear();
+            pNoahPowerboard->get_sys_status_ack_vector.clear();
 
             pNoahPowerboard->GetSysStatus(pNoahPowerboard->sys_powerboard);
 
             while(time_out_cnt < GET_SYS_STSTUS_TIME_OUT/5)
             {
                 time_out_cnt++;
-                if(!get_sys_status_ack_vector.empty())
+                if(!pNoahPowerboard->get_sys_status_ack_vector.empty())
                 {
-                    auto b = get_sys_status_ack_vector.begin();
+                    auto b = pNoahPowerboard->get_sys_status_ack_vector.begin();
                     get_sys_status_ack_t get_sys_status_ack = *b;
                     ROS_INFO("get get_sys_status_ack_vector data");
                     ROS_INFO("sys status is  %d",get_sys_status_ack.sys_status);
@@ -771,10 +812,7 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
         //ROS_INFO("find pub_name");
         if(j["pub_name"] == "set_module_state")
         {
-            //ROS_INFO("find set_module_state");
-
-
-
+            boost::mutex::scoped_lock(mtx);
             if(j["data"]["dev_name"] == "_24v_printer")
             {
                 if(j["data"]["set_state"] == true)
@@ -784,7 +822,7 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                     param.group_num = 1;
                     param.module = POWER_24V_PRINTER;    
                     param.on_off = MODULE_CTRL_ON;
-                    module_set_vector.push_back(param);
+                    this->module_set_vector.push_back(param);
                 }
                 else if(j["data"]["set_state"] == false)
                 {
@@ -793,11 +831,9 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                     param.group_num = 1;
                     param.module = POWER_24V_PRINTER;    
                     param.on_off = MODULE_CTRL_OFF;
-                    module_set_vector.push_back(param);
+                    this->module_set_vector.push_back(param);
                 }
             }
-
-
 
             if(j["data"]["dev_name"] == "_24v_dcdc")
             {
@@ -808,7 +844,7 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                     param.group_num = 1;
                     param.module = POWER_24V_EN;    
                     param.on_off = MODULE_CTRL_ON;
-                    module_set_vector.push_back(param);
+                    this->module_set_vector.push_back(param);
                 }
                 else if(j["data"]["set_state"] == false)
                 {
@@ -817,11 +853,9 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                     param.group_num = 1;
                     param.module = POWER_24V_EN;    
                     param.on_off = MODULE_CTRL_OFF;
-                    module_set_vector.push_back(param);
+                    this->module_set_vector.push_back(param);
                 }
             }
-
-
 
             if(j["data"]["dev_name"] == "_5v_dcdc")
             {
@@ -832,7 +866,7 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                     param.group_num = 1;
                     param.module = POWER_5V_EN;    
                     param.on_off = MODULE_CTRL_ON;
-                    module_set_vector.push_back(param);
+                    this->module_set_vector.push_back(param);
                 }
                 else if(j["data"]["set_state"] == false)
                 {
@@ -841,11 +875,10 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                     param.group_num = 1;
                     param.module = POWER_5V_EN;    
                     param.on_off = MODULE_CTRL_OFF;
-                    module_set_vector.push_back(param);
+                    this->module_set_vector.push_back(param);
                 }
 
             }
-
 
             if(j["data"]["dev_name"] == "_12v_dcdc")
             {
@@ -856,7 +889,7 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                     param.group_num = 1;
                     param.module = POWER_12V_EN;    
                     param.on_off = MODULE_CTRL_ON;
-                    module_set_vector.push_back(param);
+                    this->module_set_vector.push_back(param);
                 }
                 else if(j["data"]["set_state"] == false)
                 {
@@ -865,7 +898,7 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                     param.group_num = 1;
                     param.module = POWER_12V_EN;    
                     param.on_off = MODULE_CTRL_OFF;
-                    module_set_vector.push_back(param);
+                    this->module_set_vector.push_back(param);
                 }
             }
 
@@ -879,7 +912,7 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                     param.group_num = 1;
                     param.module = POWER_VSYS_24V_NV;    
                     param.on_off = MODULE_CTRL_ON;
-                    module_set_vector.push_back(param);
+                    this->module_set_vector.push_back(param);
                 }
                 else if(j["data"]["set_state"] == false)
                 {
@@ -888,7 +921,7 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                     param.group_num = 1;
                     param.module = POWER_VSYS_24V_NV;    
                     param.on_off = MODULE_CTRL_OFF;
-                    module_set_vector.push_back(param);
+                    this->module_set_vector.push_back(param);
                 }
             }
 
@@ -909,31 +942,33 @@ void NoahPowerboard:: from_navigation_rcv_callback(const std_msgs::String::Const
 
     ROS_INFO("camera led ctrl:value is %d",value);
     ROS_INFO("%s",msg->data.c_str());
+
+    boost::mutex::scoped_lock(mtx);
     switch(value)
     {
         case 0:
             ROS_INFO("camera led ctrl:get 00"); 
             param.module = POWER_CAMERA_LED;    
             param.on_off = MODULE_CTRL_OFF;
-            module_set_vector.push_back(param);
+            this->module_set_vector.push_back(param);
             break;
         case 1:
             ROS_INFO("camera led ctrl:get 01"); 
             param.module = POWER_CAMERA_LED;    
             param.on_off = MODULE_CTRL_ON;
-            module_set_vector.push_back(param);
+            this->module_set_vector.push_back(param);
             break;
         case 10:
             ROS_INFO("camera led ctrl:get 10"); 
             param.module = POWER_CAMERA_LED;    
             param.on_off = MODULE_CTRL_ON;
-            module_set_vector.push_back(param);
+            this->module_set_vector.push_back(param);
             break;
         case 11:
             ROS_INFO("camera led ctrl:get 11"); 
             param.module = POWER_CAMERA_LED;    
             param.on_off = MODULE_CTRL_ON;
-            module_set_vector.push_back(param);
+            this->module_set_vector.push_back(param);
             break;
         default :
             break;
@@ -962,11 +997,11 @@ void NoahPowerboard::power_from_app_rcv_callback(std_msgs::UInt8MultiArray data)
     //this->PubPower();
         get_bat_info_t  get_bat_info;
         get_bat_info.reserve = 0;
-        get_bat_info_vector.push_back(get_bat_info);
+        this->get_bat_info_vector.push_back(get_bat_info);
         usleep(10*1000);
         get_sys_status_t get_sys_status;
         get_sys_status.reserve = 0;
-        get_sys_status_vector.push_back(get_sys_status);
+        this->get_sys_status_vector.push_back(get_sys_status);
    }
 }
 
@@ -1015,8 +1050,11 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
         module_ctrl_ack.module = *(uint32_t *)&msg->Data[2];
         module_ctrl_ack.group_num = msg->Data[1];
         module_ctrl_ack.module_status_ack  = *(uint32_t *)&msg->Data[6];
-        
-        module_set_ack_vector.push_back(module_ctrl_ack);
+        do
+        {
+            boost::mutex::scoped_lock(this->mtx);        
+            this->module_set_ack_vector.push_back(module_ctrl_ack);
+        }while(0);
 
         ROS_INFO("receive module : 0x%x",module_ctrl_ack.module);
         ROS_INFO("receive module state : 0x%x",module_ctrl_ack.module_status_ack);
@@ -1051,7 +1089,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
         get_bat_info_ack.bat_vol = *(uint16_t *)&msg->Data[1];
         get_bat_info_ack.bat_percent = *(uint16_t *)&msg->Data[3];
         
-        get_bat_info_ack_vector.push_back(get_bat_info_ack);
+        this->get_bat_info_ack_vector.push_back(get_bat_info_ack);
 
         ROS_INFO("receive bat vol : %d",get_bat_info_ack.bat_vol);
         ROS_INFO("receive bat percent : %d",get_bat_info_ack.bat_percent);
@@ -1066,7 +1104,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
         get_sys_status_ack_t get_sys_status_ack;
         get_sys_status_ack.sys_status = *(uint16_t *)&msg->Data[1];
         
-        get_sys_status_ack_vector.push_back(get_sys_status_ack);
+        this->get_sys_status_ack_vector.push_back(get_sys_status_ack);
 
         this->sys_powerboard->sys_status = get_sys_status_ack.sys_status;
         this->PubPower(this->sys_powerboard);

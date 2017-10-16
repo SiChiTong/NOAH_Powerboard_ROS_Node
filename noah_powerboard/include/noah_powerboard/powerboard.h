@@ -3,7 +3,7 @@
 #include "json.hpp"
 #include <mrobot_driver_msgs/vci_can.h>
 #include <can_long_frame.h>
-
+#include <boost/thread/mutex.hpp>  
 using json = nlohmann::json;
 #ifndef LED_H
 #define LED_H
@@ -391,6 +391,20 @@ class NoahPowerboard
 
         powerboard_t    *sys_powerboard;
         can_long_frame  long_frame;
+
+
+
+
+        vector<module_ctrl_t> module_set_vector;
+        vector<module_ctrl_ack_t> module_set_ack_vector;
+
+        vector<get_bat_info_t> get_bat_info_vector;
+        vector<get_bat_info_ack_t> get_bat_info_ack_vector;
+
+        vector<get_sys_status_t> get_sys_status_vector;
+        vector<get_sys_status_ack_t> get_sys_status_ack_vector;
+
+        boost::mutex mtx;
 
     private:
         uint8_t CalCheckSum(uint8_t *data, uint8_t len);
