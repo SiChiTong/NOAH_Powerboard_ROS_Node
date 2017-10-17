@@ -37,7 +37,7 @@ int main(int argc, char **argv)
     {
         if(cnt++ % (uint32_t)rate == (uint32_t)rate/2)
         {
-            //test_fun(); 
+            test_fun((void*)&powerboard); 
         }
         ros::spinOnce();
         loop_rate.sleep();

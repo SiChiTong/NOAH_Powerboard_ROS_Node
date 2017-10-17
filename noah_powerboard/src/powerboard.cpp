@@ -43,8 +43,9 @@ static int last_unread_bytes = 0;
 static unsigned char recv_buf_last[BUF_LEN] = {0};
 
 
-void test_fun(void)
+void test_fun(void * arg)
 {
+    NoahPowerboard *pNoahPowerboard =  (NoahPowerboard*)arg;
     module_ctrl_t param;  
     static uint8_t cnt = 0;
     param.module = POWER_5V_EN | POWER_12V_EN | POWER_LED_MCU;
@@ -59,23 +60,32 @@ void test_fun(void)
     }
 
     //    module_set_vector.push_back(param);
+    set_ir_duty_t set_ir_duty;
+    
+    set_ir_duty.duty = 90;
+    set_ir_duty.reserve = 0;
+    
+    pNoahPowerboard->set_ir_duty_vector.push_back(set_ir_duty);
 }
 
 class NoahPowerboard;
 #define MODULE_SET_TIME_OUT         1000//ms
 #define GET_BAT_INFO_TIME_OUT       1000//ms
 #define GET_SYS_STSTUS_TIME_OUT     1000//ms
+#define SET_IR_DUTY_TIME_OUT        1000//ms
 void *CanProtocolProcess(void* arg)
 {
     module_ctrl_t module_set;
     get_bat_info_t get_bat_info;
     get_sys_status_t get_sys_status;
+    set_ir_duty_t set_ir_duty;
 
     NoahPowerboard *pNoahPowerboard =  (NoahPowerboard*)arg;
 
     bool module_flag = 0;
     bool get_bat_info_flag = 0;
     bool get_sys_status_flag = 0;
+    bool set_ir_duty_flag = 0;
     while(ros::ok())
     {
         /* --------  module ctrl protocol  -------- */
@@ -312,8 +322,105 @@ get_bat_info_restart:
         /* -------- get bat info protocol end -------- */
 
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        /* -------- set ir duty protocol begin -------- */
+        do
+        {
+            boost::mutex::scoped_lock(mtx);
+            if(!pNoahPowerboard->set_ir_duty_vector.empty())
+            {
+                auto a = pNoahPowerboard->set_ir_duty_vector.begin(); 
+                set_ir_duty = *a;
+                if((set_ir_duty.duty <= 100 ) && (set_ir_duty.reserve == 0))
+                {
+                    set_ir_duty_flag = 1;            
+                }
 
+                pNoahPowerboard->set_ir_duty_vector.erase(a);
+
+            }
+
+        }while(0);
+
+        if(set_ir_duty_flag == 1)
+        {   
+            uint8_t flag = 0;
+            uint32_t time_out_cnt = 0;
+            static uint8_t err_cnt = 0;
+
+            set_ir_duty_flag = 0;
+
+            ROS_INFO("get set ir duty cmd");
+            do
+            {
+                boost::mutex::scoped_lock(mtx);
+                pNoahPowerboard->set_ir_duty_ack_vector.clear();
+            }while(0);
+
+set_ir_duty_restart:
+
+            ROS_INFO("get sys status:send cmd to mcu");
+            pNoahPowerboard->InfraredLedCtrl(pNoahPowerboard->sys_powerboard);
+
+            bool set_ir_duty_ack_flag = 0;
+            set_ir_duty_ack_t set_ir_duty_ack;
+            while(time_out_cnt < SET_IR_DUTY_TIME_OUT/10)
+            {
+                time_out_cnt++;
+                do
+                {
+                    boost::mutex::scoped_lock(mtx);
+                    if(!pNoahPowerboard->set_ir_duty_ack_vector.empty())
+                    {
+                        ROS_INFO("set_ir_duty_ack_vector is not empty");
+                        auto b = pNoahPowerboard->set_ir_duty_ack_vector.begin();
+                        set_ir_duty_ack = *b;
+                        pNoahPowerboard->set_ir_duty_ack_vector.erase(b);
+
+                        ROS_INFO("set_ir_duty_ack.duty = %d",set_ir_duty_ack.duty);
+
+                        if( set_ir_duty_ack.duty <= 100 )
+                        {
+                            set_ir_duty_ack_flag = 1;
+                            ROS_INFO("get right set_ir_duty  ack");
+                        }
+                    }
+                }while(0);
+                if(set_ir_duty_ack_flag == 1)
+                {
+                    set_ir_duty_ack_flag = 0;
+                    ROS_INFO("get set_ir_duty_ack_vector data");
+
+                    break;
+                }
+                else
+                {
+                    usleep(10*1000);
+                }
+            }
+            if(time_out_cnt < SET_IR_DUTY_TIME_OUT/10)
+            {
+                ROS_INFO("set ir duty flow OK");
+                err_cnt = 0;
+                time_out_cnt = 0;
+            }
+            else
+            {
+                ROS_ERROR("set ir duty time out");
+                time_out_cnt = 0;
+                if(err_cnt++ < 3)
+                {
+                    ROS_ERROR("set ir duty start to resend msg....");
+                    goto set_ir_duty_restart;
+                }
+                ROS_ERROR("CAN NOT COMMUNICATE with powerboard mcu,set ir duty failed !");
+                err_cnt = 0;
+            }
+
+        }
+        /* -------- set ir duty protocol end -------- */
+
+
+        /* -------- get sys status protocol begin -------- */
         do
         {
             boost::mutex::scoped_lock(mtx);
@@ -409,50 +516,9 @@ get_sys_status_restart:
             }
 
         }
+        /* -------- get sys status protocol end -------- */
 
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#if 0
-        if(!pNoahPowerboard->get_sys_status_vector.empty()) 
-        {   
-            auto a = pNoahPowerboard->get_sys_status_vector.begin(); 
-
-            uint8_t flag = 0;
-            uint32_t time_out_cnt = 0;
-
-            pNoahPowerboard->get_sys_status_vector.erase(a);
-            ROS_INFO("get get bat info cmd");
-
-            pNoahPowerboard->get_sys_status_ack_vector.clear();
-
-            pNoahPowerboard->GetSysStatus(pNoahPowerboard->sys_powerboard);
-
-            while(time_out_cnt < GET_SYS_STSTUS_TIME_OUT/5)
-            {
-                time_out_cnt++;
-                if(!pNoahPowerboard->get_sys_status_ack_vector.empty())
-                {
-                    auto b = pNoahPowerboard->get_sys_status_ack_vector.begin();
-                    get_sys_status_ack_t get_sys_status_ack = *b;
-                    ROS_INFO("get get_sys_status_ack_vector data");
-                    ROS_INFO("sys status is  %d",get_sys_status_ack.sys_status);
-                    break;
-                }
-                else
-                {
-                    usleep(5*1000);
-                }
-            }
-            if(time_out_cnt < GET_SYS_STSTUS_TIME_OUT/5)
-            {
-                ROS_INFO("get bat info flow OK");
-            }
-            else
-            {
-                ROS_ERROR("get bat info time out");
-            }
-        }
-#endif
         usleep(5000);
     }
 }
@@ -1257,7 +1323,11 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
         get_bat_info_ack.bat_vol = *(uint16_t *)&msg->Data[1];
         get_bat_info_ack.bat_percent = *(uint16_t *)&msg->Data[3];
 
-        this->get_bat_info_ack_vector.push_back(get_bat_info_ack);
+        do
+        {
+            boost::mutex::scoped_lock(this->mtx);        
+            this->get_bat_info_ack_vector.push_back(get_bat_info_ack);
+        }while(0);
 
         ROS_INFO("receive bat vol : %d",get_bat_info_ack.bat_vol);
         ROS_INFO("receive bat percent : %d",get_bat_info_ack.bat_percent);
@@ -1272,7 +1342,11 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
         get_sys_status_ack_t get_sys_status_ack;
         get_sys_status_ack.sys_status = *(uint16_t *)&msg->Data[1];
 
-        this->get_sys_status_ack_vector.push_back(get_sys_status_ack);
+        do
+        {
+            boost::mutex::scoped_lock(this->mtx);        
+            this->get_sys_status_ack_vector.push_back(get_sys_status_ack);
+        }while(0);
 
         this->sys_powerboard->sys_status = get_sys_status_ack.sys_status;
         this->PubPower(this->sys_powerboard);
@@ -1281,13 +1355,16 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
     if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_SET_IR_LED_LIGHTNESS)
     {
         ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_SET_IR_LED_LIGHTNESS");
-        get_sys_status_ack_t get_sys_status_ack;
-        get_sys_status_ack.sys_status = *(uint16_t *)&msg->Data[1];
+        set_ir_duty_ack_t set_ir_duty_ack;
+        set_ir_duty_ack.duty = msg->Data[1];
 
-        this->get_sys_status_ack_vector.push_back(get_sys_status_ack);
+        do
+        {
+            boost::mutex::scoped_lock(this->mtx);        
+            this->set_ir_duty_ack_vector.push_back(set_ir_duty_ack);
+        }while(0);
 
-        this->sys_powerboard->sys_status = get_sys_status_ack.sys_status;
-        this->PubPower(this->sys_powerboard);
+        this->sys_powerboard->ir_cmd.lightness_percent = set_ir_duty_ack.duty;
     }
 }
 

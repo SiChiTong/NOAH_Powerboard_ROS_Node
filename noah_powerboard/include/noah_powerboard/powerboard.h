@@ -444,7 +444,8 @@ int handle_receive_data(powerboard_t *sys);
 
 void *CanProtocolProcess(void* arg);
 
-void test_fun(void);
+
+void test_fun(void * arg);
 
 typedef struct
 {
