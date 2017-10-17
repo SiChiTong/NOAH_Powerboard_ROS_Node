@@ -64,7 +64,7 @@ int main(int argc, char **argv)
     ros::Publisher test_navigation_pub = n.advertise<std_msgs::String>("lane_follower_node/camera_using_n",1000);
     ros::Subscriber test_sub = n.subscribe("tx_noah_powerboard_node", 1000, &callback);
     ros::Publisher test_power_pub = n.advertise<std_msgs::UInt8MultiArray>("app_pub_power",1000);
-    ros::Rate loop_rate(1);
+    ros::Rate loop_rate(0.5);
     json j;
     static uint32_t cnt = 0;
     static uint8_t flag = 0;
@@ -89,22 +89,22 @@ int main(int argc, char **argv)
                 if(cnt % 4 == 0)
                 {
                     led.data = "00";
-                    ROS_INFO("camera led : 00");
+                    ROS_INFO("set camera led : 00");
                 }
                 if(cnt % 4 == 1)
                 {
                     //led.data = "01";
-                    ROS_INFO("camera led : 01");
+                    ROS_INFO("set camera led : 01");
                 }
                 if(cnt % 4 == 2)
                 {
                     led.data = "10";
-                    ROS_INFO("camera led : 10");
+                    ROS_INFO("set camera led : 10");
                 }
                 if(cnt % 4 == 3)
                 {
                     led.data = "11";
-                    ROS_INFO("camera led : 11");
+                    ROS_INFO("set camera led : 11");
                 }
                 test_navigation_pub.publish(led);
 
@@ -114,6 +114,7 @@ int main(int argc, char **argv)
                 std_msgs::UInt8MultiArray test_power;
                 test_power.data.push_back(0);
                 test_power_pub.publish(test_power);
+                ROS_INFO("power request");
 #endif
 
 #if 1
@@ -134,6 +135,7 @@ int main(int argc, char **argv)
                 pub_json_msg.data.clear();  
                 pub_json_msg.data = ss.str();
                 test_pub.publish(pub_json_msg);
+                ROS_INFO("set 24v printer: %d",state);
 #endif
 
 
@@ -181,6 +183,7 @@ int main(int argc, char **argv)
                 pub_json_msg_4.data.clear();  
                 pub_json_msg_4.data = ss_4.str();
                 test_pub.publish(pub_json_msg_4);
+                ROS_INFO("set 5v dcdc: %d",state);
                 //usleep(500*1000);
 #endif
 
@@ -204,6 +207,7 @@ int main(int argc, char **argv)
                 pub_json_msg_3.data.clear();  
                 pub_json_msg_3.data = ss_3.str();
                 test_pub.publish(pub_json_msg_3);
+                ROS_INFO("set 12v dcdc: %d",state);
                 //usleep(500*1000);
 #endif
 

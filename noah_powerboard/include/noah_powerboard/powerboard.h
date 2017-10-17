@@ -389,6 +389,8 @@ class NoahPowerboard
         void rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::ConstPtr &c_msg);
         
 
+        json j;
+        void pub_json_msg_to_app(const nlohmann::json j_msg);
         powerboard_t    *sys_powerboard;
         can_long_frame  long_frame;
 
@@ -419,8 +421,8 @@ class NoahPowerboard
         ros::Publisher pub_charge_status_to_move_base;
         ros::Publisher pub_to_can_node;//publish to roscan node
         ros::Subscriber sub_from_can_node;
-        json j;
-        void pub_json_msg_to_app(const nlohmann::json j_msg);
+//        json j;
+//        void pub_json_msg_to_app(const nlohmann::json j_msg);
         powerboard_t    sys_powerboard_ram; 
 
 };
