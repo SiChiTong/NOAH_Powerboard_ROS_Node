@@ -139,6 +139,18 @@ typedef struct
 
 typedef struct
 {
+    uint8_t reserve;
+    uint8_t duty;
+}set_ir_duty_t;
+
+typedef struct
+{
+    uint8_t reserve;
+    uint8_t duty;
+}set_ir_duty_ack_t;
+
+typedef struct
+{
     uint8_t r;
     uint8_t g;
     uint8_t b;
@@ -406,6 +418,8 @@ class NoahPowerboard
         vector<get_sys_status_t> get_sys_status_vector;
         vector<get_sys_status_ack_t> get_sys_status_ack_vector;
 
+        vector<set_ir_duty_t> set_ir_duty_vector;
+        vector<set_ir_duty_ack_t> set_ir_duty_ack_vector;
         boost::mutex mtx;
 
     private:

@@ -68,13 +68,17 @@ class NoahPowerboard;
 void *CanProtocolProcess(void* arg)
 {
     module_ctrl_t module_set;
-
+    get_bat_info_t get_bat_info;
+    get_sys_status_t get_sys_status;
 
     NoahPowerboard *pNoahPowerboard =  (NoahPowerboard*)arg;
 
     bool module_flag = 0;
+    bool get_bat_info_flag = 0;
+    bool get_sys_status_flag = 0;
     while(ros::ok())
     {
+        /* --------  module ctrl protocol  -------- */
         do
         {
             boost::mutex::scoped_lock(mtx);
@@ -133,7 +137,11 @@ module_set_restart:
                         module_set_ack = *b;
 
                         pNoahPowerboard->module_set_ack_vector.erase(b);
-                        //if((module_set_ack.module <= POWER_ALL ) && (module_set_ack.on_off <= 1) && (module_set_ack.group_num <= 2))
+
+                        ROS_INFO("module_set_ack.module = 0x%x",module_set_ack.module);
+                        ROS_INFO("module_set_ack.group_num = %d",module_set_ack.group_num);
+                        ROS_INFO("module_set_ack.on_off = %d",module_set_ack.on_off);
+                        if((module_set_ack.module <= POWER_ALL ) && (module_set_ack.on_off <= 1) && (module_set_ack.group_num <= 2))
                         {
                             module_ack_flag = 1;
                             ROS_INFO("get right module ctrl ack");
@@ -201,50 +209,210 @@ module_set_restart:
             }
 
         }
+        /* --------  module ctrl protocol end -------- */
 
-        if(!pNoahPowerboard->get_bat_info_vector.empty()) 
+        
+        /* --------  bat info protocol begin -------- */
+        do
+        {
+            boost::mutex::scoped_lock(mtx);
+            if(!pNoahPowerboard->get_bat_info_vector.empty())
+            {
+                auto a = pNoahPowerboard->get_bat_info_vector.begin(); 
+                get_bat_info = *a;
+                if(get_bat_info.reserve == 0 )
+                {
+                    get_bat_info_flag = 1;            
+                }
+
+                pNoahPowerboard->get_bat_info_vector.erase(a);
+
+            }
+
+        }while(0);
+
+        if(get_bat_info_flag == 1)
         {   
-            auto a = pNoahPowerboard->get_bat_info_vector.begin(); 
-
             uint8_t flag = 0;
             uint32_t time_out_cnt = 0;
+            static uint8_t err_cnt = 0;
 
-            pNoahPowerboard->get_bat_info_vector.erase(a);
-            ROS_INFO("get get bat info cmd");
+            get_bat_info_flag = 0;
 
-            pNoahPowerboard->get_bat_info_ack_vector.clear();
+            ROS_INFO("get get_bat_info cmd");
+            do
+            {
+                boost::mutex::scoped_lock(mtx);
+                pNoahPowerboard->get_bat_info_ack_vector.clear();
+            }while(0);
 
+get_bat_info_restart:
+            ROS_INFO("get bat info:send cmd to mcu");
             pNoahPowerboard->GetBatteryInfo(pNoahPowerboard->sys_powerboard);
-
-            while(time_out_cnt < GET_BAT_INFO_TIME_OUT/5)
+            bool get_bat_info_ack_flag = 0;
+            get_bat_info_ack_t get_bat_info_ack;
+            while(time_out_cnt < GET_BAT_INFO_TIME_OUT/10)
             {
                 time_out_cnt++;
-                if(!pNoahPowerboard->get_bat_info_ack_vector.empty())
+                do
                 {
-                    auto b = pNoahPowerboard->get_bat_info_ack_vector.begin();
-                    get_bat_info_ack_t get_bat_info_ack = *b;
+                    boost::mutex::scoped_lock(mtx);
+                    if(!pNoahPowerboard->get_bat_info_ack_vector.empty())
+                    {
+                        ROS_INFO("get_bat_info_ack_vector is not empty");
+                        auto b = pNoahPowerboard->get_bat_info_ack_vector.begin();
+
+                        get_bat_info_ack = *b;
+
+                        pNoahPowerboard->get_bat_info_ack_vector.erase(b);
+
+                        ROS_INFO("get_bat_info_ack.bat_vol = 0x%x",get_bat_info_ack.bat_vol);
+                        ROS_INFO("get_bat_info_ack.bat_percent = %d",get_bat_info_ack.bat_percent);
+                        if( get_bat_info_ack.bat_percent <= 100)
+                        {
+                            get_bat_info_ack_flag = 1;
+                            ROS_INFO("get get_bat_info ack");
+                        }
+                    }
+                }while(0);
+                if(get_bat_info_ack_flag == 1)
+                {
+                    get_bat_info_ack_flag = 0;
                     ROS_INFO("get get_bat_info_ack_vector data");
-                    ROS_INFO("get bat voltage %d",get_bat_info_ack.bat_vol);
-                    ROS_INFO("get bat percent %d",get_bat_info_ack.bat_percent);
+                    ROS_INFO("get right get_bat_info ack, bat_vol is %d",get_bat_info_ack.bat_vol);
+                    ROS_INFO("get right get_bat_info ack, bat_percent is %d",get_bat_info_ack.bat_percent);
+
                     break;
                 }
                 else
                 {
-                    usleep(5*1000);
+                    usleep(10*1000);
                 }
             }
-            if(time_out_cnt < GET_BAT_INFO_TIME_OUT/5)
+            if(time_out_cnt < GET_BAT_INFO_TIME_OUT/10)
             {
-                ROS_INFO("get bat info flow OK");
+                ROS_INFO("get_bat_info flow OK");
+                err_cnt = 0;
+                time_out_cnt = 0;
             }
             else
             {
-                ROS_ERROR("get bat info time out");
+                ROS_ERROR("get_bat_info time out");
+                time_out_cnt = 0;
+                if(err_cnt++ < 3)
+                {
+                    ROS_ERROR("get_bat_info start to resend msg....");
+                    goto get_bat_info_restart;
+                }
+                ROS_ERROR("CAN NOT COMMUNICATE with powerboard mcu, get bat info failed !");
+                err_cnt = 0;
             }
+
+        }
+        /* -------- get bat info protocol end -------- */
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        do
+        {
+            boost::mutex::scoped_lock(mtx);
+            if(!pNoahPowerboard->get_sys_status_vector.empty())
+            {
+                auto a = pNoahPowerboard->get_sys_status_vector.begin(); 
+                get_sys_status = *a;
+                if(get_sys_status.reserve == 0 )
+                {
+                    get_sys_status_flag = 1;            
+                }
+
+                pNoahPowerboard->get_sys_status_vector.erase(a);
+
+            }
+
+        }while(0);
+
+        if(get_sys_status_flag == 1)
+        {   
+            uint8_t flag = 0;
+            uint32_t time_out_cnt = 0;
+            static uint8_t err_cnt = 0;
+
+            get_sys_status_flag = 0;
+
+            ROS_INFO("get get sys status cmd");
+            do
+            {
+                boost::mutex::scoped_lock(mtx);
+                pNoahPowerboard->get_sys_status_ack_vector.clear();
+            }while(0);
+
+get_sys_status_restart:
+
+            ROS_INFO("get sys status:send cmd to mcu");
+            pNoahPowerboard->GetSysStatus(pNoahPowerboard->sys_powerboard);
+
+            bool get_sys_status_ack_flag = 0;
+            get_sys_status_ack_t get_sys_status_ack;
+            while(time_out_cnt < GET_SYS_STSTUS_TIME_OUT/10)
+            {
+                time_out_cnt++;
+                do
+                {
+                    boost::mutex::scoped_lock(mtx);
+                    if(!pNoahPowerboard->get_sys_status_ack_vector.empty())
+                    {
+                        ROS_INFO("get_sys_status_vector is not empty");
+                        auto b = pNoahPowerboard->get_sys_status_ack_vector.begin();
+                        get_sys_status_ack = *b;
+                        pNoahPowerboard->get_sys_status_ack_vector.erase(b);
+
+                        ROS_INFO("get_sys_status_ack.sys_status = %d",get_sys_status_ack.sys_status);
+
+                        if(get_sys_status_ack.sys_status <= 0x1ff )
+                        {
+                            get_sys_status_ack_flag = 1;
+                            ROS_INFO("get right get_sys_status  ack");
+                        }
+                    }
+                }while(0);
+                if(get_sys_status_ack_flag == 1)
+                {
+                    get_sys_status_ack_flag = 0;
+                    ROS_INFO("get get_sys_status_ack_vector data");
+                    ROS_INFO("get right get_sys_status ack, status is 0x%x",get_sys_status_ack.sys_status);
+
+                    break;
+                }
+                else
+                {
+                    usleep(10*1000);
+                }
+            }
+            if(time_out_cnt < GET_SYS_STSTUS_TIME_OUT/10)
+            {
+                ROS_INFO("get sys status flow OK");
+                err_cnt = 0;
+                time_out_cnt = 0;
+            }
+            else
+            {
+                ROS_ERROR("get sys status time out");
+                time_out_cnt = 0;
+                if(err_cnt++ < 3)
+                {
+                    ROS_ERROR("get sys status start to resend msg....");
+                    goto get_sys_status_restart;
+                }
+                ROS_ERROR("CAN NOT COMMUNICATE with powerboard mcu, get_sys_status failed !");
+                err_cnt = 0;
+            }
+
         }
 
 
-
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#if 0
         if(!pNoahPowerboard->get_sys_status_vector.empty()) 
         {   
             auto a = pNoahPowerboard->get_sys_status_vector.begin(); 
@@ -284,7 +452,7 @@ module_set_restart:
                 ROS_ERROR("get bat info time out");
             }
         }
-
+#endif
         usleep(5000);
     }
 }
@@ -523,28 +691,23 @@ int NoahPowerboard::GetSysStatus(powerboard_t *sys)     // done
 
 int NoahPowerboard::InfraredLedCtrl(powerboard_t *sys)     // done
 {
-    int error = -1;
-    sys->send_data_buf[0] = PROTOCOL_HEAD;
-    sys->send_data_buf[1] = 7;
-    sys->send_data_buf[2] = FRAME_TYPE_IRLED_CONTROL;
-    sys->send_data_buf[3] = sys->ir_cmd.cmd;
-    if(sys->send_data_buf[3] == IR_CMD_READ)
-    {
-        sys->send_data_buf[4] = 0;
-    }
-    else if(sys->send_data_buf[3] == IR_CMD_WRITE)
-    {
-        sys->send_data_buf[4] = sys->ir_cmd.set_ir_percent;
-    }
-    sys->send_data_buf[5] = this->CalCheckSum(sys->send_data_buf, 5);
-    sys->send_data_buf[6] = PROTOCOL_TAIL;
-    this->send_serial_data(sys);
-    usleep(TEST_WAIT_TIME);
-    error = this->handle_receive_data(sys);
-    if(error < 0)
-    {
+    int error = 0; 
+    mrobot_driver_msgs::vci_can can_msg;
+    CAN_ID_UNION id;
+    memset(&id, 0x0, sizeof(CAN_ID_UNION));
+    id.CanID_Struct.SourceID = CAN_SOURCE_ID_SET_IR_LED_LIGHTNESS;
+    id.CanID_Struct.SrcMACID = 0;//CAN_SUB_PB_SRC_ID;
+    id.CanID_Struct.DestMACID = NOAH_POWERBOARD_CAN_SRCMAC_ID;
+    id.CanID_Struct.FUNC_ID = 0x02;
+    id.CanID_Struct.ACK = 0;
+    id.CanID_Struct.res = 0;
 
-    }
+    can_msg.ID = id.CANx_ID;
+    can_msg.DataLen = 2;
+    can_msg.Data.resize(2);
+    can_msg.Data[0] = 0x00;
+    can_msg.Data[1] = sys->ir_cmd.lightness_percent; 
+    this->pub_to_can_node.publish(can_msg);
     return error;
 }
 
@@ -1054,9 +1217,9 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
     {
         return;
     }
-    for(uint8_t i = 0; i < msg->DataLen; i++)
+    //for(uint8_t i = 0; i < msg->DataLen; i++)
     {
-        ROS_INFO("msg->Data[%d] = 0x%x",i,msg->Data[i]);
+        //ROS_INFO("msg->Data[%d] = 0x%x",i,msg->Data[i]);
     }
     can_msg.ID = msg->ID;
     id.CANx_ID = can_msg.ID;
@@ -1073,6 +1236,8 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
         module_ctrl_ack_t module_ctrl_ack;
         module_ctrl_ack.module = *(uint32_t *)&msg->Data[2];
         module_ctrl_ack.group_num = msg->Data[1];
+        module_ctrl_ack.on_off = msg->Data[10];
+
         module_ctrl_ack.module_status_ack  = *(uint32_t *)&msg->Data[6];
         do
         {
@@ -1082,28 +1247,6 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
 
         ROS_INFO("receive module : 0x%x",module_ctrl_ack.module);
         ROS_INFO("receive module state : 0x%x",module_ctrl_ack.module_status_ack);
-
-#if 0
-        if(module_ctrl_ack.module & POWER_VSYS_24V_NV)
-        {
-
-            ROS_INFO("module %d",module_ctrl_ack.module);
-
-            this->j.clear();
-            this->j = 
-            {
-                {"sub_name","set_module_state"},
-                {
-                    "data",
-                    {
-                        {"door_ctrl_state",(bool)(module_ctrl_ack.module_status_ack & POWER_VSYS_24V_NV)},
-                        {"error_code", CAN_SOURCE_ID_SET_MODULE_STATE},
-                    } 
-                }
-            };
-            this->pub_json_msg_to_app(this->j);
-        }
-#endif 
 
     }
 
@@ -1126,6 +1269,18 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
     if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_GET_SYS_STATE)
     {
         ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_SYS_STATE");
+        get_sys_status_ack_t get_sys_status_ack;
+        get_sys_status_ack.sys_status = *(uint16_t *)&msg->Data[1];
+
+        this->get_sys_status_ack_vector.push_back(get_sys_status_ack);
+
+        this->sys_powerboard->sys_status = get_sys_status_ack.sys_status;
+        this->PubPower(this->sys_powerboard);
+    }
+
+    if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_SET_IR_LED_LIGHTNESS)
+    {
+        ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_SET_IR_LED_LIGHTNESS");
         get_sys_status_ack_t get_sys_status_ack;
         get_sys_status_ack.sys_status = *(uint16_t *)&msg->Data[1];
 
