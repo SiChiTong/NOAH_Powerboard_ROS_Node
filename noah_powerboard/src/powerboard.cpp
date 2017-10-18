@@ -65,12 +65,16 @@ void test_fun(void * arg)
     set_ir_duty.duty = 90;
     set_ir_duty.reserve = 0;
     
-    pNoahPowerboard->set_ir_duty_vector.push_back(set_ir_duty);
+    //pNoahPowerboard->set_ir_duty_vector.push_back(set_ir_duty);
 
     get_version_t get_version;
     get_version.get_version_type = cnt % 3 + 1;
-    pNoahPowerboard->get_version_vector.push_back(get_version);
+    //pNoahPowerboard->get_version_vector.push_back(get_version);
     
+
+    get_adc_t get_adc;
+    get_adc.frq = 0;
+    pNoahPowerboard->get_adc_vector.push_back(get_adc);
 
     cnt++;
 }
@@ -81,6 +85,7 @@ class NoahPowerboard;
 #define GET_SYS_STSTUS_TIME_OUT     1000//ms
 #define SET_IR_DUTY_TIME_OUT        1000//ms
 #define GET_VERSION_TIME_OUT        1000//ms
+#define GET_ADC_TIME_OUT            1000//ms
 void *CanProtocolProcess(void* arg)
 {
     module_ctrl_t module_set;
@@ -88,6 +93,7 @@ void *CanProtocolProcess(void* arg)
     get_sys_status_t get_sys_status;
     set_ir_duty_t set_ir_duty;
     get_version_t get_version;
+    get_adc_t   get_adc;
 
     NoahPowerboard *pNoahPowerboard =  (NoahPowerboard*)arg;
 
@@ -96,6 +102,7 @@ void *CanProtocolProcess(void* arg)
     bool get_sys_status_flag = 0;
     bool set_ir_duty_flag = 0;
     bool get_version_flag = 0;
+    bool get_adc_flag = 0;
     while(ros::ok())
     {
         /* --------  module ctrl protocol  -------- */
@@ -631,6 +638,121 @@ get_version_restart:
 
         }
         /* --------  get version protocol end -------- */
+
+
+
+
+
+
+
+
+        /* --------  adc protocol begin -------- */
+        do
+        {
+            boost::mutex::scoped_lock(mtx);
+            if(!pNoahPowerboard->get_adc_vector.empty())
+            {
+                auto a = pNoahPowerboard->get_adc_vector.begin(); 
+                get_adc = *a;
+                if((get_adc.frq <= 10 ) ||  (get_adc.frq == 0xff))
+                {
+                    get_adc_flag = 1;            
+                }
+
+                pNoahPowerboard->get_adc_vector.erase(a);
+
+            }
+
+        }while(0);
+
+        if(get_adc_flag == 1)
+        {   
+            uint8_t flag = 0;
+            uint32_t time_out_cnt = 0;
+            static uint8_t err_cnt = 0;
+
+            get_adc_flag = 0;
+
+            ROS_INFO("get get adc cmd");
+            ROS_INFO("get_adc.frq = %d",get_adc.frq);
+            do
+            {
+                boost::mutex::scoped_lock(mtx);
+                pNoahPowerboard->get_adc_ack_vector.clear();
+            }while(0);
+
+get_adc_restart:
+            ROS_INFO("module ctrl:send cmd to mcu");
+            pNoahPowerboard->GetAdcData(pNoahPowerboard->sys_powerboard);
+            bool get_adc_ack_flag = 0;
+            get_adc_ack_t get_adc_ack;
+            while(time_out_cnt < GET_ADC_TIME_OUT/10)
+            {
+                time_out_cnt++;
+                do
+                {
+                    boost::mutex::scoped_lock(mtx);
+                    if(!pNoahPowerboard->get_adc_ack_vector.empty())
+                    {
+                        ROS_INFO("get_adc_ack_vector is not empty");
+                        auto b = pNoahPowerboard->get_adc_ack_vector.begin();
+
+                        get_adc_ack = *b;
+
+                        pNoahPowerboard->get_adc_ack_vector.erase(b);
+
+                        //if((get_adc ) && (module_set_ack.on_off <= 1) && (module_set_ack.group_num <= 2))
+                        {
+                            get_adc_ack_flag = 1;
+                            ROS_INFO("get right get adc ack");
+                        }
+                    }
+                }while(0);
+                if(get_adc_ack_flag == 1)
+                {
+                    get_adc_ack_flag = 0;
+                    ROS_INFO("get get_adc_ack_vector data");
+                    ROS_INFO("get right get adc ack");
+                    memcpy(&(pNoahPowerboard->sys_powerboard->voltage_info.voltage_data), &get_adc_ack, sizeof(get_adc_ack_t));
+                    ROS_INFO("5v dcdc:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data._5V_voltage);
+                    ROS_INFO("12v dcdc:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data._12V_voltage);
+                    ROS_INFO("24v dcdc:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data._24V_voltage);
+                    ROS_INFO("bat voltage:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data.bat_voltage);
+
+                    ROS_INFO("24v temperature:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data._24V_temp);
+                    ROS_INFO("12v temperature:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data._12V_temp);
+                    ROS_INFO("5v temperature:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data._5V_temp);
+                    ROS_INFO("air temperature:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data.air_temp);
+                    break;
+                }
+                else
+                {
+                    usleep(10*1000);
+                }
+            }
+            if(time_out_cnt < GET_ADC_TIME_OUT/10)
+            {
+                ROS_INFO("get adc flow OK");
+                err_cnt = 0;
+                time_out_cnt = 0;
+            }
+            else
+            {
+                ROS_ERROR("get adc time out");
+                time_out_cnt = 0;
+                if(err_cnt++ < 3)
+                {
+                    ROS_ERROR("get adc start to resend msg....");
+                    goto get_adc_restart;
+                }
+                ROS_ERROR("CAN NOT COMMUNICATE with powerboard mcu, get adc failed !");
+                err_cnt = 0;
+            }
+
+        }
+        /* --------  adc protocol end -------- */
+
+
         usleep(10 * 1000);
     }
 }
@@ -804,22 +926,23 @@ int NoahPowerboard::GetModulePowerOnOff(powerboard_t *sys)
 }
 int NoahPowerboard::GetAdcData(powerboard_t *sys)      // done
 {
-    int error = -1;
-    sys->send_data_buf[0] = PROTOCOL_HEAD;
-    sys->send_data_buf[1] = 8;
-    sys->send_data_buf[2] = FRAME_TYPE_GET_CURRENT;
-    sys->send_data_buf[3] = 0x01;
-    sys->send_data_buf[4] = 0x01;
-    sys->send_data_buf[5] = sys->current_cmd_frame.cmd;
-    sys->send_data_buf[6] = this->CalCheckSum(sys->send_data_buf, 5);
-    sys->send_data_buf[7] = PROTOCOL_TAIL;
-    this->send_serial_data(sys);
-    usleep(TEST_WAIT_TIME);
-    error = this->handle_receive_data(sys);
-    if(error < 0)
-    {
+    int error = 0; 
+    mrobot_driver_msgs::vci_can can_msg;
+    CAN_ID_UNION id;
+    memset(&id, 0x0, sizeof(CAN_ID_UNION));
+    id.CanID_Struct.SourceID = CAN_SOURCE_ID_GET_ADC_DATA;
+    id.CanID_Struct.SrcMACID = 0;//CAN_SUB_PB_SRC_ID;
+    id.CanID_Struct.DestMACID = NOAH_POWERBOARD_CAN_SRCMAC_ID;
+    id.CanID_Struct.FUNC_ID = 0x02;
+    id.CanID_Struct.ACK = 0;
+    id.CanID_Struct.res = 0;
 
-    }
+    can_msg.ID = id.CANx_ID;
+    can_msg.DataLen = 2;
+    can_msg.Data.resize(2);
+    can_msg.Data[0] = 0x00;
+    can_msg.Data[1] = 0;//reserve
+    this->pub_to_can_node.publish(can_msg);
     return error;
 }
 
@@ -1431,18 +1554,55 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
 
     if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_GET_SYS_STATE)
     {
-        ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_SYS_STATE");
-        get_sys_status_ack_t get_sys_status_ack;
-        get_sys_status_ack.sys_status = *(uint16_t *)&msg->Data[1];
-
-        do
+        if(id.CanID_Struct.ACK == 1)
         {
-            boost::mutex::scoped_lock(this->mtx);        
-            this->get_sys_status_ack_vector.push_back(get_sys_status_ack);
-        }while(0);
+            ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_SYS_STATE");
+            get_sys_status_ack_t get_sys_status_ack;
+            get_sys_status_ack.sys_status = *(uint16_t *)&msg->Data[1];
 
-        this->sys_powerboard->sys_status = get_sys_status_ack.sys_status;
-        this->PubPower(this->sys_powerboard);
+            do
+            {
+                boost::mutex::scoped_lock(this->mtx);        
+                this->get_sys_status_ack_vector.push_back(get_sys_status_ack);
+            }while(0);
+
+            this->sys_powerboard->sys_status = get_sys_status_ack.sys_status;
+            this->PubPower(this->sys_powerboard);
+        }
+        if(id.CanID_Struct.ACK == 0)
+        {
+            ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_SYS_STATE");
+            ROS_INFO("sys_status :mcu upload");
+            *(uint16_t *)&msg->Data[1];
+            this->sys_powerboard->sys_status = *(uint16_t *)&msg->Data[1];
+
+            if((this->sys_powerboard->sys_status & STATE_IS_RECHARGE_IN) || (this->sys_powerboard->sys_status & STATE_IS_CHARGER_IN))
+            {
+                
+                if(this->sys_powerboard->sys_status & STATE_IS_RECHARGE_IN)
+                {
+                    ROS_INFO("recharge plug in");
+                }
+                if(this->sys_powerboard->sys_status & STATE_IS_CHARGER_IN)
+                {
+                    ROS_INFO("charge plug in");
+                }
+            }
+            else
+            {
+                ROS_INFO("charge not plug in");
+                ROS_INFO("recharge not plug in");
+            }
+#if 0
+            ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_SYS_STATE");
+            get_sys_status_ack_t get_sys_status_ack;
+
+            get_sys_status_ack.sys_status = *(uint16_t *)&msg->Data[1];
+
+            this->sys_powerboard->sys_status = get_sys_status_ack.sys_status;
+            this->PubPower(this->sys_powerboard);
+#endif
+        }
     }
 
     if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_SET_IR_LED_LIGHTNESS)
@@ -1485,6 +1645,26 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
         }while(0);
     }
 
+    if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_GET_ADC_DATA)
+    {
+        ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_ADC_DATA");
+        get_adc_ack_t get_adc_ack;
+        get_adc_ack = *(get_adc_ack_t *)&msg->Data[0];
+
+        if(id.CanID_Struct.ACK == 1)
+        {
+            do
+            {
+                boost::mutex::scoped_lock(this->mtx);        
+                this->get_adc_ack_vector.push_back(get_adc_ack);
+            }while(0);
+        }
+        if(id.CanID_Struct.ACK == 0)
+        {
+            ROS_INFO("adc : mcu upload"); 
+        }
+
+    }
 }
 
 

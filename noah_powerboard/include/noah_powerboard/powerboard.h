@@ -97,6 +97,59 @@ typedef enum
 
 } module_ctrl_e;
 
+#pragma pack(1)
+typedef struct _VoltageData_t 
+{
+    uint16_t              _5V_reserve1_currents;
+    //uint16_t              _24V_nv_currents;
+    //uint16_t              _12V_nv_currents;
+    uint16_t              _48V_extend_currents;
+
+    uint16_t              _12V_extend_currents;
+    uint16_t              motor_currents;
+    uint16_t              slam_currents;
+    uint16_t              _2_1_pa_currents;
+
+    uint16_t              pad_currents;
+    uint16_t              printer_currents;
+    uint16_t              x86_currents;
+    uint16_t              ir_led_currents;
+
+    uint16_t              _5V_leds_currents;
+
+    uint16_t              recharge_currents;
+    uint16_t              _24V_extend_currents;
+    uint16_t              charge_currents;
+    uint16_t              batin_currents;
+
+    uint16_t              vbus_currents;
+    uint16_t              bat_motor_currents;
+    //  uint16_t              multi_channel_adc;
+
+    uint16_t              _24V_temp;
+    uint16_t              _12V_temp;
+    uint16_t              _5V_temp;
+    uint16_t              air_temp;
+
+    uint16_t              _24V_all_currents;
+    uint16_t              _12V_all_currents;
+    uint16_t              _5V_all_currents;
+    uint16_t              _24V_voltage;
+
+    uint16_t              _12V_voltage;
+    uint16_t               _5V_voltage;
+    uint16_t               bat_voltage;
+    uint16_t               sensor_board_currents;
+
+    int16_t               _12V_router_currents;
+
+    uint16_t              _24V_nv_currents;
+    uint16_t              _12V_nv_currents;
+    uint16_t              keypad_currents;
+} voltage_data_t;
+#pragma pack()
+
+
 typedef struct
 {
 #define MODULE_CTRL_ON      1  
@@ -161,6 +214,13 @@ typedef struct
     uint8_t get_version_type;
 }get_version_t;
 
+typedef struct 
+{
+    uint8_t frq;
+}get_adc_t;
+
+typedef voltage_data_t get_adc_ack_t;
+
 typedef struct
 {
     uint8_t get_version_type;
@@ -196,51 +256,6 @@ typedef struct
 
 
 #pragma pack(1)
-typedef struct _VoltageData_t 
-{
-    uint16_t              _5V_reserve1_currents;
-    uint16_t              _24V_nv_currents;
-    uint16_t              _12V_nv_currents;
-    uint16_t              _48V_extend_currents;
-
-    uint16_t              _12V_extend_currents;
-    uint16_t              motor_currents;
-    uint16_t              slam_currents;
-    uint16_t              _2_1_pa_currents;
-
-    uint16_t              pad_currents;
-    uint16_t              printer_currents;
-    uint16_t              x86_currents;
-    uint16_t              ir_led_currents;
-
-    uint16_t              _5V_leds_currents;
-
-    uint16_t              recharge_currents;
-    uint16_t              _24V_extend_currents;
-    uint16_t              charge_currents;
-    uint16_t              batin_currents;
-
-    uint16_t              vbus_currents;
-    uint16_t              bat_motor_currents;
-    //  uint16_t              multi_channel_adc;
-
-    uint16_t              _24V_temp;
-    uint16_t              _12V_temp;
-    uint16_t              _5V_temp;
-    uint16_t              air_temp;
-
-    uint16_t              _24V_all_currents;
-    uint16_t              _12V_all_currents;
-    uint16_t              _5V_all_currents;
-    uint16_t              _24V_voltage;
-
-    uint16_t              _12V_voltage;
-    uint16_t               _5V_voltage;
-    uint16_t               bat_voltage;
-    uint16_t               sensor_board_currents;
-
-    int16_t               _5V_router_currents;
-} voltage_data_t;
 
 typedef struct 
 {
@@ -440,6 +455,9 @@ class NoahPowerboard
 
         vector<get_version_t>           get_version_vector;
         vector<get_version_ack_t>       get_version_ack_vector;
+
+        vector<get_adc_t>               get_adc_vector;
+        vector<get_adc_ack_t>           get_adc_ack_vector;
 
         boost::mutex mtx;
 
