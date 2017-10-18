@@ -47,10 +47,10 @@ void test_fun(void * arg)
 {
     NoahPowerboard *pNoahPowerboard =  (NoahPowerboard*)arg;
     module_ctrl_t param;  
-    static uint8_t cnt = 0;
+    static uint8_t cnt = 2;
     param.module = POWER_5V_EN | POWER_12V_EN | POWER_LED_MCU;
     param.group_num = 1;
-    if(cnt++ % 2)
+    if(cnt % 2)
     {
         param.on_off = 0;
     }
@@ -66,6 +66,13 @@ void test_fun(void * arg)
     set_ir_duty.reserve = 0;
     
     pNoahPowerboard->set_ir_duty_vector.push_back(set_ir_duty);
+
+    get_version_t get_version;
+    get_version.get_version_type = cnt % 3 + 1;
+    pNoahPowerboard->get_version_vector.push_back(get_version);
+    
+
+    cnt++;
 }
 
 class NoahPowerboard;
@@ -73,12 +80,14 @@ class NoahPowerboard;
 #define GET_BAT_INFO_TIME_OUT       1000//ms
 #define GET_SYS_STSTUS_TIME_OUT     1000//ms
 #define SET_IR_DUTY_TIME_OUT        1000//ms
+#define GET_VERSION_TIME_OUT        1000//ms
 void *CanProtocolProcess(void* arg)
 {
     module_ctrl_t module_set;
     get_bat_info_t get_bat_info;
     get_sys_status_t get_sys_status;
     set_ir_duty_t set_ir_duty;
+    get_version_t get_version;
 
     NoahPowerboard *pNoahPowerboard =  (NoahPowerboard*)arg;
 
@@ -86,6 +95,7 @@ void *CanProtocolProcess(void* arg)
     bool get_bat_info_flag = 0;
     bool get_sys_status_flag = 0;
     bool set_ir_duty_flag = 0;
+    bool get_version_flag = 0;
     while(ros::ok())
     {
         /* --------  module ctrl protocol  -------- */
@@ -519,7 +529,109 @@ get_sys_status_restart:
         /* -------- get sys status protocol end -------- */
 
 
-        usleep(5000);
+        /* --------  get version protocol begin -------- */
+        do
+        {
+            boost::mutex::scoped_lock(mtx);
+            if(!pNoahPowerboard->get_version_vector.empty())
+            {
+                auto a = pNoahPowerboard->get_version_vector.begin(); 
+                get_version = *a;
+                if(get_version.get_version_type <= 3 )
+                {
+                    get_version_flag = 1;            
+                }
+
+                pNoahPowerboard->get_version_vector.erase(a);
+            }
+        }while(0);
+
+        if(get_version_flag == 1)
+        {   
+            uint8_t flag = 0;
+            uint32_t time_out_cnt = 0;
+            static uint8_t err_cnt = 0;
+
+            get_version_flag = 0;
+
+            ROS_INFO("get get version cmd");
+            ROS_INFO("get_version.get_version_type = 0x%x",get_version.get_version_type);
+            do
+            {
+                boost::mutex::scoped_lock(mtx);
+                pNoahPowerboard->get_version_ack_vector.clear();
+            }while(0);
+
+get_version_restart:
+            pNoahPowerboard->sys_powerboard->get_version_type = get_version.get_version_type;
+            ROS_INFO("get_verion:send cmd to mcu");
+            pNoahPowerboard->GetVersion(pNoahPowerboard->sys_powerboard);
+            bool get_version_ack_flag = 0;
+            get_version_ack_t get_version_ack;
+            while(time_out_cnt < GET_VERSION_TIME_OUT/10)
+            {
+                time_out_cnt++;
+                do
+                {
+                    boost::mutex::scoped_lock(mtx);
+                    if(!pNoahPowerboard->get_version_ack_vector.empty())
+                    {
+                        ROS_INFO("get_version_ack_vector is not empty"); 
+                        auto b = pNoahPowerboard->get_version_ack_vector.begin();
+
+                        get_version_ack = *b;
+
+                        pNoahPowerboard->get_version_ack_vector.erase(b);
+
+                        ROS_INFO("module_set_ack.group_num = %d",get_version_ack.get_version_type);
+                        if( get_version_ack.get_version_type <= 3) 
+                        {
+                            get_version_ack_flag = 1;
+                            ROS_INFO("get right get_version ack");
+                        }
+                    }
+                }while(0);
+                if(get_version_ack_flag == 1)
+                {
+                    get_version_ack_flag = 0;
+                    ROS_INFO("get get_version_ack_vector data");
+                    if(get_version_ack.get_version_type == get_version.get_version_type)
+                    {
+                        ROS_INFO("get right get version ack");
+                        break;
+                    }
+                    else
+                    {
+                        usleep(10*1000);
+                    }
+                }
+                else
+                {
+                    usleep(10*1000);
+                }
+            }
+            if(time_out_cnt < GET_VERSION_TIME_OUT/10)
+            {
+                ROS_INFO("get version flow OK");
+                err_cnt = 0;
+                time_out_cnt = 0;
+            }
+            else
+            {
+                ROS_ERROR("get version time out");
+                time_out_cnt = 0;
+                if(err_cnt++ < 3)
+                {
+                    ROS_ERROR("get version start to resend msg....");
+                    goto get_version_restart;
+                }
+                ROS_ERROR("CAN NOT COMMUNICATE with powerboard mcu, get version failed !");
+                err_cnt = 0;
+            }
+
+        }
+        /* --------  get version protocol end -------- */
+        usleep(10 * 1000);
     }
 }
 
@@ -582,7 +694,7 @@ begin:
 }
 int NoahPowerboard::GetBatteryInfo(powerboard_t *sys)      // done
 {
-    int error = -1; 
+    int error = 0; 
     mrobot_driver_msgs::vci_can can_msg;
     CAN_ID_UNION id;
     memset(&id, 0x0, sizeof(CAN_ID_UNION));
@@ -603,10 +715,7 @@ int NoahPowerboard::GetBatteryInfo(powerboard_t *sys)      // done
 }
 int NoahPowerboard::SetModulePowerOnOff(powerboard_t *sys)
 {
-    static uint8_t err_cnt = 0;
-    int error = -1; 
-
-
+    int error = 0; 
 
     mrobot_driver_msgs::vci_can can_msg;
     CAN_ID_UNION id;
@@ -716,20 +825,23 @@ int NoahPowerboard::GetAdcData(powerboard_t *sys)      // done
 
 int NoahPowerboard::GetVersion(powerboard_t *sys)      // done
 {
-    int error = -1;
-    sys->send_data_buf[0] = PROTOCOL_HEAD;
-    sys->send_data_buf[1] = 6;
-    sys->send_data_buf[2] = FRAME_TYPE_GET_VERSION;
-    sys->send_data_buf[3] = sys->get_version_type;
-    sys->send_data_buf[4] = this->CalCheckSum(sys->send_data_buf, 4);
-    sys->send_data_buf[5] = PROTOCOL_TAIL;
-    this->send_serial_data(sys);
-    usleep(TEST_WAIT_TIME);
-    error = this->handle_receive_data(sys);
-    if(error < 0)
-    {
+    int error = 0; 
+    mrobot_driver_msgs::vci_can can_msg;
+    CAN_ID_UNION id;
+    memset(&id, 0x0, sizeof(CAN_ID_UNION));
+    id.CanID_Struct.SourceID = CAN_SOURCE_ID_READ_VERSION;
+    id.CanID_Struct.SrcMACID = 0;//CAN_SUB_PB_SRC_ID;
+    id.CanID_Struct.DestMACID = NOAH_POWERBOARD_CAN_SRCMAC_ID;
+    id.CanID_Struct.FUNC_ID = 0x02;
+    id.CanID_Struct.ACK = 0;
+    id.CanID_Struct.res = 0;
 
-    }
+    can_msg.ID = id.CANx_ID;
+    can_msg.DataLen = 2;
+    can_msg.Data.resize(2);
+    can_msg.Data[0] = 0x00;
+    can_msg.Data[1] = sys->get_version_type;//reserve
+    this->pub_to_can_node.publish(can_msg);
     return error;
 }
 
@@ -912,23 +1024,6 @@ int NoahPowerboard::handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf
 
         case FRAME_TYPE_BAT_STATUS:
             sys->bat_info.cmd = frame_buf[3];
-            //PowerboardInfo("sys->bat_info.cmd is %d",sys->bat_info.cmd);
-#if 0
-            if(sys->bat_info.cmd == CMD_BAT_VOLTAGE)
-            {
-                sys->bat_info.bat_info = frame_buf[5]<< 8  | frame_buf[4]; 
-                PowerboardInfo("battery voltage is %d",sys->bat_info.bat_info);
-            }
-            if(sys->bat_info.cmd == CMD_BAT_PERCENT)
-            {
-                sys->bat_info.bat_info = frame_buf[5] << 8  | frame_buf[4]; 
-                if(sys->bat_info.bat_info > 100)
-                {
-                    sys->bat_info.bat_info = 100;
-                }
-                PowerboardInfo("battery voltage is %d",sys->bat_info.bat_info);
-            }
-#endif
             error = FRAME_TYPE_BAT_STATUS;
             break;
 
@@ -1184,8 +1279,6 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
 
 
 
-
-
 void NoahPowerboard:: from_navigation_rcv_callback(const std_msgs::String::ConstPtr &msg)
 {
     int value = atoi(msg->data.c_str());
@@ -1283,9 +1376,9 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
     {
         return;
     }
-    //for(uint8_t i = 0; i < msg->DataLen; i++)
+    for(uint8_t i = 0; i < msg->DataLen; i++)
     {
-        //ROS_INFO("msg->Data[%d] = 0x%x",i,msg->Data[i]);
+        ROS_INFO("msg->Data[%d] = 0x%x",i,msg->Data[i]);
     }
     can_msg.ID = msg->ID;
     id.CANx_ID = can_msg.ID;
@@ -1366,6 +1459,32 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
 
         this->sys_powerboard->ir_cmd.lightness_percent = set_ir_duty_ack.duty;
     }
+
+    if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_READ_VERSION)
+    {
+        ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_READ_VERSION");
+        get_version_ack_t get_version_ack;
+        get_version_ack.get_version_type = msg->Data[0];
+        if(get_version_ack.get_version_type == 1)//software version
+        {
+            memcpy(&get_version_ack.sw_version[0], &msg->Data[1], SW_VERSION_SIZE);
+        }
+        else if(get_version_ack.get_version_type == 2)//protocol version
+        {
+            memcpy(&get_version_ack.protocol_version[0], &msg->Data[1], PROTOCOL_VERSION_SIZE);
+        }
+        else if(get_version_ack.get_version_type == 3)//hardware version
+        {
+            memcpy(&get_version_ack.hw_version[0], &msg->Data[1], HW_VERSION_SIZE);
+        }
+
+        do
+        {
+            boost::mutex::scoped_lock(this->mtx);        
+            this->get_version_ack_vector.push_back(get_version_ack);
+        }while(0);
+    }
+
 }
 
 

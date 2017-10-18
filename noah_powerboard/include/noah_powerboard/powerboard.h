@@ -51,6 +51,13 @@ using json = nlohmann::json;
 #define CAN_SOURCE_ID_GET_IR_LED_LIGHTNESS  0x88
 
 
+
+#define HW_VERSION_SIZE             3
+#define SW_VERSION_SIZE             16
+#define PROTOCOL_VERSION_SIZE       14 
+
+
+
 typedef enum
 {
     POWER_5V_MOTOR            = 0x00000001,
@@ -148,6 +155,19 @@ typedef struct
     uint8_t reserve;
     uint8_t duty;
 }set_ir_duty_ack_t;
+
+typedef struct
+{
+    uint8_t get_version_type;
+}get_version_t;
+
+typedef struct
+{
+    uint8_t get_version_type;
+    char    hw_version[HW_VERSION_SIZE];
+    char    sw_version[SW_VERSION_SIZE];
+    char    protocol_version[PROTOCOL_VERSION_SIZE];
+}get_version_ack_t;
 
 typedef struct
 {
@@ -317,12 +337,9 @@ typedef struct
 #define VERSION_TYPE_PROTOCOL       1
     uint8_t                     get_version_type;
 
-#define HW_VERSION_SIZE             3
-#define SW_VERSION_SIZE             16
-#define PROTOCOL_VERSION_SIZE       15 
     char                        hw_version[HW_VERSION_SIZE];
     char                        sw_version[SW_VERSION_SIZE];
-    char                        protocol_version[];
+    char                        protocol_version[PROTOCOL_VERSION_SIZE];
 
 #define SYS_STATUS_OFF              0
 #define SYS_STATUS_TURNING_ON       1
@@ -409,17 +426,21 @@ class NoahPowerboard
 
 
 
-        vector<module_ctrl_t> module_set_vector;
-        vector<module_ctrl_ack_t> module_set_ack_vector;
+        vector<module_ctrl_t>           module_set_vector;
+        vector<module_ctrl_ack_t>       module_set_ack_vector;
 
-        vector<get_bat_info_t> get_bat_info_vector;
-        vector<get_bat_info_ack_t> get_bat_info_ack_vector;
+        vector<get_bat_info_t>          get_bat_info_vector;
+        vector<get_bat_info_ack_t>      get_bat_info_ack_vector;
 
-        vector<get_sys_status_t> get_sys_status_vector;
-        vector<get_sys_status_ack_t> get_sys_status_ack_vector;
+        vector<get_sys_status_t>        get_sys_status_vector;
+        vector<get_sys_status_ack_t>    get_sys_status_ack_vector;
 
-        vector<set_ir_duty_t> set_ir_duty_vector;
-        vector<set_ir_duty_ack_t> set_ir_duty_ack_vector;
+        vector<set_ir_duty_t>           set_ir_duty_vector;
+        vector<set_ir_duty_ack_t>       set_ir_duty_ack_vector;
+
+        vector<get_version_t>           get_version_vector;
+        vector<get_version_ack_t>       get_version_ack_vector;
+
         boost::mutex mtx;
 
     private:
