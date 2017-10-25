@@ -18,10 +18,12 @@
 #include "../include/starline/json.hpp"
 #include "std_msgs/String.h"
 #include "std_msgs/UInt8MultiArray.h" 
-static std::string laser_frames[LASER_NUM - 3] = {"laser_frame_0","laser_frame_1","laser_frame_2","laser_frame_3","laser_frame_4","laser_frame_5",
-										      "laser_frame_6","laser_frame_7","laser_frame_8","laser_frame_9"};
+#include <sensor_msgs/Range.h>
+static std::string laser_frames[LASER_NUM] = {"laser_frame_0","laser_frame_1","laser_frame_2","laser_frame_3","laser_frame_4","laser_frame_5",
+										      "laser_frame_6","laser_frame_7","laser_frame_8","laser_frame_9","laser_frame_10","laser_frame_11","laser_frame_12"};
 
 
+static std::string sonar_frames[SONAR_NUM] = {"sonar_frame_0","sonar_frame_1","sonar_frame_2","sonar_frame_3","sonar_frame_4","sonar_frame_5", "sonar_frame_6","sonar_frame_7","sonar_frame_8"};
 using json = nlohmann::json;
 static sensor_sys_t sensor_sys;
 static sensor_info_t sensor_info;
@@ -71,7 +73,7 @@ static void pub_laser_data(sensor_sys_t *sys)
 	sys->laser_data.radiation_type = INFRARED;
 	sys->laser_data.field_of_view = 0.1;
 	sys->laser_data.min_range =  0.0;
-	sys->laser_data.max_range = 0.4;
+	sys->laser_data.max_range = 1.2;
 
 
 sensor_msgs::PointCloud2 cloud_out;
@@ -112,28 +114,37 @@ sensor_msgs::PointCloud2 cloud_out;
 			sys->lasercloud_pub.publish(cloud_out);
 		}	    
 				
-		sys->laser_data.range.push_back(sys->laser_len[i]);
+		//sys->laser_data.range.push_back(sys->laser_len[i]);
 	}
-	sys->sensor_pub.publish(sys->laser_data);
-	sys->laser_data.range.clear();
+	for(int j=0;j<LASER_NUM;j++)
+    {
+        ROS_INFO("j=%d",j);
+        sys->laser_data.header.frame_id = laser_frames[j];
+        sys->laser_data.range = sys->laser_len[j];
+        sys->laser_pub.publish(sys->laser_data);
+    }
+	//sys->laser_data.range.clear();
 
 }
 
 static void pub_sonar_data(sensor_sys_t *sys)
 {
 	sys->sonar_data.header.stamp = ros::Time::now();
-	sys->sonar_data.header.frame_id = "sonar";
 	sys->sonar_data.radiation_type = ULTRASOUND;
 	sys->sonar_data.field_of_view = 0.1;
-	sys->sonar_data.min_range = 0.4;
+	sys->sonar_data.min_range = 0.23;
 	sys->sonar_data.max_range = 1.9;
 
 	for(int i=0;i<SONAR_NUM;i++)
-		sys->sonar_data.range.push_back(sys->sonar_len[i]);
+    {
+        ROS_INFO("i=%d",i);
+        sys->sonar_data.header.frame_id = sonar_frames[i];
+		sys->sonar_data.range = sys->sonar_len[i];
+        sys->sonar_pub.publish(sys->sonar_data);
+    }
 
-	sys->sensor_pub.publish(sys->sonar_data);
 
-	sys->sonar_data.range.clear();
+	//sys->sonar_data.range.clear();
 }
 
 void pub_hall_msg(const nlohmann::json j_msg)
@@ -947,7 +958,8 @@ void *sensor_thread_start(void *)
     }
     ros::Rate loop_rate(sensor_sys.sensor_freq);
     sensor_sys.lasercloud_pub = nh.advertise<sensor_msgs::PointCloud2>("lasercloud", 50, true);
-	sensor_sys.sensor_pub = nh.advertise<SensorMsg>("sensor_msg", 2, true);
+	sensor_sys.laser_pub = nh.advertise<sensor_msgs::Range>("laser_msg", 20, true);
+	sensor_sys.sonar_pub = nh.advertise<sensor_msgs::Range>("sonar_msg", 20, true);
     hall_pub = nh.advertise<std_msgs::String>("hall_msg",20);
     sub_from_sensor = nh.subscribe("sensor_to_starline_node",1000,sub_from_sensor_cb);
     sub_from_hall = nh.subscribe("hall_to_starline_node",1000,sub_from_hall_cb);

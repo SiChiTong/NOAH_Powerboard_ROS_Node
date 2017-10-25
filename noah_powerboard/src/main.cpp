@@ -31,13 +31,24 @@ int main(int argc, char **argv)
     float rate = 1000;
     ros::Rate loop_rate(rate);
     uint32_t cnt = 0;
+    bool flag = 0;
     pthread_t can_protocol_proc_handle;
     pthread_create(&can_protocol_proc_handle, NULL, CanProtocolProcess,(void*)&powerboard);  
+
+    get_bat_info_t get_bat_info;
+    get_bat_info.reserve = 0;
     while(ros::ok())
     {
-        if(cnt++ % (uint32_t)rate == (uint32_t)rate/2)
+        if(flag == 0)
+        {
+            flag = 1;
+            //powerboard.get_bat_info_vector.push_back(get_bat_info);
+            //init 
+        }
+        if(cnt++ % (uint32_t)(rate * 2) == (uint32_t)rate/2)
         {
             test_fun((void*)&powerboard); 
+            powerboard.get_bat_info_vector.push_back(get_bat_info);
         }
         ros::spinOnce();
         loop_rate.sleep();

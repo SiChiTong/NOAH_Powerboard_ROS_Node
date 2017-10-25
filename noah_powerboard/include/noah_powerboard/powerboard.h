@@ -49,7 +49,7 @@ using json = nlohmann::json;
 #define CAN_SOURCE_ID_GET_ADC_DATA          0x86
 #define CAN_SOURCE_ID_SET_IR_LED_LIGHTNESS  0x87
 #define CAN_SOURCE_ID_GET_IR_LED_LIGHTNESS  0x88
-
+#define CAN_SOURCE_ID_SET_LED_EFFECT        0x89
 
 
 #define HW_VERSION_SIZE             3
@@ -229,12 +229,25 @@ typedef struct
     char    protocol_version[PROTOCOL_VERSION_SIZE];
 }get_version_ack_t;
 
+
+#pragma pack(1)
 typedef struct
 {
     uint8_t r;
     uint8_t g;
     uint8_t b;
 }color_t;
+
+typedef struct
+{
+    uint8_t               reserve;
+    uint8_t               mode;
+    color_t               color;
+    uint8_t               period;
+}set_leds_effect_t;
+
+typedef set_leds_effect_t set_leds_effect_ack_t;
+#pragma pack()
 
 #pragma pack(1)
 typedef struct 
@@ -298,7 +311,7 @@ typedef struct _recModuleControlFrame_t
 
 typedef struct 
 {
-    uint8_t      effect;
+    uint8_t      mode;
     color_t      color;
     uint8_t      period;
 }led_t;
@@ -341,7 +354,7 @@ typedef struct
     char                        dev[DEV_STRING_LEN]; 
     int                         device;
     led_t                       led;
-    led_t                       led_set;
+    set_leds_effect_t           led_set;
     rcv_serial_leds_frame_t     rcv_serial_leds_frame;
     bat_info_t                  bat_info;
 
@@ -458,6 +471,9 @@ class NoahPowerboard
 
         vector<get_adc_t>               get_adc_vector;
         vector<get_adc_ack_t>           get_adc_ack_vector;
+        
+        vector<set_leds_effect_t>       set_leds_effect_vector;
+        vector<set_leds_effect_t>       set_leds_effect_ack_vector;
 
         boost::mutex mtx;
 

@@ -11,6 +11,7 @@
 #define SENSOR_SLEEP_TIME 60*1000
 
 #include "starline/SensorMsg.h"
+#include <sensor_msgs/Range.h>
 #include <sensor_msgs/PointCloud2.h>
 using namespace starline;
 
@@ -47,11 +48,13 @@ typedef struct{
     unsigned char upgrade_status;
 	int upgrade_result;
 
-	SensorMsg laser_data;
-	SensorMsg sonar_data;
+	//SensorMsg laser_data;
+	sensor_msgs::Range laser_data;
+	sensor_msgs::Range sonar_data;
 	SensorMsg hall_data;
     ros::Publisher lasercloud_pub;
-	ros::Publisher sensor_pub;
+	ros::Publisher laser_pub;
+	ros::Publisher sonar_pub;
 }sensor_sys_t;
 
 typedef struct{

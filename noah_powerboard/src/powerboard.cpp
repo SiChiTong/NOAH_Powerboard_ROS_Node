@@ -58,23 +58,33 @@ void test_fun(void * arg)
     {
         param.on_off = 1;
     }
-
-    //    module_set_vector.push_back(param);
+#if 0
+    pNoahPowerboard->module_set_vector.push_back(param);
     set_ir_duty_t set_ir_duty;
     
     set_ir_duty.duty = 90;
     set_ir_duty.reserve = 0;
     
-    //pNoahPowerboard->set_ir_duty_vector.push_back(set_ir_duty);
+    pNoahPowerboard->set_ir_duty_vector.push_back(set_ir_duty);
 
     get_version_t get_version;
-    get_version.get_version_type = cnt % 3 + 1;
-    //pNoahPowerboard->get_version_vector.push_back(get_version);
+    get_version.get_version_type = 1;
+    pNoahPowerboard->get_version_vector.push_back(get_version);
     
+    get_version.get_version_type = 2;
+    pNoahPowerboard->get_version_vector.push_back(get_version);
+
+    get_version.get_version_type = 3;
+    pNoahPowerboard->get_version_vector.push_back(get_version);
 
     get_adc_t get_adc;
     get_adc.frq = 0;
     pNoahPowerboard->get_adc_vector.push_back(get_adc);
+#endif
+    set_leds_effect_t set_led_effect;
+
+    set_led_effect.mode= cnt % (LIGHTS_MODE_EMERGENCY_STOP + 1) ; 
+    pNoahPowerboard->set_leds_effect_vector.push_back(set_led_effect);
 
     cnt++;
 }
@@ -86,6 +96,7 @@ class NoahPowerboard;
 #define SET_IR_DUTY_TIME_OUT        1000//ms
 #define GET_VERSION_TIME_OUT        1000//ms
 #define GET_ADC_TIME_OUT            1000//ms
+#define SET_LED_EFFECT_TIME_OUT     1000//ms
 void *CanProtocolProcess(void* arg)
 {
     module_ctrl_t module_set;
@@ -94,6 +105,7 @@ void *CanProtocolProcess(void* arg)
     set_ir_duty_t set_ir_duty;
     get_version_t get_version;
     get_adc_t   get_adc;
+    set_leds_effect_t set_led_effect;
 
     NoahPowerboard *pNoahPowerboard =  (NoahPowerboard*)arg;
 
@@ -103,6 +115,7 @@ void *CanProtocolProcess(void* arg)
     bool set_ir_duty_flag = 0;
     bool get_version_flag = 0;
     bool get_adc_flag = 0;
+    bool set_led_effect_flag = 0;
     while(ros::ok())
     {
         /* --------  module ctrl protocol  -------- */
@@ -590,7 +603,7 @@ get_version_restart:
 
                         pNoahPowerboard->get_version_ack_vector.erase(b);
 
-                        ROS_INFO("module_set_ack.group_num = %d",get_version_ack.get_version_type);
+                        ROS_INFO("version type : %d",get_version_ack.get_version_type);
                         if( get_version_ack.get_version_type <= 3) 
                         {
                             get_version_ack_flag = 1;
@@ -753,6 +766,115 @@ get_adc_restart:
         /* --------  adc protocol end -------- */
 
 
+
+
+
+
+        /* --------  serial led protocol begin -------- */
+        do
+        {
+            boost::mutex::scoped_lock(mtx);
+            if(!pNoahPowerboard->set_leds_effect_vector.empty())
+            {
+                auto a = pNoahPowerboard->set_leds_effect_vector.begin(); 
+                set_led_effect = *a;
+                {
+                    set_led_effect_flag = 1;            
+                }
+
+                pNoahPowerboard->set_leds_effect_vector.erase(a);
+
+            }
+
+        }while(0);
+
+        if(set_led_effect_flag == 1)
+        {   
+            uint8_t flag = 0;
+            uint32_t time_out_cnt = 0;
+            static uint8_t err_cnt = 0;
+
+            set_led_effect_flag = 0;
+
+            ROS_INFO("get set led effect cmd");
+            ROS_INFO("set_led_effect.mode = %d",set_led_effect.mode);
+            do
+            {
+                boost::mutex::scoped_lock(mtx);
+                pNoahPowerboard->set_leds_effect_ack_vector.clear();
+            }while(0);
+
+set_leds_effect_restart:
+            ROS_INFO("set led effect :send cmd to mcu");
+            pNoahPowerboard->sys_powerboard->led_set.mode = set_led_effect.mode;
+            pNoahPowerboard->sys_powerboard->led_set.color = set_led_effect.color;
+            pNoahPowerboard->sys_powerboard->led_set.period = set_led_effect.period;
+
+            pNoahPowerboard->SetLedEffect(pNoahPowerboard->sys_powerboard);
+            bool set_led_effect_ack_flag = 0;
+            set_leds_effect_ack_t set_led_effect_ack;
+            while(time_out_cnt < SET_LED_EFFECT_TIME_OUT/10)
+            {
+                time_out_cnt++;
+                do
+                {
+                    boost::mutex::scoped_lock(mtx);
+                    if(!pNoahPowerboard->set_leds_effect_ack_vector.empty())
+                    {
+                        ROS_INFO("set_leds_effect_ack_vector is not empty");
+                        auto b = pNoahPowerboard->set_leds_effect_ack_vector.begin();
+
+                        set_led_effect_ack = *b;
+
+                        pNoahPowerboard->set_leds_effect_ack_vector.erase(b);
+
+                        //if((get_adc ) && (module_set_ack.on_off <= 1) && (module_set_ack.group_num <= 2))
+                        {
+                            set_led_effect_ack_flag = 1;
+                            ROS_INFO("get right set led effect ack");
+                        }
+                    }
+                }while(0);
+                if(set_led_effect_ack_flag == 1)
+                {
+                    set_led_effect_ack_flag = 0;
+                    ROS_INFO("get set_leds_effect_ack_vector data");
+                    ROS_INFO("get right set led effect ack");
+                    pNoahPowerboard->sys_powerboard->led.mode = set_led_effect_ack.mode;
+                    pNoahPowerboard->sys_powerboard->led.color = set_led_effect_ack.color;
+                    pNoahPowerboard->sys_powerboard->led.period = set_led_effect_ack.period;
+                    ROS_INFO("get led mode:%d",set_led_effect_ack.mode);
+                    ROS_INFO("get led color:r=%d,g=%d,b=%d",set_led_effect_ack.color.r,set_led_effect_ack.color.g,set_led_effect_ack.color.b);
+                    ROS_INFO("get led period:%d",set_led_effect_ack.period);
+                    break;
+                }
+                else
+                {
+                    usleep(10*1000);
+                }
+            }
+            if(time_out_cnt < SET_LED_EFFECT_TIME_OUT/10)
+            {
+                ROS_INFO("set led effect flow OK");
+                err_cnt = 0;
+                time_out_cnt = 0;
+            }
+            else
+            {
+                ROS_ERROR("set led effect time out");
+                time_out_cnt = 0;
+                if(err_cnt++ < 3)
+                {
+                    ROS_ERROR("set led effect start to resend msg....");
+                    goto set_leds_effect_restart;
+                }
+                ROS_ERROR("CAN NOT COMMUNICATE with powerboard mcu, set led effect failed !");
+                err_cnt = 0;
+            }
+
+        }
+        /* -------- serial led protocol end -------- */
+
         usleep(10 * 1000);
     }
 }
@@ -760,7 +882,7 @@ get_adc_restart:
 
 int NoahPowerboard::PowerboardParamInit(void)
 {
-    sys_powerboard->led_set.effect = LIGHTS_MODE_DEFAULT;
+    sys_powerboard->led_set.mode = LIGHTS_MODE_DEFAULT;
     return 0;
 }
 
@@ -783,35 +905,26 @@ uint8_t NoahPowerboard::CalCheckSum(uint8_t *data, uint8_t len)
 
 int NoahPowerboard::SetLedEffect(powerboard_t *powerboard)     // done
 {
-begin:
-    static uint8_t err_cnt = 0;
+    int error = 0; 
+    mrobot_driver_msgs::vci_can can_msg;
+    CAN_ID_UNION id;
+    memset(&id, 0x0, sizeof(CAN_ID_UNION));
+    id.CanID_Struct.SourceID = CAN_SOURCE_ID_SET_LED_EFFECT;
+    id.CanID_Struct.SrcMACID = 0;//CAN_SUB_PB_SRC_ID;
+    id.CanID_Struct.DestMACID = NOAH_POWERBOARD_CAN_SRCMAC_ID;
+    id.CanID_Struct.FUNC_ID = 0x02;
+    id.CanID_Struct.ACK = 0;
+    id.CanID_Struct.res = 0;
 
-    int error = -1;
-    powerboard->send_data_buf[0] = PROTOCOL_HEAD;
-    powerboard->send_data_buf[1] = 0x0a;
-    powerboard->send_data_buf[2] = FRAME_TYPE_LEDS_CONTROL;
-    powerboard->send_data_buf[3] = powerboard->led_set.effect;
-    memcpy(&powerboard->send_data_buf[4], (uint8_t *)&(powerboard->led_set.color), sizeof(color_t));
-    powerboard->send_data_buf[7] = powerboard->led_set.period;
-    powerboard->send_data_buf[8] = this->CalCheckSum(powerboard->send_data_buf, 8);
-    powerboard->send_data_buf[9] = PROTOCOL_TAIL;
-    this->send_serial_data(powerboard);
-    usleep(TEST_WAIT_TIME);
-    if((error = this->handle_receive_data(powerboard)) < 0)
-    {
-
-        if(err_cnt++ < COM_ERR_REPEAT_TIME)
-        {
-            usleep(500*1000); 
-            ROS_ERROR("Set leds effect start to resend");
-            goto begin; 
-        }
-        ROS_ERROR("Set Leds Effecct : com error !");
-    }
-    else
-    {
-        err_cnt = 0;
-    }
+    can_msg.ID = id.CANx_ID;
+    can_msg.DataLen = 7;
+    can_msg.Data.resize(7);
+    can_msg.Data[0] = 0x00;
+    can_msg.Data[1] = 0;//reserve
+    can_msg.Data[2] = powerboard->led_set.mode;
+    *(color_t*)&can_msg.Data[3] = powerboard->led_set.color;
+    can_msg.Data[6] = powerboard->led_set.period;
+    this->pub_to_can_node.publish(can_msg);
     return error;
 }
 int NoahPowerboard::GetBatteryInfo(powerboard_t *sys)      // done
@@ -1486,7 +1599,6 @@ void NoahPowerboard::PubChargeStatus(uint8_t status)
     }
 
 }
-
 void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::ConstPtr &c_msg)
 {
     mrobot_driver_msgs::vci_can can_msg;
@@ -1662,6 +1774,29 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
         if(id.CanID_Struct.ACK == 0)
         {
             ROS_INFO("adc : mcu upload"); 
+        }
+
+    }
+
+    if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_SET_LED_EFFECT)
+    {
+        ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_ADC_DATA");
+        set_leds_effect_t set_led_effect_ack;
+
+        set_led_effect_ack.mode = msg->Data[2];
+        set_led_effect_ack.color = *(color_t *)&msg->Data[3];
+        set_led_effect_ack.period = msg->Data[6];
+        if(id.CanID_Struct.ACK == 1)
+        {
+            do
+            {
+                boost::mutex::scoped_lock(this->mtx);        
+                this->set_leds_effect_ack_vector.push_back(set_led_effect_ack);
+            }while(0);
+        }
+        if(id.CanID_Struct.ACK == 0)
+        {
+            ROS_INFO("set led effect : mcu upload"); 
         }
 
     }
