@@ -45,9 +45,9 @@ int main(int argc, char **argv)
             //powerboard.get_bat_info_vector.push_back(get_bat_info);
             //init 
         }
-        if(cnt++ % (uint32_t)(rate * 2) == (uint32_t)rate/2)
+        if(cnt++ % (uint32_t)(rate * 5) == (uint32_t)rate/2)
         {
-            test_fun((void*)&powerboard); 
+            //test_fun((void*)&powerboard); 
             powerboard.get_bat_info_vector.push_back(get_bat_info);
         }
         ros::spinOnce();

@@ -71,7 +71,7 @@ static void pub_laser_data(sensor_sys_t *sys)
 	sys->laser_data.header.stamp = ros::Time::now();
 	sys->laser_data.header.frame_id = "laser";
 	sys->laser_data.radiation_type = INFRARED;
-	sys->laser_data.field_of_view = 0.1;
+    sys->laser_data.field_of_view = 0.1;
 	sys->laser_data.min_range =  0.0;
 	sys->laser_data.max_range = 1.2;
 
@@ -131,13 +131,17 @@ static void pub_sonar_data(sensor_sys_t *sys)
 {
 	sys->sonar_data.header.stamp = ros::Time::now();
 	sys->sonar_data.radiation_type = ULTRASOUND;
-	sys->sonar_data.field_of_view = 0.1;
+	sys->sonar_data.field_of_view = 1;
 	sys->sonar_data.min_range = 0.23;
-	sys->sonar_data.max_range = 1.9;
+	sys->sonar_data.max_range = 1.5;
 
 	for(int i=0;i<SONAR_NUM;i++)
     {
         ROS_INFO("i=%d",i);
+        if(i >= 3)
+        {
+            sys->sonar_data.min_range = 0.13;
+        }
         sys->sonar_data.header.frame_id = sonar_frames[i];
 		sys->sonar_data.range = sys->sonar_len[i];
         sys->sonar_pub.publish(sys->sonar_data);

@@ -48,7 +48,7 @@ void test_fun(void * arg)
     NoahPowerboard *pNoahPowerboard =  (NoahPowerboard*)arg;
     module_ctrl_t param;  
     static uint8_t cnt = 2;
-    param.module = POWER_5V_EN | POWER_12V_EN | POWER_LED_MCU;
+    param.module = POWER_5V_EN | POWER_12V_EN;
     param.group_num = 1;
     if(cnt % 2)
     {
@@ -58,7 +58,7 @@ void test_fun(void * arg)
     {
         param.on_off = 1;
     }
-#if 0
+#if 1
     pNoahPowerboard->module_set_vector.push_back(param);
     set_ir_duty_t set_ir_duty;
     
@@ -246,6 +246,26 @@ module_set_restart:
                 }
                 ROS_ERROR("CAN NOT COMMUNICATE with powerboard mcu, module ctrl failed !");
                 err_cnt = 0;
+
+                if(module_set.module & POWER_VSYS_24V_NV)
+                {
+                    ROS_ERROR("set door ctrl time out !");
+
+                    pNoahPowerboard->j.clear();
+                    pNoahPowerboard->j = 
+                    {
+                        {"sub_name","set_module_state"},
+                        {
+                            "data",
+                            {
+                                {"door_ctrl_state",(bool)(module_set_ack.module_status_ack & POWER_VSYS_24V_NV)},
+                                {"error_code", -1},
+                            } 
+                        }
+                    };
+                    pNoahPowerboard->pub_json_msg_to_app(pNoahPowerboard->j);
+                }
+
             }
 
         }
@@ -1705,15 +1725,6 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
                 ROS_INFO("charge not plug in");
                 ROS_INFO("recharge not plug in");
             }
-#if 0
-            ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_SYS_STATE");
-            get_sys_status_ack_t get_sys_status_ack;
-
-            get_sys_status_ack.sys_status = *(uint16_t *)&msg->Data[1];
-
-            this->sys_powerboard->sys_status = get_sys_status_ack.sys_status;
-            this->PubPower(this->sys_powerboard);
-#endif
         }
     }
 
