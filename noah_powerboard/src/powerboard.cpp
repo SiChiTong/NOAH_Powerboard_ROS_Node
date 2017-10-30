@@ -32,7 +32,7 @@
 #include <boost/thread/mutex.hpp>
 #include <mrobot_driver_msgs/vci_can.h>
 //#include <roscan/can_long_frame.h>
-#include <can_long_frame.h>
+#include <roscan/can_long_frame.h>
 
 #define TEST_WAIT_TIME     90*1000
 
