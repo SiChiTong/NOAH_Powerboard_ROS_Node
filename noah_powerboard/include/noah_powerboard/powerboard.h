@@ -412,8 +412,9 @@ extern powerboard_t    *sys_powerboard;
 class NoahPowerboard
 {
     public:
-        NoahPowerboard()
+        NoahPowerboard(bool log_on = false)
         {
+            is_log_on = log_on;
             noah_powerboard_pub = n.advertise<std_msgs::String>("tx_noah_powerboard_node",1000);
             pub_charge_status_to_move_base = n.advertise<std_msgs::UInt8MultiArray>("charge_status_to_move_base",1000);
             resp_navigation_camera_leds = n.advertise<std_msgs::String>("resp_lane_follower_node/camera_using_n",1000);
@@ -493,6 +494,8 @@ class NoahPowerboard
 //        json j;
 //        void pub_json_msg_to_app(const nlohmann::json j_msg);
         powerboard_t    sys_powerboard_ram; 
+
+        bool is_log_on;
 
 };
 int handle_receive_data(powerboard_t *sys);
