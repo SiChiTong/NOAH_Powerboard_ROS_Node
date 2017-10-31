@@ -348,6 +348,13 @@ typedef struct
     uint8_t set_ir_percent;
     uint8_t lightness_percent;
 }ir_cmd_t;
+
+#define VBAT_POWER_OFF_PERCENTAGE           10  // %
+#define VBAT_POWER_LOW_WARNING_PERCENTAGE   20  // %
+
+#define VBAT_POWER_CHARGING_LOW             20
+#define VBAT_POWER_CHARGING_MEDIUM          30
+#define VBAT_POWER_CHARGING_FULL            100
 typedef struct
 {
 #define DEV_STRING_LEN              50
@@ -394,20 +401,22 @@ typedef struct
 
 typedef enum 
 {
-    LIGHTS_MODE_DEFAULT                 = 0,
+    LIGHTS_MODE_NONE                    = 0,
     LIGHTS_MODE_NOMAL                   = 1,
     LIGHTS_MODE_ERROR                   = 2,
     LIGHTS_MODE_LOW_POWER,
-    LIGHTS_MODE_CHARGING,
+    LIGHTS_MODE_CHARGING_POWER_MEDIUM,
+    LIGHTS_MODE_CHARGING_POWER_LOW,
+    LIGHTS_MODE_CHARGING_FULL,
     LIGHTS_MODE_TURN_LEFT,
     LIGHTS_MODE_TURN_RIGHT,
     LIGHTS_MODE_COM_ERROR,
     LIGHTS_MODE_EMERGENCY_STOP,
 
+
     LIGHTS_MODE_SETTING                 = 0xff,
 }light_mode_t;
 
-//#define DEV_PATH                "/dev/noah_powerboard"
 extern powerboard_t    *sys_powerboard;
 class NoahPowerboard
 {
@@ -452,7 +461,7 @@ class NoahPowerboard
         powerboard_t    *sys_powerboard;
         can_long_frame  long_frame;
 
-
+        void update_sys_status(void);
 
 
         vector<module_ctrl_t>           module_set_vector;

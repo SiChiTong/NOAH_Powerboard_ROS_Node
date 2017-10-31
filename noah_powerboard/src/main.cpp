@@ -27,17 +27,17 @@ void sigintHandler(int sig)
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "noah_powerboard_node");
-    bool is_log_on = false;
-    if(ros::param::has("is_log_on"))
+    bool is_log_on = 0;
+    ROS_INFO("creating noah powerboard node...");
+    if(ros::param::has("noah_pb_can_data_log_on"))
     {
-        ROS_INFO("has param");
-        ros::param::get("~is_log_on",is_log_on);
-        ROS_INFO("param value is %d",is_log_on);
+        ros::param::get("/noah_pb_can_data_log_on",is_log_on);
+        ROS_INFO("can data log is %d",is_log_on);
     }
     else
     {
         is_log_on = false;
-        ROS_INFO("has not param");
+        ROS_INFO("can data log is off");
     }
     NoahPowerboard *powerboard = new NoahPowerboard(is_log_on);
     float rate = 1000;
@@ -48,20 +48,32 @@ int main(int argc, char **argv)
     pthread_create(&can_protocol_proc_handle, NULL, CanProtocolProcess,(void*)powerboard);  
 
     get_bat_info_t get_bat_info;
+    set_leds_effect_t set_led_effect;
     get_bat_info.reserve = 0;
+    set_led_effect.mode = LIGHTS_MODE_NOMAL;
+    set_led_effect.reserve = 0;
+
     while(ros::ok())
     {
         if(flag == 0)
         {
-            flag = 1;
-            //powerboard.get_bat_info_vector.push_back(get_bat_info);
-            //init 
+            if(cnt % (uint32_t)(rate * 2) == (uint32_t)rate/2)
+            {
+                flag = 1;
+                powerboard->set_leds_effect_vector.push_back(set_led_effect);
+            }
         }
-        if(cnt++ % (uint32_t)(rate * 5) == (uint32_t)rate/2)
+        if(cnt % (uint32_t)(rate * 5) == (uint32_t)rate/2)
         {
             //test_fun((void*)powerboard); 
             powerboard->get_bat_info_vector.push_back(get_bat_info);
         }
+        
+        if(cnt % (uint32_t)(rate * 1) == (uint32_t)rate/2)
+        {
+            powerboard->update_sys_status();
+        }
+        cnt++;
         ros::spinOnce();
         loop_rate.sleep();
     }

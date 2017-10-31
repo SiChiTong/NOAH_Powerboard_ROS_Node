@@ -1,4 +1,4 @@
 <launch>
     <node name="noah_powerboard_node" pkg="noah_powerboard" type="noah_powerboard_node" respawn="true" output="screen"/>
-    <param name="can_log" type="bool" value="true" />
+    <param name="noah_pb_can_data_log_on" type="bool" value="false" />
 </launch>

@@ -848,7 +848,7 @@ set_leds_effect_restart:
 
                         pNoahPowerboard->set_leds_effect_ack_vector.erase(b);
 
-                        //if((get_adc ) && (module_set_ack.on_off <= 1) && (module_set_ack.group_num <= 2))
+                        if(set_led_effect_ack.mode == set_led_effect.mode)
                         {
                             set_led_effect_ack_flag = 1;
                             ROS_INFO("get right set led effect ack");
@@ -902,7 +902,7 @@ set_leds_effect_restart:
 
 int NoahPowerboard::PowerboardParamInit(void)
 {
-    sys_powerboard->led_set.mode = LIGHTS_MODE_DEFAULT;
+    sys_powerboard->led_set.mode = LIGHTS_MODE_NOMAL;
     return 0;
 }
 
@@ -1399,7 +1399,6 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
 
             if((this->sys_powerboard->sys_status & STATE_IS_RECHARGE_IN) || (this->sys_powerboard->sys_status & STATE_IS_CHARGER_IN))
             {
-                
                 if(this->sys_powerboard->sys_status & STATE_IS_RECHARGE_IN)
                 {
                     ROS_INFO("recharge plug in");
@@ -1480,12 +1479,13 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
 
     if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_SET_LED_EFFECT)
     {
-        ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_ADC_DATA");
+        ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_SET_LED_EFFECT");
         set_leds_effect_t set_led_effect_ack;
 
         set_led_effect_ack.mode = msg->Data[2];
         set_led_effect_ack.color = *(color_t *)&msg->Data[3];
         set_led_effect_ack.period = msg->Data[6];
+        ROS_INFO("led mode %d",set_led_effect_ack.mode);
         if(id.CanID_Struct.ACK == 1)
         {
             do
@@ -1503,4 +1503,80 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
 }
 
 
+void NoahPowerboard::update_sys_status(void)
+{
+    uint16_t sys_status = this->sys_powerboard->sys_status;
+    uint8_t  power_percent = this->sys_powerboard->bat_info.bat_percent;
+    static bool charging_low_flag = 0;
+    static bool charging_medium_flag = 0;
+    static bool charging_full_flag = 0;
+    static bool power_low_flag = 0;
+    static bool power_medium_flag = 0;
+
+
+    /* ---- set led effect ----*/
+    set_leds_effect_t set_led_effect;
+    set_led_effect.reserve = 0;
+
+    if((sys_status & STATE_IS_CHARGING) || (sys_status & STATE_IS_CHARGING))
+    {
+        if(power_percent < VBAT_POWER_CHARGING_LOW)
+        {
+            if(charging_low_flag == 0)
+            {
+                set_led_effect.mode = LIGHTS_MODE_CHARGING_POWER_LOW;
+                this->set_leds_effect_vector.push_back(set_led_effect);
+                charging_low_flag = 1;
+                charging_medium_flag = 0;
+                charging_full_flag = 0;
+            }
+        }
+        else if(power_percent < VBAT_POWER_CHARGING_MEDIUM)
+        {
+            if(charging_medium_flag == 0)
+            {
+                set_led_effect.mode = LIGHTS_MODE_CHARGING_POWER_MEDIUM;
+                this->set_leds_effect_vector.push_back(set_led_effect);
+                charging_low_flag = 0;
+                charging_medium_flag = 1;
+                charging_full_flag = 0;
+            }
+        }
+        else if(power_percent == VBAT_POWER_CHARGING_FULL)
+        {
+            if(charging_full_flag == 0)
+            {
+                set_led_effect.mode = LIGHTS_MODE_CHARGING_FULL;
+                this->set_leds_effect_vector.push_back(set_led_effect);
+                charging_low_flag = 0;
+                charging_medium_flag = 0;
+                charging_full_flag = 1;
+            }
+        }
+        
+    }
+    else
+    {
+        if(power_percent < VBAT_POWER_LOW_WARNING_PERCENTAGE)
+        {
+            if(power_low_flag == 0)
+            {
+                set_led_effect.mode = LIGHTS_MODE_LOW_POWER;
+                this->set_leds_effect_vector.push_back(set_led_effect);
+                power_low_flag = 1;
+                power_medium_flag = 0;
+            }
+        }
+        else 
+        {
+            if(power_medium_flag == 0)
+            {
+                set_led_effect.mode = LIGHTS_MODE_NOMAL;
+                this->set_leds_effect_vector.push_back(set_led_effect);
+                power_low_flag = 0;
+                power_medium_flag = 1;
+            }
+        }
+    }
+}
 
