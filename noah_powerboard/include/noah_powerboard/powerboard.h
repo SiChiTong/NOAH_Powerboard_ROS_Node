@@ -486,6 +486,7 @@ class NoahPowerboard
         vector<set_leds_effect_t>       set_leds_effect_ack_vector;
 
         boost::mutex mtx;
+        bool is_log_on;
 
     private:
         uint8_t CalCheckSum(uint8_t *data, uint8_t len);
@@ -504,7 +505,6 @@ class NoahPowerboard
 //        void pub_json_msg_to_app(const nlohmann::json j_msg);
         powerboard_t    sys_powerboard_ram; 
 
-        bool is_log_on;
 
 };
 int handle_receive_data(powerboard_t *sys);

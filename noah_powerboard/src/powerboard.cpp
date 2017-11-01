@@ -145,10 +145,13 @@ void *CanProtocolProcess(void* arg)
 
             module_flag = 0;
 
-            ROS_INFO("get set module cmd");
-            ROS_INFO("module_set_param.module = 0x%x",module_set.module);
-            ROS_INFO("module_set_param.group_num = %d",module_set.group_num);
-            ROS_INFO("module_set_param.on_off = %d",module_set.on_off);
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("get set module cmd");
+                ROS_INFO("module_set_param.module = 0x%x",module_set.module);
+                ROS_INFO("module_set_param.group_num = %d",module_set.group_num);
+                ROS_INFO("module_set_param.on_off = %d",module_set.on_off);
+            }
             do
             {
                 boost::mutex::scoped_lock(mtx);
@@ -159,7 +162,10 @@ module_set_restart:
             pNoahPowerboard->sys_powerboard->module_status_set.module = module_set.module;
             pNoahPowerboard->sys_powerboard->module_status_set.group_num = module_set.group_num;
             pNoahPowerboard->sys_powerboard->module_status_set.on_off = module_set.on_off;
-            ROS_INFO("module ctrl:send cmd to mcu");
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("module ctrl:send cmd to mcu");
+            }
             pNoahPowerboard->SetModulePowerOnOff(pNoahPowerboard->sys_powerboard);
             bool module_ack_flag = 0;
             module_ctrl_ack_t module_set_ack;
@@ -171,36 +177,51 @@ module_set_restart:
                     boost::mutex::scoped_lock(mtx);
                     if(!pNoahPowerboard->module_set_ack_vector.empty())
                     {
-                        ROS_INFO("module_set_ack_vector is not empty");
                         auto b = pNoahPowerboard->module_set_ack_vector.begin();
 
                         module_set_ack = *b;
 
                         pNoahPowerboard->module_set_ack_vector.erase(b);
 
-                        ROS_INFO("module_set_ack.module = 0x%x",module_set_ack.module);
-                        ROS_INFO("module_set_ack.group_num = %d",module_set_ack.group_num);
-                        ROS_INFO("module_set_ack.on_off = %d",module_set_ack.on_off);
+                        if(pNoahPowerboard->is_log_on == true)
+                        {
+                            ROS_INFO("module_set_ack_vector is not empty");
+                            ROS_INFO("module_set_ack.module = 0x%x",module_set_ack.module);
+                            ROS_INFO("module_set_ack.group_num = %d",module_set_ack.group_num);
+                            ROS_INFO("module_set_ack.on_off = %d",module_set_ack.on_off);
+                        }
                         if((module_set_ack.module <= POWER_ALL ) && (module_set_ack.on_off <= 1) && (module_set_ack.group_num <= 2))
                         {
                             module_ack_flag = 1;
-                            ROS_INFO("get right module ctrl ack");
+                            if(pNoahPowerboard->is_log_on == true)
+                            {
+                                ROS_INFO("get right module ctrl ack");
+                            }
                         }
                     }
                 }while(0);
                 if(module_ack_flag == 1)
                 {
                     module_ack_flag = 0;
-                    ROS_INFO("get module_set_ack_vector data");
+                    if(pNoahPowerboard->is_log_on == true)
+                    {
+                        ROS_INFO("get module_set_ack_vector data");
+                    }
                     if(module_set_ack.module == module_set.module)
                     {
-                        ROS_INFO("get right module ack, module is 0x%x",module_set_ack.module);
-                        ROS_INFO("now start to publish module ctrl relative topic");
+                        if(pNoahPowerboard->is_log_on == true)
+                        {
+                            ROS_INFO("get right module ack, module is 0x%x",module_set_ack.module);
+                            ROS_INFO("now start to publish module ctrl relative topic");
+                        }
 
 
                         if(module_set_ack.module & POWER_VSYS_24V_NV)
                         {
-                            ROS_INFO("module %d",module_set_ack.module);
+                            if(pNoahPowerboard->is_log_on == true)
+                            {
+                                ROS_INFO("module %d",module_set_ack.module);
+                            }
 
                             pNoahPowerboard->j.clear();
                             pNoahPowerboard->j = 
@@ -299,7 +320,10 @@ module_set_restart:
 
             get_bat_info_flag = 0;
 
-            ROS_INFO("get get_bat_info cmd");
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("get get_bat_info cmd");
+            }
             do
             {
                 boost::mutex::scoped_lock(mtx);
@@ -307,7 +331,10 @@ module_set_restart:
             }while(0);
 
 get_bat_info_restart:
-            ROS_INFO("get bat info:send cmd to mcu");
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("get bat info:send cmd to mcu");
+            }
             pNoahPowerboard->GetBatteryInfo(pNoahPowerboard->sys_powerboard);
             bool get_bat_info_ack_flag = 0;
             get_bat_info_ack_t get_bat_info_ack;
@@ -319,28 +346,40 @@ get_bat_info_restart:
                     boost::mutex::scoped_lock(mtx);
                     if(!pNoahPowerboard->get_bat_info_ack_vector.empty())
                     {
-                        ROS_INFO("get_bat_info_ack_vector is not empty");
+                        if(pNoahPowerboard->is_log_on == true)
+                        {
+                            ROS_INFO("get_bat_info_ack_vector is not empty");
+                        }
                         auto b = pNoahPowerboard->get_bat_info_ack_vector.begin();
 
                         get_bat_info_ack = *b;
 
                         pNoahPowerboard->get_bat_info_ack_vector.erase(b);
 
-                        ROS_INFO("get_bat_info_ack.bat_vol = %d",get_bat_info_ack.bat_vol);
-                        ROS_INFO("get_bat_info_ack.bat_percent = %d",get_bat_info_ack.bat_percent);
+                        if(pNoahPowerboard->is_log_on == true)
+                        {
+                            ROS_INFO("get_bat_info_ack.bat_vol = %d",get_bat_info_ack.bat_vol);
+                            ROS_INFO("get_bat_info_ack.bat_percent = %d",get_bat_info_ack.bat_percent);
+                        }
                         if( get_bat_info_ack.bat_percent <= 100)
                         {
                             get_bat_info_ack_flag = 1;
-                            ROS_INFO("get get_bat_info ack");
+                            if(pNoahPowerboard->is_log_on == true)
+                            {
+                                ROS_INFO("get get_bat_info ack");
+                            }
                         }
                     }
                 }while(0);
                 if(get_bat_info_ack_flag == 1)
                 {
                     get_bat_info_ack_flag = 0;
-                    ROS_INFO("get get_bat_info_ack_vector data");
-                    ROS_INFO("get right get_bat_info ack, bat_vol is %d",get_bat_info_ack.bat_vol);
-                    ROS_INFO("get right get_bat_info ack, bat_percent is %d",get_bat_info_ack.bat_percent);
+                    if(pNoahPowerboard->is_log_on == true)
+                    {
+                        ROS_INFO("get get_bat_info_ack_vector data");
+                        ROS_INFO("get right get_bat_info ack, bat_vol is %d",get_bat_info_ack.bat_vol);
+                        ROS_INFO("get right get_bat_info ack, bat_percent is %d",get_bat_info_ack.bat_percent);
+                    }
 
                     break;
                 }
@@ -399,7 +438,10 @@ get_bat_info_restart:
 
             set_ir_duty_flag = 0;
 
-            ROS_INFO("get set ir duty cmd");
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("get set ir duty cmd");
+            }
             do
             {
                 boost::mutex::scoped_lock(mtx);
@@ -408,7 +450,10 @@ get_bat_info_restart:
 
 set_ir_duty_restart:
 
-            ROS_INFO("get sys status:send cmd to mcu");
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("get sys status:send cmd to mcu");
+            }
             pNoahPowerboard->InfraredLedCtrl(pNoahPowerboard->sys_powerboard);
 
             bool set_ir_duty_ack_flag = 0;
@@ -421,17 +466,26 @@ set_ir_duty_restart:
                     boost::mutex::scoped_lock(mtx);
                     if(!pNoahPowerboard->set_ir_duty_ack_vector.empty())
                     {
-                        ROS_INFO("set_ir_duty_ack_vector is not empty");
+                        if(pNoahPowerboard->is_log_on == true)
+                        {
+                            ROS_INFO("set_ir_duty_ack_vector is not empty");
+                        }
                         auto b = pNoahPowerboard->set_ir_duty_ack_vector.begin();
                         set_ir_duty_ack = *b;
                         pNoahPowerboard->set_ir_duty_ack_vector.erase(b);
 
-                        ROS_INFO("set_ir_duty_ack.duty = %d",set_ir_duty_ack.duty);
+                        if(pNoahPowerboard->is_log_on == true)
+                        {
+                            ROS_INFO("set_ir_duty_ack.duty = %d",set_ir_duty_ack.duty);
+                        }
 
                         if( set_ir_duty_ack.duty <= 100 )
                         {
                             set_ir_duty_ack_flag = 1;
-                            ROS_INFO("get right set_ir_duty  ack");
+                            if(pNoahPowerboard->is_log_on == true)
+                            {
+                                ROS_INFO("get right set_ir_duty  ack");
+                            }
                         }
                     }
                 }while(0);
@@ -497,7 +551,10 @@ set_ir_duty_restart:
 
             get_sys_status_flag = 0;
 
-            ROS_INFO("get get sys status cmd");
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("get get sys status cmd");
+            }
             do
             {
                 boost::mutex::scoped_lock(mtx);
@@ -506,7 +563,10 @@ set_ir_duty_restart:
 
 get_sys_status_restart:
 
-            ROS_INFO("get sys status:send cmd to mcu");
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("get sys status:send cmd to mcu");
+            }
             pNoahPowerboard->GetSysStatus(pNoahPowerboard->sys_powerboard);
 
             bool get_sys_status_ack_flag = 0;
@@ -519,25 +579,37 @@ get_sys_status_restart:
                     boost::mutex::scoped_lock(mtx);
                     if(!pNoahPowerboard->get_sys_status_ack_vector.empty())
                     {
-                        ROS_INFO("get_sys_status_vector is not empty");
+                        if(pNoahPowerboard->is_log_on == true)
+                        {
+                            ROS_INFO("get_sys_status_vector is not empty");
+                        }
                         auto b = pNoahPowerboard->get_sys_status_ack_vector.begin();
                         get_sys_status_ack = *b;
                         pNoahPowerboard->get_sys_status_ack_vector.erase(b);
 
-                        ROS_INFO("get_sys_status_ack.sys_status = %d",get_sys_status_ack.sys_status);
+                        if(pNoahPowerboard->is_log_on == true)
+                        {
+                            ROS_INFO("get_sys_status_ack.sys_status = %d",get_sys_status_ack.sys_status);
+                        }
 
                         if(get_sys_status_ack.sys_status <= 0x1ff )
                         {
                             get_sys_status_ack_flag = 1;
-                            ROS_INFO("get right get_sys_status  ack");
+                            if(pNoahPowerboard->is_log_on == true)
+                            {
+                                ROS_INFO("get right get_sys_status  ack");
+                            }
                         }
                     }
                 }while(0);
                 if(get_sys_status_ack_flag == 1)
                 {
                     get_sys_status_ack_flag = 0;
-                    ROS_INFO("get get_sys_status_ack_vector data");
-                    ROS_INFO("get right get_sys_status ack, status is 0x%x",get_sys_status_ack.sys_status);
+                    if(pNoahPowerboard->is_log_on == true)
+                    {
+                        ROS_INFO("get right get_sys_status ack, status is 0x%x",get_sys_status_ack.sys_status);
+                        ROS_INFO("get get_sys_status_ack_vector data");
+                    }
 
                     break;
                 }
@@ -594,8 +666,14 @@ get_sys_status_restart:
 
             get_version_flag = 0;
 
-            ROS_INFO("get get version cmd");
-            ROS_INFO("get_version.get_version_type = 0x%x",get_version.get_version_type);
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("get get version cmd");
+            }
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("get_version.get_version_type = 0x%x",get_version.get_version_type);
+            }
             do
             {
                 boost::mutex::scoped_lock(mtx);
@@ -604,7 +682,10 @@ get_sys_status_restart:
 
 get_version_restart:
             pNoahPowerboard->sys_powerboard->get_version_type = get_version.get_version_type;
-            ROS_INFO("get_verion:send cmd to mcu");
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("get_verion:send cmd to mcu");
+            }
             pNoahPowerboard->GetVersion(pNoahPowerboard->sys_powerboard);
             bool get_version_ack_flag = 0;
             get_version_ack_t get_version_ack;
@@ -616,28 +697,43 @@ get_version_restart:
                     boost::mutex::scoped_lock(mtx);
                     if(!pNoahPowerboard->get_version_ack_vector.empty())
                     {
-                        ROS_INFO("get_version_ack_vector is not empty"); 
+                        if(pNoahPowerboard->is_log_on == true)
+                        {
+                            ROS_INFO("get_version_ack_vector is not empty"); 
+                        }
                         auto b = pNoahPowerboard->get_version_ack_vector.begin();
 
                         get_version_ack = *b;
 
                         pNoahPowerboard->get_version_ack_vector.erase(b);
 
-                        ROS_INFO("version type : %d",get_version_ack.get_version_type);
+                        if(pNoahPowerboard->is_log_on == true)
+                        {
+                            ROS_INFO("version type : %d",get_version_ack.get_version_type);
+                        }
                         if( get_version_ack.get_version_type <= 3) 
                         {
                             get_version_ack_flag = 1;
-                            ROS_INFO("get right get_version ack");
+                            if(pNoahPowerboard->is_log_on == true)
+                            {
+                                ROS_INFO("get right get_version ack");
+                            }
                         }
                     }
                 }while(0);
                 if(get_version_ack_flag == 1)
                 {
                     get_version_ack_flag = 0;
-                    ROS_INFO("get get_version_ack_vector data");
+                    if(pNoahPowerboard->is_log_on == true)
+                    {
+                        ROS_INFO("get get_version_ack_vector data");
+                    }
                     if(get_version_ack.get_version_type == get_version.get_version_type)
                     {
-                        ROS_INFO("get right get version ack");
+                        if(pNoahPowerboard->is_log_on == true)
+                        {
+                            ROS_INFO("get right get version ack");
+                        }
                         break;
                     }
                     else
@@ -706,8 +802,11 @@ get_version_restart:
 
             get_adc_flag = 0;
 
-            ROS_INFO("get get adc cmd");
-            ROS_INFO("get_adc.frq = %d",get_adc.frq);
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("get_adc.frq = %d",get_adc.frq);
+                ROS_INFO("get get adc cmd");
+            }
             do
             {
                 boost::mutex::scoped_lock(mtx);
@@ -715,7 +814,10 @@ get_version_restart:
             }while(0);
 
 get_adc_restart:
-            ROS_INFO("module ctrl:send cmd to mcu");
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("module ctrl:send cmd to mcu");
+            }
             pNoahPowerboard->GetAdcData(pNoahPowerboard->sys_powerboard);
             bool get_adc_ack_flag = 0;
             get_adc_ack_t get_adc_ack;
@@ -727,7 +829,10 @@ get_adc_restart:
                     boost::mutex::scoped_lock(mtx);
                     if(!pNoahPowerboard->get_adc_ack_vector.empty())
                     {
-                        ROS_INFO("get_adc_ack_vector is not empty");
+                        if(pNoahPowerboard->is_log_on == true)
+                        {
+                            ROS_INFO("get_adc_ack_vector is not empty");
+                        }
                         auto b = pNoahPowerboard->get_adc_ack_vector.begin();
 
                         get_adc_ack = *b;
@@ -737,25 +842,34 @@ get_adc_restart:
                         //if((get_adc ) && (module_set_ack.on_off <= 1) && (module_set_ack.group_num <= 2))
                         {
                             get_adc_ack_flag = 1;
-                            ROS_INFO("get right get adc ack");
+                            if(pNoahPowerboard->is_log_on == true)
+                            {
+                                ROS_INFO("get right get adc ack");
+                            }
                         }
                     }
                 }while(0);
                 if(get_adc_ack_flag == 1)
                 {
                     get_adc_ack_flag = 0;
-                    ROS_INFO("get get_adc_ack_vector data");
-                    ROS_INFO("get right get adc ack");
+                    if(pNoahPowerboard->is_log_on == true)
+                    {
+                        ROS_INFO("get right get adc ack");
+                    }
                     memcpy(&(pNoahPowerboard->sys_powerboard->voltage_info.voltage_data), &get_adc_ack, sizeof(get_adc_ack_t));
-                    ROS_INFO("5v dcdc:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data._5V_voltage);
-                    ROS_INFO("12v dcdc:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data._12V_voltage);
-                    ROS_INFO("24v dcdc:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data._24V_voltage);
-                    ROS_INFO("bat voltage:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data.bat_voltage);
+                    if(pNoahPowerboard->is_log_on == true)
+                    {
+                        ROS_INFO("get get_adc_ack_vector data");
+                        ROS_INFO("5v dcdc:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data._5V_voltage);
+                        ROS_INFO("12v dcdc:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data._12V_voltage);
+                        ROS_INFO("24v dcdc:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data._24V_voltage);
+                        ROS_INFO("bat voltage:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data.bat_voltage);
 
-                    ROS_INFO("24v temperature:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data._24V_temp);
-                    ROS_INFO("12v temperature:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data._12V_temp);
-                    ROS_INFO("5v temperature:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data._5V_temp);
-                    ROS_INFO("air temperature:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data.air_temp);
+                        ROS_INFO("24v temperature:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data._24V_temp);
+                        ROS_INFO("12v temperature:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data._12V_temp);
+                        ROS_INFO("5v temperature:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data._5V_temp);
+                        ROS_INFO("air temperature:%d",pNoahPowerboard->sys_powerboard->voltage_info.voltage_data.air_temp);
+                    }
                     break;
                 }
                 else
@@ -816,8 +930,11 @@ get_adc_restart:
 
             set_led_effect_flag = 0;
 
-            ROS_INFO("get set led effect cmd");
-            ROS_INFO("set_led_effect.mode = %d",set_led_effect.mode);
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("set_led_effect.mode = %d",set_led_effect.mode);
+                ROS_INFO("get set led effect cmd");
+            }
             do
             {
                 boost::mutex::scoped_lock(mtx);
@@ -825,7 +942,10 @@ get_adc_restart:
             }while(0);
 
 set_leds_effect_restart:
-            ROS_INFO("set led effect :send cmd to mcu");
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("set led effect :send cmd to mcu");
+            }
             pNoahPowerboard->sys_powerboard->led_set.mode = set_led_effect.mode;
             pNoahPowerboard->sys_powerboard->led_set.color = set_led_effect.color;
             pNoahPowerboard->sys_powerboard->led_set.period = set_led_effect.period;
@@ -841,7 +961,10 @@ set_leds_effect_restart:
                     boost::mutex::scoped_lock(mtx);
                     if(!pNoahPowerboard->set_leds_effect_ack_vector.empty())
                     {
-                        ROS_INFO("set_leds_effect_ack_vector is not empty");
+                        if(pNoahPowerboard->is_log_on == true)
+                        {
+                            ROS_INFO("set_leds_effect_ack_vector is not empty");
+                        }
                         auto b = pNoahPowerboard->set_leds_effect_ack_vector.begin();
 
                         set_led_effect_ack = *b;
@@ -851,21 +974,29 @@ set_leds_effect_restart:
                         if(set_led_effect_ack.mode == set_led_effect.mode)
                         {
                             set_led_effect_ack_flag = 1;
-                            ROS_INFO("get right set led effect ack");
+                            if(pNoahPowerboard->is_log_on == true)
+                            {
+                                ROS_INFO("get right set led effect ack");
+                            }
                         }
                     }
                 }while(0);
                 if(set_led_effect_ack_flag == 1)
                 {
                     set_led_effect_ack_flag = 0;
-                    ROS_INFO("get set_leds_effect_ack_vector data");
-                    ROS_INFO("get right set led effect ack");
+                    if(pNoahPowerboard->is_log_on == true)
+                    {
+                        ROS_INFO("get right set led effect ack");
+                    }
                     pNoahPowerboard->sys_powerboard->led.mode = set_led_effect_ack.mode;
                     pNoahPowerboard->sys_powerboard->led.color = set_led_effect_ack.color;
                     pNoahPowerboard->sys_powerboard->led.period = set_led_effect_ack.period;
-                    ROS_INFO("get led mode:%d",set_led_effect_ack.mode);
-                    ROS_INFO("get led color:r=%d,g=%d,b=%d",set_led_effect_ack.color.r,set_led_effect_ack.color.g,set_led_effect_ack.color.b);
-                    ROS_INFO("get led period:%d",set_led_effect_ack.period);
+                    if(pNoahPowerboard->is_log_on == true)
+                    {
+                        ROS_INFO("get led mode:%d",set_led_effect_ack.mode);
+                        ROS_INFO("get led color:r=%d,g=%d,b=%d",set_led_effect_ack.color.r,set_led_effect_ack.color.g,set_led_effect_ack.color.b);
+                        ROS_INFO("get led period:%d",set_led_effect_ack.period);
+                    }
                     break;
                 }
                 else
@@ -1278,18 +1409,14 @@ void NoahPowerboard::PubPower(powerboard_t *sys)
 void NoahPowerboard::power_from_app_rcv_callback(std_msgs::UInt8MultiArray data)
 {
     uint8_t value = data.data[0]; 
-    ROS_INFO("power_from_app_rcv_callback");
-    ROS_INFO("data is %d",value);
+    if(this->is_log_on == true)
+    {
+        ROS_INFO("power_from_app_rcv_callback");
+        ROS_INFO("data is %d",value);
+    }
     if(value == 0)
     {
-        //this->PubPower();
-        get_bat_info_t  get_bat_info;
-        get_bat_info.reserve = 0;
-        this->get_bat_info_vector.push_back(get_bat_info);
-        usleep(10*1000);
-        get_sys_status_t get_sys_status;
-        get_sys_status.reserve = 0;
-        this->get_sys_status_vector.push_back(get_sys_status);
+        this->PubPower(this->sys_powerboard);
     }
 }
 
@@ -1348,8 +1475,11 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
             this->module_set_ack_vector.push_back(module_ctrl_ack);
         }while(0);
 
-        ROS_INFO("receive module : 0x%x",module_ctrl_ack.module);
-        ROS_INFO("receive module state : 0x%x",module_ctrl_ack.module_status_ack);
+        if(this->is_log_on == true)
+        {
+            ROS_INFO("receive module : 0x%x",module_ctrl_ack.module);
+            ROS_INFO("receive module state : 0x%x",module_ctrl_ack.module_status_ack);
+        }
 
     }
 
@@ -1366,8 +1496,11 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
             this->get_bat_info_ack_vector.push_back(get_bat_info_ack);
         }while(0);
 
-        ROS_INFO("receive bat vol : %d",get_bat_info_ack.bat_vol);
-        ROS_INFO("receive bat percent : %d",get_bat_info_ack.bat_percent);
+        if(this->is_log_on == true)
+        {
+            ROS_INFO("receive bat vol : %d",get_bat_info_ack.bat_vol);
+            ROS_INFO("receive bat percent : %d",get_bat_info_ack.bat_percent);
+        }
         this->sys_powerboard->bat_info.bat_vol = get_bat_info_ack.bat_vol;
         this->sys_powerboard->bat_info.bat_percent = get_bat_info_ack.bat_percent;
         //this->PubPower(this->sys_powerboard);
@@ -1379,7 +1512,9 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
         {
             ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_SYS_STATE");
             get_sys_status_ack_t get_sys_status_ack;
+            *(uint16_t *)&msg->Data[1];
             get_sys_status_ack.sys_status = *(uint16_t *)&msg->Data[1];
+            this->sys_powerboard->sys_status = get_sys_status_ack.sys_status;
 
             do
             {
@@ -1387,8 +1522,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
                 this->get_sys_status_ack_vector.push_back(get_sys_status_ack);
             }while(0);
 
-            this->sys_powerboard->sys_status = get_sys_status_ack.sys_status;
-            this->PubPower(this->sys_powerboard);
+            //this->PubPower(this->sys_powerboard);
         }
         if(id.CanID_Struct.ACK == 0)
         {
@@ -1485,7 +1619,10 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
         set_led_effect_ack.mode = msg->Data[2];
         set_led_effect_ack.color = *(color_t *)&msg->Data[3];
         set_led_effect_ack.period = msg->Data[6];
-        ROS_INFO("led mode %d",set_led_effect_ack.mode);
+        if(this->is_log_on == true)
+        {
+            ROS_INFO("led mode %d",set_led_effect_ack.mode);
+        }
         if(id.CanID_Struct.ACK == 1)
         {
             do
@@ -1506,7 +1643,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
 void NoahPowerboard::update_sys_status(void)
 {
     uint16_t sys_status = this->sys_powerboard->sys_status;
-    uint8_t  power_percent = this->sys_powerboard->bat_info.bat_percent;
+    uint16_t  power_percent = this->sys_powerboard->bat_info.bat_percent;
     static bool charging_low_flag = 0;
     static bool charging_medium_flag = 0;
     static bool charging_full_flag = 0;
@@ -1517,15 +1654,21 @@ void NoahPowerboard::update_sys_status(void)
     /* ---- set led effect ----*/
     set_leds_effect_t set_led_effect;
     set_led_effect.reserve = 0;
-
-    if((sys_status & STATE_IS_CHARGING) || (sys_status & STATE_IS_CHARGING))
+    ROS_INFO("sys status 0x%x",sys_status);
+    if((sys_status & STATE_IS_RECHARGE_IN) || (sys_status & STATE_IS_CHARGER_IN))
     {
         if(power_percent < VBAT_POWER_CHARGING_LOW)
         {
+            ROS_INFO("sys status is charging, power low, %d",power_percent);
             if(charging_low_flag == 0)
             {
+                ROS_INFO("set led effect charging low power");
                 set_led_effect.mode = LIGHTS_MODE_CHARGING_POWER_LOW;
-                this->set_leds_effect_vector.push_back(set_led_effect);
+                do
+                {
+                    boost::mutex::scoped_lock(this->mtx);        
+                    this->set_leds_effect_vector.push_back(set_led_effect);
+                }while(0);
                 charging_low_flag = 1;
                 charging_medium_flag = 0;
                 charging_full_flag = 0;
@@ -1533,10 +1676,16 @@ void NoahPowerboard::update_sys_status(void)
         }
         else if(power_percent < VBAT_POWER_CHARGING_MEDIUM)
         {
+            ROS_INFO("sys status is charging, power medium, %d",power_percent);
             if(charging_medium_flag == 0)
             {
+                ROS_INFO("set led effect charging medium power");
                 set_led_effect.mode = LIGHTS_MODE_CHARGING_POWER_MEDIUM;
-                this->set_leds_effect_vector.push_back(set_led_effect);
+                do
+                {
+                    boost::mutex::scoped_lock(this->mtx);        
+                    this->set_leds_effect_vector.push_back(set_led_effect);
+                }while(0);
                 charging_low_flag = 0;
                 charging_medium_flag = 1;
                 charging_full_flag = 0;
@@ -1544,10 +1693,16 @@ void NoahPowerboard::update_sys_status(void)
         }
         else if(power_percent == VBAT_POWER_CHARGING_FULL)
         {
+            ROS_INFO("sys status is charging, power full, %d",power_percent);
             if(charging_full_flag == 0)
             {
+                ROS_INFO("set led effect charging full power");
                 set_led_effect.mode = LIGHTS_MODE_CHARGING_FULL;
-                this->set_leds_effect_vector.push_back(set_led_effect);
+                do
+                {
+                    boost::mutex::scoped_lock(this->mtx);        
+                    this->set_leds_effect_vector.push_back(set_led_effect);
+                }while(0);
                 charging_low_flag = 0;
                 charging_medium_flag = 0;
                 charging_full_flag = 1;
@@ -1559,20 +1714,32 @@ void NoahPowerboard::update_sys_status(void)
     {
         if(power_percent < VBAT_POWER_LOW_WARNING_PERCENTAGE)
         {
+            ROS_INFO("sys status is not charging, power low warning, %d",power_percent);
             if(power_low_flag == 0)
             {
+                ROS_INFO("set led effect not charging low warning power");
                 set_led_effect.mode = LIGHTS_MODE_LOW_POWER;
-                this->set_leds_effect_vector.push_back(set_led_effect);
+                do
+                {
+                    boost::mutex::scoped_lock(this->mtx);        
+                    this->set_leds_effect_vector.push_back(set_led_effect);
+                }while(0);
                 power_low_flag = 1;
                 power_medium_flag = 0;
             }
         }
         else 
         {
+            ROS_INFO("sys status is not charging, power normal, %d",power_percent);
             if(power_medium_flag == 0)
             {
+                ROS_INFO("set led effect not charging normal power");
                 set_led_effect.mode = LIGHTS_MODE_NOMAL;
-                this->set_leds_effect_vector.push_back(set_led_effect);
+                do
+                {
+                    boost::mutex::scoped_lock(this->mtx);        
+                    this->set_leds_effect_vector.push_back(set_led_effect);
+                }while(0);
                 power_low_flag = 0;
                 power_medium_flag = 1;
             }

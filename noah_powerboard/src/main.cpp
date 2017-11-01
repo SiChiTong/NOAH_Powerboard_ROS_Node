@@ -49,9 +49,14 @@ int main(int argc, char **argv)
 
     get_bat_info_t get_bat_info;
     set_leds_effect_t set_led_effect;
+    get_sys_status_t get_sys_status;
+
     get_bat_info.reserve = 0;
+
     set_led_effect.mode = LIGHTS_MODE_NOMAL;
     set_led_effect.reserve = 0;
+
+    get_sys_status.reserve = 0;
 
     while(ros::ok())
     {
@@ -60,13 +65,22 @@ int main(int argc, char **argv)
             if(cnt % (uint32_t)(rate * 2) == (uint32_t)rate/2)
             {
                 flag = 1;
-                powerboard->set_leds_effect_vector.push_back(set_led_effect);
+                do
+                {
+                    boost::mutex::scoped_lock(powerboard->mtx);        
+                    powerboard->set_leds_effect_vector.push_back(set_led_effect);
+                }while(0);
             }
         }
         if(cnt % (uint32_t)(rate * 5) == (uint32_t)rate/2)
         {
             //test_fun((void*)powerboard); 
-            powerboard->get_bat_info_vector.push_back(get_bat_info);
+            do
+            {
+                boost::mutex::scoped_lock(powerboard->mtx);        
+                powerboard->get_bat_info_vector.push_back(get_bat_info);
+                powerboard->get_sys_status_vector.push_back(get_sys_status);
+            }while(0);
         }
         
         if(cnt % (uint32_t)(rate * 1) == (uint32_t)rate/2)
