@@ -30,9 +30,13 @@ static sensor_info_t sensor_info;
 static int sensor_over_time_flag = 0;
 static int last_unread_bytes = 0;
 static unsigned char recv_buf_last[BUF_LEN] = {0};
+
+static uint32_t sonar_en = 0xffffffff;
+static uint32_t laser_en = 0xffffffff;
 ros::Publisher hall_pub;
 ros::Subscriber sub_from_sensor;
 ros::Subscriber sub_from_hall;
+ros::Subscriber sensor_en;
 //laser data:mm to m
 static inline double restore_laser_len(unsigned char *buf)
 {
@@ -68,6 +72,7 @@ static inline double restore_sensor_data(unsigned char *buf)
 
 static void pub_laser_data(sensor_sys_t *sys)
 {
+    uint32_t en_laser = laser_en;
 	sys->laser_data.header.stamp = ros::Time::now();
 	sys->laser_data.header.frame_id = "laser";
 	sys->laser_data.radiation_type = INFRARED;
@@ -118,10 +123,14 @@ sensor_msgs::PointCloud2 cloud_out;
 	}
 	for(int j=0;j<LASER_NUM;j++)
     {
-        ROS_INFO("j=%d",j);
-        sys->laser_data.header.frame_id = laser_frames[j];
-        sys->laser_data.range = sys->laser_len[j];
-        sys->laser_pub.publish(sys->laser_data);
+        if(en_laser & (1<<j))
+        {
+            ROS_INFO("laser:%d",j);
+            sys->laser_data.header.frame_id = laser_frames[j];
+            sys->laser_data.range = sys->laser_len[j];
+            usleep(1000);
+            sys->laser_pub.publish(sys->laser_data);
+        }
     }
 	//sys->laser_data.range.clear();
 
@@ -129,6 +138,7 @@ sensor_msgs::PointCloud2 cloud_out;
 
 static void pub_sonar_data(sensor_sys_t *sys)
 {
+    uint32_t en_sonar = sonar_en;
 	sys->sonar_data.header.stamp = ros::Time::now();
 	sys->sonar_data.radiation_type = ULTRASOUND;
 	sys->sonar_data.field_of_view = 1;
@@ -137,14 +147,18 @@ static void pub_sonar_data(sensor_sys_t *sys)
 
 	for(int i=0;i<SONAR_NUM;i++)
     {
-        ROS_INFO("i=%d",i);
-        if(i >= 3)
+        if(en_sonar & (0x00000001<<i))
         {
-            sys->sonar_data.min_range = 0.13;
+            ROS_INFO("sonar:%d",i);
+            if(i >= 3)
+            {
+                sys->sonar_data.min_range = 0.13;
+            }
+            sys->sonar_data.header.frame_id = sonar_frames[i];
+            sys->sonar_data.range = sys->sonar_len[i];
+            usleep(1000);
+            sys->sonar_pub.publish(sys->sonar_data);
         }
-        sys->sonar_data.header.frame_id = sonar_frames[i];
-		sys->sonar_data.range = sys->sonar_len[i];
-        sys->sonar_pub.publish(sys->sonar_data);
     }
 
 
@@ -929,6 +943,24 @@ void sub_from_hall_cb(std_msgs::UInt8MultiArray data)
     }
     pub_hall_data(&sensor_sys);
 }
+void sensor_en_cb(const std_msgs::String::ConstPtr &msg)
+{
+    ROS_INFO("%s",__func__);
+    auto j = json::parse(msg->data.c_str());
+    if(j.find("params") != j.end())
+    {
+        if(j["params"].find("enable_supersonic") != j["params"].end()) 
+        {
+            sonar_en = j["params"]["enable_supersonic"];
+            ROS_INFO("find enable_supersonic: 0x%x",sonar_en);
+        }
+        if(j["params"].find("enable_microlaser") != j["params"].end()) 
+        {
+            laser_en = j["params"]["enable_microlaser"];
+            ROS_INFO("find enable_microlaser: 0x%x",laser_en);
+        }
+    }
+}
 void sub_from_sensor_cb(std_msgs::UInt8MultiArray data)
 {
     uint8_t j;
@@ -967,6 +999,7 @@ void *sensor_thread_start(void *)
     hall_pub = nh.advertise<std_msgs::String>("hall_msg",20);
     sub_from_sensor = nh.subscribe("sensor_to_starline_node",1000,sub_from_sensor_cb);
     sub_from_hall = nh.subscribe("hall_to_starline_node",1000,sub_from_hall_cb);
+    sensor_en = nh.subscribe("map_server_mrobot/region_params_changer/sensor_params",1000,sensor_en_cb);
     while(ros::ok()) 
     {  
         //ROS_INFO("ros OK!!");

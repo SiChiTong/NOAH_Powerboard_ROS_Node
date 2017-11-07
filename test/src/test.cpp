@@ -64,10 +64,14 @@ int main(int argc, char **argv)
     ros::Publisher test_navigation_pub = n.advertise<std_msgs::String>("lane_follower_node/camera_using_n",1000);
     ros::Subscriber test_sub = n.subscribe("tx_noah_powerboard_node", 1000, &callback);
     ros::Publisher test_power_pub = n.advertise<std_msgs::UInt8MultiArray>("app_pub_power",1000);
-    ros::Rate loop_rate(0.1);
+    ros::Publisher starline_test_pub = n.advertise<std_msgs::String>("map_server_mrobot/region_params_changer/sensor_params",1000);
+    ros::Publisher sensor_to_starline_pub = n.advertise<std_msgs::UInt8MultiArray>("sensor_to_starline_node",1000);
+    ros::Rate loop_rate(1);
     json j;
     static uint32_t cnt = 0;
     static uint8_t flag = 0;
+    uint32_t sonar_en = 0x12345678;
+    uint32_t laser_en = 0x87654321;
     sleep(1);
     while(ros::ok())
     {
@@ -109,13 +113,81 @@ int main(int argc, char **argv)
                 test_navigation_pub.publish(led);
 
 #endif
+#if 1
 
+            {
+            
+                std_msgs::UInt8MultiArray array;
+                for(uint8_t i = 0; i < 13 + 10; i++)
+                {
+                    if(i < 10)
+                    {
+                        array.data.push_back(i);
+                    }
+                    else
+                    {
+                        array.data.push_back(i*2);
+                    }
+                }
+                sensor_to_starline_pub.publish(array);
+            }
+
+#endif
 #if 1
                 std_msgs::UInt8MultiArray test_power;
                 test_power.data.push_back(0);
                 test_power_pub.publish(test_power);
                 ROS_INFO("power request");
 #endif
+
+#if 1
+                j.clear();
+                j = 
+                {
+                    {"pub_name","set_module_state"},
+                    {
+                        "data",
+                        {
+                            {"dev_name","door_ctrl_state"},
+                            {"set_state",(bool)state},
+                        }
+                    },
+                };
+                std_msgs::String pub_json_msg_5;
+                std::stringstream ss_5;
+                ss_5.clear();
+                ss_5 << j;
+                pub_json_msg_5.data.clear();  
+                pub_json_msg_5.data = ss_5.str();
+                test_pub.publish(pub_json_msg_5);
+                ROS_INFO("set door ctrl %d",state);
+                //usleep(500*1000);
+#endif
+
+
+#if 1
+                j.clear();
+                j = 
+                {
+                    {
+                        "params",
+                        {
+                            {"enable_supersonic",(uint32_t)sonar_en},
+                            {"enable_microlaser",(uint32_t)laser_en},
+                        }
+                    },
+                };
+                std_msgs::String pub_json_msg_6;
+                std::stringstream ss_6;
+                ss_6.clear();
+                ss_6 << j;
+                pub_json_msg_6.data.clear();  
+                pub_json_msg_6.data = ss_6.str();
+                starline_test_pub.publish(pub_json_msg_6);
+#endif
+
+
+
 
 #if 0
                 j.clear();
@@ -208,30 +280,6 @@ int main(int argc, char **argv)
                 pub_json_msg_3.data = ss_3.str();
                 test_pub.publish(pub_json_msg_3);
                 ROS_INFO("set 12v dcdc: %d",state);
-                //usleep(500*1000);
-#endif
-
-#if 1
-                j.clear();
-                j = 
-                {
-                    {"pub_name","set_module_state"},
-                    {
-                        "data",
-                        {
-                            {"dev_name","door_ctrl_state"},
-                            {"set_state",(bool)state},
-                        }
-                    },
-                };
-                std_msgs::String pub_json_msg_5;
-                std::stringstream ss_5;
-                ss_5.clear();
-                ss_5 << j;
-                pub_json_msg_5.data.clear();  
-                pub_json_msg_5.data = ss_5.str();
-                test_pub.publish(pub_json_msg_5);
-                ROS_INFO("set door ctrl %d",state);
                 //usleep(500*1000);
 #endif
             }
