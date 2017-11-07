@@ -112,11 +112,14 @@ sensor_msgs::PointCloud2 cloud_out;
 	{
 		if(i < LASER_NUM - 3)//bu yao dong
 		{
-			cloud_out.header.frame_id = laser_frames[i];
-			float *pstep = (float*)&cloud_out.data[0];
-			pstep[0] = (float)sys->laser_len[i];
-			pstep[1] = 0.0;
-			sys->lasercloud_pub.publish(cloud_out);
+            if(en_laser & (1<<i))
+            {
+                cloud_out.header.frame_id = laser_frames[i];
+                float *pstep = (float*)&cloud_out.data[0];
+                pstep[0] = (float)sys->laser_len[i];
+                pstep[1] = 0.0;
+                sys->lasercloud_pub.publish(cloud_out);
+            }
 		}	    
 				
 		//sys->laser_data.range.push_back(sys->laser_len[i]);
@@ -125,10 +128,10 @@ sensor_msgs::PointCloud2 cloud_out;
     {
         if(en_laser & (1<<j))
         {
-            ROS_INFO("laser:%d",j);
+            //ROS_INFO("laser:%d",j);
             sys->laser_data.header.frame_id = laser_frames[j];
             sys->laser_data.range = sys->laser_len[j];
-            usleep(1000);
+            usleep(2000);
             sys->laser_pub.publish(sys->laser_data);
         }
     }
@@ -149,14 +152,14 @@ static void pub_sonar_data(sensor_sys_t *sys)
     {
         if(en_sonar & (0x00000001<<i))
         {
-            ROS_INFO("sonar:%d",i);
+            //ROS_INFO("sonar:%d",i);
             if(i >= 3)
             {
                 sys->sonar_data.min_range = 0.13;
             }
             sys->sonar_data.header.frame_id = sonar_frames[i];
             sys->sonar_data.range = sys->sonar_len[i];
-            usleep(1000);
+            usleep(2000);
             sys->sonar_pub.publish(sys->sonar_data);
         }
     }
@@ -966,7 +969,7 @@ void sub_from_sensor_cb(std_msgs::UInt8MultiArray data)
     uint8_t j;
     sensor_sys.infrared_flag = 0;// ?????????????????? 
 
-    ROS_INFO("sensor 0x03!!!!!");
+    //ROS_INFO("sensor 0x03!!!!!");
     for(j = 0;j < LASER_NUM;j++)
     {
         sensor_sys.laser_len[j] = restore_sensor_data(&data.data[j]);
@@ -999,7 +1002,7 @@ void *sensor_thread_start(void *)
     hall_pub = nh.advertise<std_msgs::String>("hall_msg",20);
     sub_from_sensor = nh.subscribe("sensor_to_starline_node",1000,sub_from_sensor_cb);
     sub_from_hall = nh.subscribe("hall_to_starline_node",1000,sub_from_hall_cb);
-    sensor_en = nh.subscribe("map_server_mrobot/region_params_changer/sensor_params",1000,sensor_en_cb);
+    sensor_en = nh.subscribe("/map_server_mrobot/region_params_changer/sensor_params",1000,sensor_en_cb);
     while(ros::ok()) 
     {  
         //ROS_INFO("ros OK!!");
