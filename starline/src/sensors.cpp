@@ -996,9 +996,9 @@ void *sensor_thread_start(void *)
         sensor_sys.sensor_freq = 20;
     }
     ros::Rate loop_rate(sensor_sys.sensor_freq);
-    sensor_sys.lasercloud_pub = nh.advertise<sensor_msgs::PointCloud2>("lasercloud", 50, true);
-	sensor_sys.laser_pub = nh.advertise<sensor_msgs::Range>("laser_msg", 20, true);
-	sensor_sys.sonar_pub = nh.advertise<sensor_msgs::Range>("sonar_msg", 20, true);
+    sensor_sys.lasercloud_pub = nh.advertise<sensor_msgs::PointCloud2>("lasercloud", 50);
+	sensor_sys.laser_pub = nh.advertise<sensor_msgs::Range>("laser_msg", 20);
+	sensor_sys.sonar_pub = nh.advertise<sensor_msgs::Range>("sonar_msg", 20);
     hall_pub = nh.advertise<std_msgs::String>("hall_msg",20);
     sub_from_sensor = nh.subscribe("sensor_to_starline_node",1000,sub_from_sensor_cb);
     sub_from_hall = nh.subscribe("hall_to_starline_node",1000,sub_from_hall_cb);
