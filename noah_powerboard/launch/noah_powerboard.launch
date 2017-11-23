@@ -1,4 +1,6 @@
 <launch>
-    <node name="noah_powerboard_node" pkg="noah_powerboard" type="noah_powerboard_node" respawn="true" output="screen"/>
+    <node name="noah_powerboard_node" pkg="noah_powerboard" type="noah_powerboard_node" respawn="true" />
     <param name="noah_pb_can_data_log_on" type="bool" value="false" />
+    <rosparam file="$(find noah_powerboard)/config/noah_powerboard.yaml" command="load"/>
+
 </launch>

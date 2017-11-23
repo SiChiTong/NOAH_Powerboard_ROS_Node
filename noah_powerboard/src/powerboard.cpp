@@ -252,7 +252,7 @@ module_set_restart:
             }
             if(time_out_cnt < MODULE_SET_TIME_OUT/10)
             {
-                ROS_INFO("module ctrl flow OK");
+                //ROS_INFO("module ctrl flow OK");
                 err_cnt = 0;
                 time_out_cnt = 0;
             }
@@ -390,7 +390,7 @@ get_bat_info_restart:
             }
             if(time_out_cnt < GET_BAT_INFO_TIME_OUT/10)
             {
-                ROS_INFO("get_bat_info flow OK");
+                //ROS_INFO("get_bat_info flow OK");
                 err_cnt = 0;
                 time_out_cnt = 0;
             }
@@ -503,7 +503,7 @@ set_ir_duty_restart:
             }
             if(time_out_cnt < SET_IR_DUTY_TIME_OUT/10)
             {
-                ROS_INFO("set ir duty flow OK");
+                //ROS_INFO("set ir duty flow OK");
                 err_cnt = 0;
                 time_out_cnt = 0;
             }
@@ -620,7 +620,7 @@ get_sys_status_restart:
             }
             if(time_out_cnt < GET_SYS_STSTUS_TIME_OUT/10)
             {
-                ROS_INFO("get sys status flow OK");
+                //ROS_INFO("get sys status flow OK");
                 err_cnt = 0;
                 time_out_cnt = 0;
             }
@@ -748,7 +748,7 @@ get_version_restart:
             }
             if(time_out_cnt < GET_VERSION_TIME_OUT/10)
             {
-                ROS_INFO("get version flow OK");
+                //ROS_INFO("get version flow OK");
                 err_cnt = 0;
                 time_out_cnt = 0;
             }
@@ -879,7 +879,7 @@ get_adc_restart:
             }
             if(time_out_cnt < GET_ADC_TIME_OUT/10)
             {
-                ROS_INFO("get adc flow OK");
+                //ROS_INFO("get adc flow OK");
                 err_cnt = 0;
                 time_out_cnt = 0;
             }
@@ -1006,7 +1006,7 @@ set_leds_effect_restart:
             }
             if(time_out_cnt < SET_LED_EFFECT_TIME_OUT/10)
             {
-                ROS_INFO("set led effect flow OK");
+                //ROS_INFO("set led effect flow OK");
                 err_cnt = 0;
                 time_out_cnt = 0;
             }
@@ -1399,24 +1399,28 @@ void NoahPowerboard::PubPower(powerboard_t *sys)
 {
     unsigned char power = 0;
     power = sys->bat_info.bat_percent;
-    unsigned char status = sys->sys_status;    //std_msgs::Int8 msg;
+    uint16_t status = sys->sys_status;    //std_msgs::Int8 msg;
     std_msgs::UInt8MultiArray bytes_msg;
 
     bytes_msg.data.push_back(power);
-    bytes_msg.data.push_back(status);
+    bytes_msg.data.push_back(status & 0xff);
+    bytes_msg.data.push_back(status >> 8);
     power_pub_to_app.publish(bytes_msg);
 }
 void NoahPowerboard::power_from_app_rcv_callback(std_msgs::UInt8MultiArray data)
 {
-    uint8_t value = data.data[0]; 
-    if(this->is_log_on == true)
+    if(data.data.size() == 1)
     {
-        ROS_INFO("power_from_app_rcv_callback");
-        ROS_INFO("data is %d",value);
-    }
-    if(value == 0)
-    {
-        this->PubPower(this->sys_powerboard);
+        uint8_t value = data.data[0]; 
+        if(this->is_log_on == true)
+        {
+            ROS_INFO("power_from_app_rcv_callback");
+            ROS_INFO("data is %d",value);
+        }
+        if(value == 0)
+        {
+            this->PubPower(this->sys_powerboard);
+        }
     }
 }
 
@@ -1462,7 +1466,6 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
     //can_msg.Data.resize(can_msg.DataLen);
     if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_SET_MODULE_STATE)
     {
-        ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_SET_MODULE_STATE");
         module_ctrl_ack_t module_ctrl_ack;
         module_ctrl_ack.module = *(uint32_t *)&msg->Data[2];
         module_ctrl_ack.group_num = msg->Data[1];
@@ -1477,6 +1480,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
 
         if(this->is_log_on == true)
         {
+            ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_SET_MODULE_STATE");
             ROS_INFO("receive module : 0x%x",module_ctrl_ack.module);
             ROS_INFO("receive module state : 0x%x",module_ctrl_ack.module_status_ack);
         }
@@ -1485,7 +1489,6 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
 
     if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_GET_BAT_STATE)
     {
-        ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_BAT_STATE");
         get_bat_info_ack_t get_bat_info_ack;
         get_bat_info_ack.bat_vol = *(uint16_t *)&msg->Data[1];
         get_bat_info_ack.bat_percent = *(uint16_t *)&msg->Data[3];
@@ -1498,6 +1501,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
 
         if(this->is_log_on == true)
         {
+            ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_BAT_STATE");
             ROS_INFO("receive bat vol : %d",get_bat_info_ack.bat_vol);
             ROS_INFO("receive bat percent : %d",get_bat_info_ack.bat_percent);
         }
@@ -1510,7 +1514,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
     {
         if(id.CanID_Struct.ACK == 1)
         {
-            ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_SYS_STATE");
+            //ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_SYS_STATE");
             get_sys_status_ack_t get_sys_status_ack;
             *(uint16_t *)&msg->Data[1];
             get_sys_status_ack.sys_status = *(uint16_t *)&msg->Data[1];
@@ -1526,7 +1530,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
         }
         if(id.CanID_Struct.ACK == 0)
         {
-            ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_SYS_STATE");
+            //ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_SYS_STATE");
             ROS_INFO("sys_status :mcu upload");
             *(uint16_t *)&msg->Data[1];
             this->sys_powerboard->sys_status = *(uint16_t *)&msg->Data[1];
@@ -1592,7 +1596,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
 
     if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_GET_ADC_DATA)
     {
-        ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_ADC_DATA");
+        //ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_ADC_DATA");
         get_adc_ack_t get_adc_ack;
         get_adc_ack = *(get_adc_ack_t *)&msg->Data[0];
 
@@ -1613,7 +1617,6 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
 
     if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_SET_LED_EFFECT)
     {
-        ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_SET_LED_EFFECT");
         set_leds_effect_t set_led_effect_ack;
 
         set_led_effect_ack.mode = msg->Data[2];
@@ -1621,6 +1624,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
         set_led_effect_ack.period = msg->Data[6];
         if(this->is_log_on == true)
         {
+            ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_SET_LED_EFFECT");
             ROS_INFO("led mode %d",set_led_effect_ack.mode);
         }
         if(id.CanID_Struct.ACK == 1)
@@ -1654,12 +1658,12 @@ void NoahPowerboard::update_sys_status(void)
     /* ---- set led effect ----*/
     set_leds_effect_t set_led_effect;
     set_led_effect.reserve = 0;
-    ROS_INFO("sys status 0x%x",sys_status);
+    //ROS_INFO("sys status 0x%x",sys_status);
     if((sys_status & STATE_IS_RECHARGE_IN) || (sys_status & STATE_IS_CHARGER_IN))
     {
         if(power_percent < VBAT_POWER_CHARGING_LOW)
         {
-            ROS_INFO("sys status is charging, power low, %d",power_percent);
+            //ROS_INFO("sys status is charging, power low, %d",power_percent);
             if(charging_low_flag == 0)
             {
                 ROS_INFO("set led effect charging low power");
@@ -1672,11 +1676,13 @@ void NoahPowerboard::update_sys_status(void)
                 charging_low_flag = 1;
                 charging_medium_flag = 0;
                 charging_full_flag = 0;
+                power_low_flag = 0;
+                power_medium_flag = 0;
             }
         }
-        else if(power_percent < VBAT_POWER_CHARGING_MEDIUM)
+        else if(power_percent < VBAT_POWER_CHARGING_FULL)
         {
-            ROS_INFO("sys status is charging, power medium, %d",power_percent);
+            //ROS_INFO("sys status is charging, power medium, %d",power_percent);
             if(charging_medium_flag == 0)
             {
                 ROS_INFO("set led effect charging medium power");
@@ -1689,11 +1695,13 @@ void NoahPowerboard::update_sys_status(void)
                 charging_low_flag = 0;
                 charging_medium_flag = 1;
                 charging_full_flag = 0;
+                power_low_flag = 0;
+                power_medium_flag = 0;
             }
         }
         else if(power_percent == VBAT_POWER_CHARGING_FULL)
         {
-            ROS_INFO("sys status is charging, power full, %d",power_percent);
+            //ROS_INFO("sys status is charging, power full, %d",power_percent);
             if(charging_full_flag == 0)
             {
                 ROS_INFO("set led effect charging full power");
@@ -1706,6 +1714,8 @@ void NoahPowerboard::update_sys_status(void)
                 charging_low_flag = 0;
                 charging_medium_flag = 0;
                 charging_full_flag = 1;
+                power_low_flag = 0;
+                power_medium_flag = 0;
             }
         }
         
@@ -1714,7 +1724,7 @@ void NoahPowerboard::update_sys_status(void)
     {
         if(power_percent < VBAT_POWER_LOW_WARNING_PERCENTAGE)
         {
-            ROS_INFO("sys status is not charging, power low warning, %d",power_percent);
+            //ROS_INFO("sys status is not charging, power low warning, %d",power_percent);
             if(power_low_flag == 0)
             {
                 ROS_INFO("set led effect not charging low warning power");
@@ -1726,11 +1736,14 @@ void NoahPowerboard::update_sys_status(void)
                 }while(0);
                 power_low_flag = 1;
                 power_medium_flag = 0;
+                charging_low_flag = 0;
+                charging_medium_flag = 0;
+                charging_full_flag = 0;
             }
         }
         else 
         {
-            ROS_INFO("sys status is not charging, power normal, %d",power_percent);
+            //ROS_INFO("sys status is not charging, power normal, %d",power_percent);
             if(power_medium_flag == 0)
             {
                 ROS_INFO("set led effect not charging normal power");
@@ -1742,6 +1755,9 @@ void NoahPowerboard::update_sys_status(void)
                 }while(0);
                 power_low_flag = 0;
                 power_medium_flag = 1;
+                charging_low_flag = 0;
+                charging_medium_flag = 0;
+                charging_full_flag = 0;
             }
         }
     }

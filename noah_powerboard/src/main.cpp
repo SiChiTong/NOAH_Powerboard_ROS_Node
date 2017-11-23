@@ -72,14 +72,22 @@ int main(int argc, char **argv)
                 }while(0);
             }
         }
-        if(cnt % (uint32_t)(rate * 5) == (uint32_t)rate/2)
+        if(cnt % (uint32_t)(rate * 5) == (uint32_t)rate*3)
+        {
+            //test_fun((void*)powerboard); 
+            do
+            {
+                boost::mutex::scoped_lock(powerboard->mtx);        
+                powerboard->get_sys_status_vector.push_back(get_sys_status);
+            }while(0);
+        }
+        if(cnt % (uint32_t)(rate * 5) == (uint32_t)rate*2)
         {
             //test_fun((void*)powerboard); 
             do
             {
                 boost::mutex::scoped_lock(powerboard->mtx);        
                 powerboard->get_bat_info_vector.push_back(get_bat_info);
-                powerboard->get_sys_status_vector.push_back(get_sys_status);
             }while(0);
         }
         

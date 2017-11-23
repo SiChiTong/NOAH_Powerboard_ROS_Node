@@ -352,8 +352,8 @@ typedef struct
 #define VBAT_POWER_OFF_PERCENTAGE           10  // %
 #define VBAT_POWER_LOW_WARNING_PERCENTAGE   20  // %
 
-#define VBAT_POWER_CHARGING_LOW             20
-#define VBAT_POWER_CHARGING_MEDIUM          30
+#define VBAT_POWER_CHARGING_LOW             30
+#define VBAT_POWER_CHARGING_MEDIUM          40
 #define VBAT_POWER_CHARGING_FULL            100
 typedef struct
 {

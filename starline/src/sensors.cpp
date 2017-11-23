@@ -156,6 +156,7 @@ static void pub_sonar_data(sensor_sys_t *sys)
             if(i >= 3)
             {
                 sys->sonar_data.min_range = 0.13;
+                sys->sonar_data.max_range = 1.2;
             }
             sys->sonar_data.header.frame_id = sonar_frames[i];
             sys->sonar_data.range = sys->sonar_len[i];
