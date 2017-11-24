@@ -23,14 +23,15 @@ static std::string laser_frames[LASER_NUM] = {"laser_frame_0","laser_frame_1","l
 										      "laser_frame_6","laser_frame_7","laser_frame_8","laser_frame_9","laser_frame_10","laser_frame_11","laser_frame_12"};
 
 
-static std::string sonar_frames[SONAR_NUM] = {"sonar_frame_0","sonar_frame_1","sonar_frame_2","sonar_frame_3","sonar_frame_4","sonar_frame_5", "sonar_frame_6","sonar_frame_7","sonar_frame_8"};
+static std::string sonar_frames[SONAR_NUM] = {"sonar_frame_0","sonar_frame_1","sonar_frame_2","sonar_frame_3","sonar_frame_4","sonar_frame_5", 
+                                                "sonar_frame_6","sonar_frame_7", "sonar_frame_8","sonar_frame_9","sonar_frame_10"};
 using json = nlohmann::json;
 static sensor_sys_t sensor_sys;
 static sensor_info_t sensor_info;
 static int sensor_over_time_flag = 0;
 static int last_unread_bytes = 0;
 static unsigned char recv_buf_last[BUF_LEN] = {0};
-
+static uint8_t sonar_num = 9;
 static uint32_t sonar_en = 0xffffffff;
 static uint32_t laser_en = 0xffffffff;
 ros::Publisher hall_pub;
@@ -73,6 +74,7 @@ static inline double restore_sensor_data(unsigned char *buf)
 static void pub_laser_data(sensor_sys_t *sys)
 {
     uint32_t en_laser = laser_en;
+    static bool close_all_flag = 0;
 	sys->laser_data.header.stamp = ros::Time::now();
 	sys->laser_data.header.frame_id = "laser";
 	sys->laser_data.radiation_type = INFRARED;
@@ -107,34 +109,70 @@ sensor_msgs::PointCloud2 cloud_out;
 	cloud_out.data.resize (cloud_out.row_step   * cloud_out.height);
 	cloud_out.is_dense = false;
 
-
-	for(int i=0;i<LASER_NUM;i++)
-	{
-		if(i < LASER_NUM - 3)//bu yao dong
-		{
-            if(en_laser & (1<<i))
-            {
-                cloud_out.header.frame_id = laser_frames[i];
-                float *pstep = (float*)&cloud_out.data[0];
-                pstep[0] = (float)sys->laser_len[i];
-                pstep[1] = 0.0;
-                sys->lasercloud_pub.publish(cloud_out);
-            }
-		}	    
-				
-		//sys->laser_data.range.push_back(sys->laser_len[i]);
-	}
-	for(int j=0;j<LASER_NUM;j++)
+    if(close_all_flag == 0)
     {
-        if(en_laser & (1<<j))
+        for(int i=0;i<LASER_NUM;i++)
         {
-            //ROS_INFO("laser:%d",j);
-            sys->laser_data.header.frame_id = laser_frames[j];
-            sys->laser_data.range = sys->laser_len[j];
-            usleep(2000);
-            sys->laser_pub.publish(sys->laser_data);
+            if(i < LASER_NUM - 3)//bu yao dong
+            {
+                if(en_laser == 0)
+                {
+                    close_all_flag = 1;
+
+                    cloud_out.header.frame_id = laser_frames[i];
+                    float *pstep = (float*)&cloud_out.data[0];
+                    pstep[0] = 5.0; 
+                    pstep[1] = 0.0;
+                    sys->lasercloud_pub.publish(cloud_out);
+
+                }
+                else if(en_laser & (1<<i))
+                {
+                    close_all_flag = 0;
+
+                    cloud_out.header.frame_id = laser_frames[i];
+                    float *pstep = (float*)&cloud_out.data[0];
+                    pstep[0] = (float)sys->laser_len[i];
+                    pstep[1] = 0.0;
+                    sys->lasercloud_pub.publish(cloud_out);
+                }
+            }	    
         }
+		//sys->laser_data.range.push_back(sys->laser_len[i]);
+        for(int j=0;j<LASER_NUM;j++)
+        {
+            if(en_laser == 0)
+            {
+                close_all_flag = 1;
+
+                sys->laser_data.header.frame_id = laser_frames[j];
+                sys->laser_data.range = 5.0;
+                usleep(2000);
+                sys->laser_pub.publish(sys->laser_data);
+            }
+            else if(en_laser & (1<<j))
+            {
+                //ROS_INFO("laser:%d",j);
+                close_all_flag = 0;
+
+                sys->laser_data.header.frame_id = laser_frames[j];
+                sys->laser_data.range = sys->laser_len[j];
+                usleep(2000);
+                sys->laser_pub.publish(sys->laser_data);
+            }
+        }
+	}
+
+    if(en_laser == 0)
+    {
+        close_all_flag = 1;
     }
+    else
+    {
+        close_all_flag = 0;
+    }
+
+
 	//sys->laser_data.range.clear();
 
 }
@@ -142,29 +180,56 @@ sensor_msgs::PointCloud2 cloud_out;
 static void pub_sonar_data(sensor_sys_t *sys)
 {
     uint32_t en_sonar = sonar_en;
+    static bool close_all_flag = 0;
 	sys->sonar_data.header.stamp = ros::Time::now();
 	sys->sonar_data.radiation_type = ULTRASOUND;
 	sys->sonar_data.field_of_view = 1;
 	sys->sonar_data.min_range = 0.23;
 	sys->sonar_data.max_range = 1.5;
-
-	for(int i=0;i<SONAR_NUM;i++)
+    if(close_all_flag == 0)
     {
-        if(en_sonar & (0x00000001<<i))
+        for(int i=0;i<sonar_num;i++)
         {
-            //ROS_INFO("sonar:%d",i);
-            if(i >= 3)
+            if(en_sonar == 0)
             {
-                sys->sonar_data.min_range = 0.13;
-                sys->sonar_data.max_range = 1.2;
+                close_all_flag = 1;
+
+                if(i >= 3)
+                {
+                    sys->sonar_data.min_range = 0.13;
+                    sys->sonar_data.max_range = 1.2;
+                }
+                sys->sonar_data.header.frame_id = sonar_frames[i];
+                sys->sonar_data.range = 5.0;
+                usleep(2000);
+                sys->sonar_pub.publish(sys->sonar_data);
             }
-            sys->sonar_data.header.frame_id = sonar_frames[i];
-            sys->sonar_data.range = sys->sonar_len[i];
-            usleep(2000);
-            sys->sonar_pub.publish(sys->sonar_data);
+            else if(en_sonar & (0x00000001<<i))
+            {
+                //ROS_INFO("sonar:%d",i);
+                close_all_flag = 0;
+
+                if(i >= 3)
+                {
+                    sys->sonar_data.min_range = 0.13;
+                    sys->sonar_data.max_range = 1.2;
+                }
+                sys->sonar_data.header.frame_id = sonar_frames[i];
+                sys->sonar_data.range = sys->sonar_len[i];
+                usleep(2000);
+                sys->sonar_pub.publish(sys->sonar_data);
+            }
         }
     }
 
+    if(en_sonar == 0)
+    {
+        close_all_flag = 1;
+    }
+    else
+    {
+        close_all_flag = 0;
+    }
 
 	//sys->sonar_data.range.clear();
 }
@@ -969,15 +1034,26 @@ void sub_from_sensor_cb(std_msgs::UInt8MultiArray data)
 {
     uint8_t j;
     sensor_sys.infrared_flag = 0;// ?????????????????? 
-
-    //ROS_INFO("sensor 0x03!!!!!");
+    if(data.data.size() == 24)
+    {
+        ROS_INFO("11 sonars");
+        sonar_num = 11;
+    }
+    else if(data.data.size() == 22)
+    {
+        ROS_INFO("9 sonars");
+        sonar_num = 9;
+    }
+    else
+    {
+        return ;
+    }
     for(j = 0;j < LASER_NUM;j++)
     {
         sensor_sys.laser_len[j] = restore_sensor_data(&data.data[j]);
-        //ROS_INFO("sensor receive:%d",sys->laser_len[j]);
     }
     pub_laser_data(&sensor_sys);
-    for(j = 0;j < SONAR_NUM;j++)
+    for(j = 0;j < sonar_num;j++)
     {
         sensor_sys.sonar_len[j] = restore_sensor_data(&data.data[LASER_NUM+j]);
     }

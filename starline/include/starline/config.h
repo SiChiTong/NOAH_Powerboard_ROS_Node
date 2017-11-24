@@ -48,7 +48,7 @@
 
 
 #define LASER_NUM  (13)
-#define SONAR_NUM  (9)
+#define SONAR_NUM  (11)
 #define HALL_NUM    (2)
 #define SENSOR_STATUS_NUM (3)
 #define SOCKET_PKG_LEN (2048)
