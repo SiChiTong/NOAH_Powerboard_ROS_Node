@@ -4,6 +4,7 @@
 #include "geometry_msgs/Twist.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "tf/transform_broadcaster.h"
+#include "sensor_msgs/Imu.h"
 
 #include <sstream>
 #include <math.h>
@@ -22,6 +23,7 @@
 
 #include "../include/starline/config.h"
 #include "../include/starline/move.h"
+#include "../include/starline/imu_9250.h"
 
 static move_sys_t move_sys;
 static move_info_t move_info;
@@ -35,6 +37,17 @@ unsigned char baseStateData[7]={0};
 static void loadMotorCMD(uint8_t cmd);
 unsigned char loadFlag = 0;
 unsigned char loadCMD = 0 ;
+
+unsigned char chargingFlag = 0;
+unsigned char chargingCMD = 0;
+static void setChargingMode(uint8_t mode);
+
+unsigned char basecmd_rx_buff[64];
+unsigned char basecmd_tx_buff[64];
+unsigned char basecmdRxFlag = 0;
+unsigned char basecmdTxFlag = 0;
+static void basecmd(uint8_t *data,uint8_t len);
+
 
 static void handle_rev_frame(move_sys_t *sys,unsigned char * frame_buf)
 {
@@ -178,6 +191,17 @@ ROS_DEBUG("move receive:%02x",frame_buf[i]);
 				}
 				break;				
 			*/
+     case 0x6A:
+       memcpy(getImuData.data,&frame_buf[3],40);
+       ImuDataPubFlag = 1;
+       break;
+
+     case 0x6C:
+          uint8_t chargingMode;
+          chargingMode = frame_buf[3];
+          ROS_INFO("chaargingMode = %d ",chargingMode);
+       break;
+
             case 0x6E:
                 for(j=0; j<MOVE_HARDWARE_VER_LEN; j++)
 				{
@@ -211,6 +235,19 @@ ROS_DEBUG("move receive:%02x",frame_buf[i]);
                          break;
 				}
 				break;
+
+     case 0x6B:
+     case 0xFF:
+     case 0xFE:
+     case 0xFD:
+//		ROS_INFO("GET FEEDBACK");
+       basecmdTxFlag = frame_buf[1] - 4;
+		ROS_INFO("basecmdTxFlag = %x",basecmdTxFlag);
+       memcpy(basecmd_tx_buff,&frame_buf[2],basecmdTxFlag);
+       for(int i =0; i< basecmdTxFlag ;i++)
+		ROS_INFO("basecmd_tx_buff[%d] = %x",i,basecmd_tx_buff[i]);
+       break;
+
 
 			default:
                 break;
@@ -999,10 +1036,22 @@ void *movebase_thread_start(void *)
 			loadMotorCMD(loadCMD);
 			loadFlag = 0;
 		}
-        else if(0 == move_sys.upgrade_status)
-        {
-            update_system_state(&move_sys);
-            handle_receive_data(&move_sys);
+    else if(1 == chargingFlag)
+    {
+      setChargingMode(chargingCMD);
+      chargingFlag = 0;
+    }
+    else if(basecmdRxFlag)
+    {
+	  ROS_INFO("TX NOAHBASECMD");
+      basecmd(basecmd_rx_buff,basecmdRxFlag);
+      basecmdRxFlag = 0;
+	  
+    }
+    else if(0 == move_sys.upgrade_status)
+    {
+        update_system_state(&move_sys);
+        handle_receive_data(&move_sys);
 
             if(COM_RUN_OK == move_sys.com_state)
             {
@@ -1031,6 +1080,8 @@ void *movebase_thread_start(void *)
     move_sys.work_normal = 0;
     return 0; 
 }
+
+
 
 void set_movebase_cmd_vel(vel_t vel)
 {  
@@ -1127,3 +1178,63 @@ static void loadMotorCMD(uint8_t cmd)
   handle_receive_data(&move_sys);
 
 }
+
+static void setChargingMode(uint8_t mode)
+{
+
+  uint8_t txData[6];
+  txData[0] = 0x5A;
+  txData[1] = 0x06;
+  txData[2] = 0x6C;
+  txData[3] = mode;
+  txData[4] = 0x00;
+  for(int i =0 ; i < 4 ; i++)
+  {
+    txData[4] += txData[i] ;
+  }
+  txData[5] = 0xA5 ;
+
+  for(int i = 0 ; i< 6; i++)
+  ROS_INFO("txData[%d] = %x" ,i,txData[i]);
+  send_serial(txData,&move_sys);
+  usleep(MOVE_SLEEP_TIME);
+  handle_receive_data(&move_sys);
+}
+
+static void basecmd(uint8_t *data, uint8_t len)
+{
+  uint8_t txData[64] = {0};
+  memset(txData,0,64);
+  txData[0] = 0x5A;
+  txData[1] = len + 4;
+  memcpy(&txData[2],data,len);
+
+  for(uint8_t i = 0; i < len+2 ;i++ )
+  {
+    txData[len+2] += txData[i];
+  }
+  txData[len + 3] = 0xA5;
+
+  for(int i =0;i< len +4;i++)
+	ROS_INFO("txData[%d] = %x",i,txData[i]);
+
+  send_serial(txData,&move_sys);
+  usleep(MOVE_SLEEP_TIME);
+  handle_receive_data(&move_sys);
+}
+
+void sendImuCmd(void)
+{
+  uint8_t txData[5];
+  txData[0] = 0x5A;
+  txData[1] = 0x05;
+  txData[2] = 0x6A;
+  for(int i =0 ; i < 3 ; i++)
+  {
+    txData[3] += txData[i] ;
+  }
+  txData[4] = 0xA5 ;
+  send_serial(txData,&move_sys);
+  usleep(MOVE_SLEEP_TIME);
+}
+

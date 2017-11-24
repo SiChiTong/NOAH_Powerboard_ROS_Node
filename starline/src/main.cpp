@@ -110,6 +110,34 @@ void loadMotorCallback(std_msgs::UInt8MultiArray app_data)
 //  loadMotorCMD(cmdData);
 }
 
+void chargingStatusCallback(std_msgs::UInt8MultiArray charging_data)
+{
+  chargingCMD = charging_data.data[0];
+  chargingFlag = 1;
+}
+
+void basecmdCallback(std_msgs::UInt8MultiArray cmddata)
+{
+  basecmdRxFlag = cmddata.data.size();
+  ROS_INFO("RXLEN = %d",basecmdRxFlag);
+  memcpy(basecmd_rx_buff,cmddata.data.data(),basecmdRxFlag);
+//  for(int i =0 ;i < basecmdRxFlag;i++)
+//	ROS_INFO("basecmd_rx_buff[%d] = %x",i,basecmd_rx_buff[i]);
+}
+
+
+void pub_basecmd(ros::Publisher &basecmd_pub )
+{
+
+  std_msgs::UInt8MultiArray basecmd_msg;
+
+  for(uint8_t i = 0; i < basecmdTxFlag; i++)
+  {
+    basecmd_msg.data.push_back(basecmd_tx_buff[i]);
+  }
+  basecmd_pub.publish(basecmd_msg);
+}
+
 int main(int argc, char **argv)
 {
     geometry_msgs::Twist cmdvel;
@@ -131,6 +159,12 @@ int main(int argc, char **argv)
     //20170815,Zero ,for load motor
     ros::Subscriber loadMotor_sub = n.subscribe("cmd_loadMotor",1,loadMotorCallback);
 
+    //20170927,Zero,for charging
+    ros::Subscriber chargingStatus_sub = n.subscribe("charge_status_to_move_base",1,chargingStatusCallback);
+
+    //20171115,Zero,for write/read base parameters
+     ros::Subscriber noahbasecmd_sub = n.subscribe("noahbasecmd_rx",1,basecmdCallback);
+     ros::Publisher noahbasecmd_pub = n.advertise<std_msgs::UInt8MultiArray>("noahbasecmd_tx",1);
     /*
      *!!! CLEAR ALL PARAMETERS FIRST  !!!
      */
@@ -198,6 +232,12 @@ int main(int argc, char **argv)
         pub_power(power_pub);
          //20170712,Zero
         pub_baseState(basestate_pub);
+
+        if(basecmdTxFlag)
+        {
+          pub_basecmd(noahbasecmd_pub);
+          basecmdTxFlag = 0;
+        }
         ros::spinOnce();
         loop_rate.sleep();
     }

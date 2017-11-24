@@ -1036,12 +1036,12 @@ void sub_from_sensor_cb(std_msgs::UInt8MultiArray data)
     sensor_sys.infrared_flag = 0;// ?????????????????? 
     if(data.data.size() == 24)
     {
-        ROS_INFO("11 sonars");
+        //ROS_INFO("11 sonars");
         sonar_num = 11;
     }
     else if(data.data.size() == 22)
     {
-        ROS_INFO("9 sonars");
+        //ROS_INFO("9 sonars");
         sonar_num = 9;
     }
     else

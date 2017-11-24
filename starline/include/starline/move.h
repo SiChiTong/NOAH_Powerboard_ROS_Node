@@ -64,6 +64,7 @@ extern void set_movebase_cmd_vel(vel_t vel);
 extern move_sys_t *get_movebase_info(void);
 extern void *movebase_thread_start(void *);
 
+
 extern int clear_open_signal(void);
 extern void get_open_sigal(void);
 extern int set_base_limit(double high_limit,double low_limit);
@@ -82,10 +83,20 @@ extern int set_movebase_upgrade(char *str,char *md5);
 extern int get_movebase_upgrade_status(void);
 extern int get_movebase_upgrade_result(void);
 
+
+
 extern unsigned char baseStateData[];
 extern unsigned char loadFlag ;
 extern unsigned char loadCMD ;
 //20170815,Zero
 //void loadMotorCMD(uint8_t cmd);
+extern unsigned char chargingFlag ;
+extern unsigned char chargingCMD;
+extern unsigned char basecmd_rx_buff[];
+extern unsigned char basecmd_tx_buff[];
+extern unsigned char basecmdRxFlag ;
+extern unsigned char basecmdTxFlag ;
+
+extern void sendImuCmd(void);
 
 #endif

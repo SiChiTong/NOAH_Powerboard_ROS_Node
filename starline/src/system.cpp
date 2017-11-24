@@ -14,6 +14,7 @@
 #include "../include/starline/sensor.h"  
 #include "../include/starline/move.h"
 #include "../include/starline/cloud.h"
+#include "../include/starline/imu_9250.h"
 
 #define ENTER_EVENT_NUM (10)
 
@@ -2100,7 +2101,8 @@ void init_sys_thread(system_t *sys)
     pthread_t upper_com_thread;
     pthread_t movebase_thread;
     pthread_t led_thread;
-	pthread_t cloud_thread;
+    pthread_t cloud_thread;
+    pthread_t imu_thread;
     int tmp = 0;
 
     if(NULL == sys)
@@ -2143,6 +2145,14 @@ void init_sys_thread(system_t *sys)
         ROS_DEBUG("cloud thread failed!\n");
 		sys->err_num = CREATE_THREAD_ERR;
     }
+/*
+    tmp = pthread_create(&imu_thread,NULL,GetImuDataThread,NULL);
+    if(0 != tmp)
+    {
+        ROS_DEBUG("imu thread failed!\n");
+        sys->err_num = CREATE_THREAD_ERR;
+    }
+*/
     return;
 }
 
