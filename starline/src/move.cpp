@@ -192,8 +192,8 @@ ROS_DEBUG("move receive:%02x",frame_buf[i]);
 				break;				
 			*/
      case 0x6A:
-       memcpy(getImuData.data,&frame_buf[3],40);
-       ImuDataPubFlag = 1;
+       //memcpy(getImuData.data,&frame_buf[3],40);
+       //ImuDataPubFlag = 1;
        break;
 
      case 0x6C:
