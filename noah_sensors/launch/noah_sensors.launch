@@ -1,0 +1,6 @@
+<launch>
+    <node name="noah_sensors" pkg="noah_sensors" type="noah_sensors" respawn="true" />
+    <param name="noah_sensors_can_data_log_on" type="bool" value="false" />
+    <rosparam file="$(find noah_sensors)/config/noah_sensors.yaml" command="load"/>
+
+</launch>
