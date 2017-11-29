@@ -36,11 +36,21 @@ void test_fun(void * arg)
 
 }
 
-
+void Ultrasonic::update_status(void)
+{
+    for(uint8_t i = 0; i < ULTRASONIC_NUM_MAX; i++)
+    {
+        if(ros::Time::now() - start_measure_time[i] >= ros::Duration(2))
+        {
+            this->err_status[i] = ERR_COMMUNICATE_TIME_OUT;
+            this->distance[i] = DISTANCE_ERR_TIME_OUT;
+        }
+    }
+}
 int Ultrasonic::start_measurement(uint8_t ul_id)     
 {
     int error = 0; 
-    if((ul_id == 0) || (ul_id > 16))
+    if(ul_id > 15)
     {
         return -1;
     }
@@ -49,17 +59,16 @@ int Ultrasonic::start_measurement(uint8_t ul_id)
     memset(&id, 0x0, sizeof(CAN_ID_UNION));
     id.CanID_Struct.SourceID = CAN_SOURCE_ID_START_MEASUREMENT;
     id.CanID_Struct.SrcMACID = 1;//CAN_SUB_PB_SRC_ID;
-    id.CanID_Struct.DestMACID = ULTRASONIC_CAN_SRC_MAC_ID_BASE+ ul_id - 1;
+    id.CanID_Struct.DestMACID = ULTRASONIC_CAN_SRC_MAC_ID_BASE+ ul_id;
     id.CanID_Struct.FUNC_ID = 0x02;
     id.CanID_Struct.ACK = 0;
     id.CanID_Struct.res = 0;
 
     can_msg.ID = id.CANx_ID;
-    can_msg.DataLen = 3;
-    can_msg.Data.resize(3);
+    can_msg.DataLen = 2;
+    can_msg.Data.resize(2);
     can_msg.Data[0] = 0x00;
     can_msg.Data[1] = 0;
-    can_msg.Data[2] = 0;
     //ROS_INFO("send CAN data");
     this->pub_to_can_node.publish(can_msg);
     return error;
@@ -77,23 +86,39 @@ void pub_json_msg_to_app( const nlohmann::json j_msg)
     pub_json_msg.data = ss.str();
     //this->noah_powerboard_pub.publish(pub_json_msg);
 }
+
+#if 0
+bool Ultrasonic::is_ultrasonic_id(uint8_t id)
+{
+    if((id >= 0)&&(id <= 15))
+    {
+        return true ;
+    }
+    return false;
+}
+#endif
+
 bool Ultrasonic::is_ultrasonic_can_id(CAN_ID_UNION id)
 {
-    if((id.CanID_Struct.SrcMACID >= 0x60)&&(id.CanID_Struct.SrcMACID <= 0x6f))//?????????????????????????????
+    if((id.CanID_Struct.SrcMACID >= 0x60)&&(id.CanID_Struct.SrcMACID <= 0x6f))
     {
         return true ;
     }
     return false;
 }
 
+
+#define NOT_ULTRASONIC_ID      0xff
 uint8_t Ultrasonic::parse_ultrasonic_id(CAN_ID_UNION id)
 {
-    if((id.CanID_Struct.SrcMACID >= 0x60)&&(id.CanID_Struct.SrcMACID <= 0x6f))//?????????????????????????????
+    if((id.CanID_Struct.SrcMACID >= 0x60)&&(id.CanID_Struct.SrcMACID <= 0x6f))
     {
-        return id.CanID_Struct.SrcMACID - ULTRASONIC_CAN_SRC_MAC_ID_BASE + 1 ;
+        return id.CanID_Struct.SrcMACID - ULTRASONIC_CAN_SRC_MAC_ID_BASE;
     }
-    return 0;
+    return NOT_ULTRASONIC_ID;
 }
+
+
 void Ultrasonic::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::ConstPtr &c_msg)
 {
     mrobot_driver_msgs::vci_can can_msg;
@@ -117,34 +142,44 @@ void Ultrasonic::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::C
     can_msg.ID = msg->ID;
     id.CANx_ID = can_msg.ID;
     can_msg.DataLen = msg->DataLen;
-    //if(id.CanID_Struct.SrcMACID != 0)//?????????????????????????????
+
     if(this->is_ultrasonic_can_id(id) == false)
     {
-        ROS_INFO("not ultrasonic CAN id");
+        ROS_ERROR("not ultrasonic CAN id");
         return ;
     }
 
-    if((ul_id = this->parse_ultrasonic_id(id)) == 0)
+    if((ul_id = this->parse_ultrasonic_id(id)) == NOT_ULTRASONIC_ID)
     {
-        ROS_INFO("ultrasonic CAN id parse error");
+        ROS_ERROR("ultrasonic CAN id not right");
         return ; 
     }
 
-        ROS_INFO("get distancemark ");
-    if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_START_MEASUREMENT)//??????????????????????????//
+    if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_START_MEASUREMENT)
     {
-        ROS_INFO("get distance ");
+        //ROS_INFO("get distance ");
         if(id.CanID_Struct.ACK == 1)
         {
-            this->distance[ul_id - 1] = *(uint16_t *)&msg->Data[1];
-            ROS_INFO("ultrasonic id: %3d,  distance: %3d",ul_id, this->distance[ul_id]);
-            
-            do
+            this->start_measure_time[ul_id] = ros::Time::now();
+            this->distance[ul_id] = msg->Data[0];
+            this->distance[ul_id] += msg->Data[1]<<8;
+            printf("\n");
+            printf("\n");
+            printf("\n");
+            for(uint8_t i = 0; i < ULTRASONIC_NUM_MAX; i++)
             {
-            }while(0);
-
+                printf("%4d ",i);
+            }
+            printf("\n");
+            for(uint8_t i = 0; i < ULTRASONIC_NUM_MAX; i++)
+            {
+                printf("%4d ",this->distance[i]);
+            }
+            printf("\n");
+            //printf("ultrasonic id: %3d,  distance: %3d \n",ul_id, this->distance[ul_id]);
         }
     }
-   
-
 }
+
+
+

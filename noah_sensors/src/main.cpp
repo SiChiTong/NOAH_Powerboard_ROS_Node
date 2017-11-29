@@ -52,17 +52,28 @@ int main(int argc, char **argv)
                 flag = 1;
             }
         }
-        if(cnt % (uint32_t)(rate / 5) == 0)
-        {
-            //ROS_INFO("request ultrasonic measurement"); 
-            ultrasonic->start_measurement(1);
+
+        if(cnt % (uint32_t)(rate / 20) == 0)
+        {   
+            static uint8_t period = 0;
+            period++;
+            if(period >= sizeof(ultrasonic->id_group) / sizeof(ultrasonic->id_group[0]))
+            {
+                period = 0;
+            }
+            
+            for(uint8_t i = 0; i < sizeof(ultrasonic->id_group[0]) / sizeof(ultrasonic->id_group[0][0]); i++)
+            {
+                if(ultrasonic->id_group[period][i] < ULTRASONIC_NUM_MAX)
+                {
+                    ultrasonic->start_measurement(ultrasonic->id_group[period][i]);
+                }
+            }
+           
         }
-        if(cnt % (uint32_t)(rate * 5) == (uint32_t)rate*2)
+        if(cnt % (uint32_t)(rate / 10) == 0)
         {
-        }
-        
-        if(cnt % (uint32_t)(rate * 1) == (uint32_t)rate/2)
-        {
+            ultrasonic->update_status();
         }
         cnt++;
         ros::spinOnce();
