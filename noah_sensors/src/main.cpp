@@ -74,6 +74,7 @@ int main(int argc, char **argv)
         if(cnt % (uint32_t)(rate / 10) == 0)
         {
             ultrasonic->update_status();
+            ultrasonic->pub_ultrasonic_data_to_navigation(ultrasonic->distance);
         }
         cnt++;
         ros::spinOnce();

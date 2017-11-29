@@ -3,6 +3,8 @@
 #include "json.hpp"
 #include <mrobot_driver_msgs/vci_can.h>
 #include <roscan/can_long_frame.h>
+#include <sensor_msgs/Range.h>
+#include <sensor_msgs/PointCloud2.h>
 
 #ifndef _ULTRASONIC__H
 #define _ULTRASONIC__H
@@ -17,6 +19,15 @@
 #define DISTANCE_MAX                        200
 #define ERR_COMMUNICATE_TIME_OUT            1
 #define DISTANCE_ERR_TIME_OUT               DISTANCE_MAX
+
+enum{
+    INFRARED = 0,
+    ULTRASOUND = 1,  
+    HALL = 2,
+};
+
+
+
 class Ultrasonic
 {
     public:
@@ -33,18 +44,27 @@ class Ultrasonic
         int start_measurement(uint8_t ul_id);
         void rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::ConstPtr &c_msg);
         void update_status(void);
+        void pub_ultrasonic_data_to_navigation(uint16_t *data);
         bool is_log_on;
         can_long_frame  long_frame;
         ros::Time start_measure_time[ULTRASONIC_NUM_MAX];
         uint8_t err_status[ULTRASONIC_NUM_MAX];
 
+
+        uint16_t distance[ULTRASONIC_NUM_MAX] = {0};
         uint8_t id_group[4][4] = 
-            {
-                {1,   2,   3,   4 },
-                {5,   6,   7,   8 },
-                {9,   10,  11,  12},
-                {13,  14,  15,  0}
-            };
+        {
+            {1,   2,   3,   4 },
+            {5,   6,   7,   8 },
+            {9,   10,  11,  12},
+            {13,  14,  15,  0}
+        };
+        //sensor_msgs::Range laser_data;
+        sensor_msgs::Range ultrasonic_data;
+        //ros::Publisher lasercloud_pub;
+        //ros::Publisher laser_pub;
+        ros::Publisher ultrasonic_pub_to_navigation;
+
 
     private:
         ros::NodeHandle n;
@@ -53,11 +73,11 @@ class Ultrasonic
 
         ros::Publisher  ultrasonic_pub;
         ros::Publisher  pub_to_can_node;
-        uint16_t distance[ULTRASONIC_NUM_MAX] = {0};
+        std::string ultrasonic_frames[ULTRASONIC_NUM_MAX] = {"sonar_frame_0","sonar_frame_1","sonar_frame_2","sonar_frame_3","sonar_frame_4","sonar_frame_5","sonar_frame_6","sonar_frame_7", "sonar_frame_8","sonar_frame_9","sonar_frame_10"};
+        uint32_t ultrasonic_en = 0xffffffff;
+        uint8_t ultrasonic_real_num = ULTRASONIC_NUM_MAX;
         bool is_ultrasonic_can_id(CAN_ID_UNION id);
         uint8_t parse_ultrasonic_id(CAN_ID_UNION id);
 };
 
-
 #endif
-

@@ -163,23 +163,79 @@ void Ultrasonic::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::C
             this->start_measure_time[ul_id] = ros::Time::now();
             this->distance[ul_id] = msg->Data[0];
             this->distance[ul_id] += msg->Data[1]<<8;
-            printf("\n");
-            printf("\n");
-            printf("\n");
-            for(uint8_t i = 0; i < ULTRASONIC_NUM_MAX; i++)
+            //if(this->is_log_on == true)
             {
-                printf("%4d ",i);
+                printf("\n");
+                printf("\n");
+                printf("\n");
+                for(uint8_t i = 0; i < ULTRASONIC_NUM_MAX; i++)
+                {
+                    printf("%4d ",i + 1);
+                }
+                printf("\n");
+                for(uint8_t i = 0; i < ULTRASONIC_NUM_MAX; i++)
+                {
+                    printf("%4d ",this->distance[i]);
+                }
+                printf("\n");
+                //printf("ultrasonic id: %3d,  distance: %3d \n",ul_id, this->distance[ul_id]);
             }
-            printf("\n");
-            for(uint8_t i = 0; i < ULTRASONIC_NUM_MAX; i++)
-            {
-                printf("%4d ",this->distance[i]);
-            }
-            printf("\n");
-            //printf("ultrasonic id: %3d,  distance: %3d \n",ul_id, this->distance[ul_id]);
         }
     }
 }
 
 
+void Ultrasonic::pub_ultrasonic_data_to_navigation(uint16_t * ul_data)
+{
+    uint32_t en_sonar = ultrasonic_en;
+    static bool close_all_flag = 0;
+    this->ultrasonic_data.header.stamp = ros::Time::now();
+    this->ultrasonic_data.radiation_type = ULTRASOUND;
+    this->ultrasonic_data.field_of_view = 1;
+    this->ultrasonic_data.min_range = 0.23;
+    this->ultrasonic_data.max_range = 1.5;
+    if(close_all_flag == 0)
+    {
+        for(int i=0;i<ultrasonic_real_num;i++)
+        {
+            if(en_sonar == 0)
+            {
+                close_all_flag = 1;
 
+                if(i >= 3)
+                {
+                    this->ultrasonic_data.min_range = 0.13;
+                    this->ultrasonic_data.max_range = 1.2;
+                }
+                this->ultrasonic_data.header.frame_id = this->ultrasonic_frames[i];
+                this->ultrasonic_data.range = 5.0;
+                usleep(2000);
+                this->ultrasonic_pub_to_navigation.publish(this->ultrasonic_data);
+            }
+            else if(en_sonar & (0x00000001<<i))
+            {
+                close_all_flag = 0;
+
+                if(i >= 3)
+                {
+                    this->ultrasonic_data.min_range = 0.13;
+                    this->ultrasonic_data.max_range = 1.2;
+                }
+                this->ultrasonic_data.header.frame_id = this->ultrasonic_frames[i];
+                this->ultrasonic_data.range = this->distance[i];
+                usleep(2000);
+                this->ultrasonic_pub_to_navigation.publish(this->ultrasonic_data);
+            }
+        }
+    }
+
+    if(en_sonar == 0)
+    {
+        close_all_flag = 1;
+    }
+    else
+    {
+        close_all_flag = 0;
+    }
+
+}
