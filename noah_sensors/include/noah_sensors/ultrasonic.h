@@ -20,12 +20,6 @@
 #define ERR_COMMUNICATE_TIME_OUT            1
 #define DISTANCE_ERR_TIME_OUT               DISTANCE_MAX
 
-enum{
-    INFRARED = 0,
-    ULTRASOUND = 1,  
-    HALL = 2,
-};
-
 
 
 class Ultrasonic
@@ -39,6 +33,7 @@ class Ultrasonic
 
             pub_to_can_node = n.advertise<mrobot_driver_msgs::vci_can>("ultrasonic_to_can", 1000);
             sub_from_can_node = n.subscribe("can_to_ultrasonic", 1000, &Ultrasonic::rcv_from_can_node_callback, this);
+            ultrasonic_pub_to_navigation = n.advertise<sensor_msgs::Range>("sonar_msg",20);
         }
         
         int start_measurement(uint8_t ul_id);
@@ -59,12 +54,8 @@ class Ultrasonic
             {9,   10,  11,  12},
             {13,  14,  15,  0}
         };
-        //sensor_msgs::Range laser_data;
         sensor_msgs::Range ultrasonic_data;
-        //ros::Publisher lasercloud_pub;
-        //ros::Publisher laser_pub;
         ros::Publisher ultrasonic_pub_to_navigation;
-
 
     private:
         ros::NodeHandle n;
@@ -76,8 +67,10 @@ class Ultrasonic
         std::string ultrasonic_frames[ULTRASONIC_NUM_MAX] = {"sonar_frame_0","sonar_frame_1","sonar_frame_2","sonar_frame_3","sonar_frame_4","sonar_frame_5","sonar_frame_6","sonar_frame_7", "sonar_frame_8","sonar_frame_9","sonar_frame_10"};
         uint32_t ultrasonic_en = 0xffffffff;
         uint8_t ultrasonic_real_num = ULTRASONIC_NUM_MAX;
+
         bool is_ultrasonic_can_id(CAN_ID_UNION id);
         uint8_t parse_ultrasonic_id(CAN_ID_UNION id);
 };
+
 
 #endif

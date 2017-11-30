@@ -15,7 +15,29 @@
 #include <pthread.h>
 
 #include <ultrasonic.h>
+#include <laser.h>
 //class NoahPowerboard;
+
+#if 0
+void sensor_en_cb(const std_msgs::String::ConstPtr &msg)
+{
+    ROS_INFO("%s",__func__);
+    auto j = json::parse(msg->data.c_str());
+    if(j.find("params") != j.end())
+    {
+        if(j["params"].find("enable_supersonic") != j["params"].end())
+        {
+            sonar_en = j["params"]["enable_supersonic"];
+            ROS_INFO("find enable_supersonic: 0x%x",sonar_en);
+        }
+        if(j["params"].find("enable_microlaser") != j["params"].end())
+        {
+            laser_en = j["params"]["enable_microlaser"];
+            ROS_INFO("find enable_microlaser: 0x%x",laser_en);
+        }
+    }
+}
+#endif
 
 void sigintHandler(int sig)
 {
@@ -39,6 +61,7 @@ int main(int argc, char **argv)
         ROS_INFO("can data log is off");
     }
     Ultrasonic *ultrasonic = new Ultrasonic(is_log_on); 
+    Laser *laser = new Laser(is_log_on); 
     float rate = 1000;
     ros::Rate loop_rate(rate);
     uint32_t cnt = 0;
@@ -52,8 +75,8 @@ int main(int argc, char **argv)
                 flag = 1;
             }
         }
-
-        if(cnt % (uint32_t)(rate / 20) == 0)
+#if 1//ultrasonic
+        if(cnt % (uint32_t)(rate / 60) == 0)
         {   
             static uint8_t period = 0;
             period++;
@@ -61,7 +84,7 @@ int main(int argc, char **argv)
             {
                 period = 0;
             }
-            
+            //ROS_INFO("group num: %d",period); 
             for(uint8_t i = 0; i < sizeof(ultrasonic->id_group[0]) / sizeof(ultrasonic->id_group[0][0]); i++)
             {
                 if(ultrasonic->id_group[period][i] < ULTRASONIC_NUM_MAX)
@@ -76,9 +99,28 @@ int main(int argc, char **argv)
             ultrasonic->update_status();
             ultrasonic->pub_ultrasonic_data_to_navigation(ultrasonic->distance);
         }
+#endif
+
+
+#if 1 //laser
+        if(cnt % (uint32_t)(rate / 60) == 0)
+        {   
+            static uint8_t i = 0;
+            laser->start_measurement(i % LASER_NUM_MAX);
+            i++;
+        }
+        if(cnt % (uint32_t)(rate / 10) == 0)
+        {
+            laser->update_status();
+            laser->pub_laser_data_to_navigation(laser->distance);
+        }
+#endif
         cnt++;
         ros::spinOnce();
         loop_rate.sleep();
     }
 
 }
+
+
+
