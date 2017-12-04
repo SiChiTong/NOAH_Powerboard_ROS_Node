@@ -2,7 +2,7 @@
  *  micro_laser.cpp 
  *  Communicate with micro lasers.
  *  Author: Kaka Xie 
- *  Create Date:2017/11/30
+ *  Date:2017/11/30
  */
 
 #include "ros/ros.h"
@@ -36,6 +36,8 @@ void Laser::update_status(void)
 {
     for(uint8_t i = 0; i < LASER_NUM_MAX; i++)
     {
+        //ros::Duration duration = ros::Time::now() - start_measure_time[i];
+        //if(duration.toSec() > 2)
         if(ros::Time::now() - start_measure_time[i] >= ros::Duration(2))
         {
             this->err_status[i] = LASER_ERR_COMMUNICATE_TIME_OUT;

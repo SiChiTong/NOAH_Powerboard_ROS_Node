@@ -2,7 +2,7 @@
  *  ultrasonic.cpp 
  *  Communicate with ultrasonics.
  *  Author: Kaka Xie 
- *  Create Date:2017/11/28
+ *  Date:2017/11/28
  */
 
 #include "ros/ros.h"
