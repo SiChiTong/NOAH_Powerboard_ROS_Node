@@ -17,7 +17,7 @@
 
 #define LASER_DISTANCE_MAX                        120 
 #define LASER_ERR_COMMUNICATE_TIME_OUT            1
-#define LASER_DISTANCE_ERR_TIME_OUT               LASER_DISTANCE_MAX
+#define LASER_DISTANCE_ERR_TIME_OUT               255 
 #if 0
 enum{
     INFRARED = 0,
@@ -36,7 +36,7 @@ class Laser
             is_log_on = log_on;
 
             pub_to_can_node = n.advertise<mrobot_driver_msgs::vci_can>("laser_to_can", 1000);
-            sub_from_can_node = n.subscribe("can_to_laser", 1000, &Laser::rcv_from_can_node_callback, this);
+            sub_from_can_node = n.subscribe("can_to_micro_laser", 1000, &Laser::rcv_from_can_node_callback, this);
             pub_to_navigation = n.advertise<sensor_msgs::Range>("laser_msg",20);
         }
         

@@ -22,7 +22,7 @@
 #include <ultrasonic.h>
 #include <laser.h>
 #include <hall.h>
-
+uint16_t laser_test_data[13] = {0};
 void sigintHandler(int sig)
 {
     ROS_INFO("killing on exit");
@@ -88,7 +88,7 @@ int main(int argc, char **argv)
 
 
 #if 1 //laser
-        if(cnt % (uint32_t)(rate / 60) == 0)
+        if(cnt % (uint32_t)(rate / 90) == 0)
         {   
             static uint8_t i = 0;
             laser->start_measurement(i % LASER_NUM_MAX);

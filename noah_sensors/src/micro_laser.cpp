@@ -42,6 +42,8 @@ void Laser::update_status(void)
         {
             this->err_status[i] = LASER_ERR_COMMUNICATE_TIME_OUT;
             this->distance[i] = LASER_DISTANCE_ERR_TIME_OUT;
+            extern uint16_t laser_test_data[13];
+            laser_test_data[i] = LASER_DISTANCE_ERR_TIME_OUT;
         }
     }
 }
@@ -57,7 +59,7 @@ int Laser::start_measurement(uint8_t laser_id)
     CAN_ID_UNION id;
     memset(&id, 0x0, sizeof(CAN_ID_UNION));
     id.CanID_Struct.SourceID = LASER_CAN_SOURCE_ID_START_MEASUREMENT;//
-    id.CanID_Struct.SrcMACID = 1;
+    id.CanID_Struct.SrcMACID = 0x60;//1;
     id.CanID_Struct.DestMACID = laser_id + LASER_CAN_SRC_MAC_ID_BASE;//
     id.CanID_Struct.FUNC_ID = 0x02;
     id.CanID_Struct.ACK = 0;
@@ -99,7 +101,7 @@ bool Laser::is_laser_can_id(CAN_ID_UNION id)
 #define NOT_LASER_ID      0xff
 uint8_t Laser::parse_laser_id(CAN_ID_UNION id)
 {
-    if((id.CanID_Struct.SrcMACID >= 0x60)&&(id.CanID_Struct.SrcMACID <= 0x6f))
+    if((id.CanID_Struct.SrcMACID >= 0x70)&&(id.CanID_Struct.SrcMACID <= 0x7f))
     {
         return id.CanID_Struct.SrcMACID - LASER_CAN_SRC_MAC_ID_BASE;
     }
@@ -113,7 +115,7 @@ void Laser::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::ConstP
     mrobot_driver_msgs::vci_can long_msg;
     CAN_ID_UNION id;
     uint8_t ul_id;
-
+    //ROS_INFO("%s",__func__);
     long_msg = this->long_frame.frame_construct(c_msg);
     mrobot_driver_msgs::vci_can* msg = &long_msg;
     if( msg->ID == 0 ) 
@@ -148,25 +150,9 @@ void Laser::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::ConstP
         if(id.CanID_Struct.ACK == 1)
         {
             this->start_measure_time[ul_id] = ros::Time::now();
-            this->distance[ul_id] = msg->Data[0];
-            this->distance[ul_id] += msg->Data[1]<<8;
-            //if(this->is_log_on == true)
-            {
-                printf("\n");
-                printf("\n");
-                printf("\n");
-                printf("laser:\n");
-                for(uint8_t i = 0; i < LASER_NUM_MAX; i++)
-                {
-                    printf("%4d ",i + 1);
-                }
-                printf("\n");
-                for(uint8_t i = 0; i <LASER_NUM_MAX; i++)
-                {
-                    printf("%4d ",this->distance[i]);
-                }
-                printf("\n");
-            }
+            this->distance[ul_id] += msg->Data[0];
+            extern uint16_t laser_test_data[13];
+            laser_test_data[ul_id] = msg->Data[0];
         }
     }
 }

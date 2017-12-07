@@ -12,13 +12,13 @@
 #define ULTRASONIC_CAN_SRC_MAC_ID_BASE      0x60
 #define CAN_SOURCE_ID_START_MEASUREMENT     0x80
 
-#define ULTRASONIC_NUM_MAX                 15 
+#define ULTRASONIC_NUM_MAX                 14 
 
 #define GROUP_PERIOD                        100//ms
 
-#define DISTANCE_MAX                        200
+#define DISTANCE_MAX                        400
 #define ERR_COMMUNICATE_TIME_OUT            1
-#define DISTANCE_ERR_TIME_OUT               DISTANCE_MAX
+#define DISTANCE_ERR_TIME_OUT               255 
 
 
 
@@ -49,10 +49,10 @@ class Ultrasonic
         uint16_t distance[ULTRASONIC_NUM_MAX] = {0};
         uint8_t id_group[4][4] = 
         {
-            {1,   2,   3,   4 },
-            {5,   6,   7,   8 },
-            {9,   10,  11,  12},
-            {13,  14,  15,  0}
+            {10,  11,   3,   7 },
+            {0,   13,   5,   8 },
+            {1,   9,  4,  0xff},
+            {2,  6,  12,  0xff}
         };
         sensor_msgs::Range ultrasonic_data;
         ros::Publisher ultrasonic_pub_to_navigation;

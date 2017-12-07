@@ -149,22 +149,38 @@ void Ultrasonic::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::C
             this->start_measure_time[ul_id] = ros::Time::now();
             this->distance[ul_id] = msg->Data[0];
             this->distance[ul_id] += msg->Data[1]<<8;
+
+            if(this->distance[ul_id] > 200)
+                this->distance[ul_id] = 200;
+
             //if(this->is_log_on == true)
             {
+#if 1
                 printf("\n");
                 printf("\n");
                 printf("\n");
-                printf("ultrasonic:\n");
+                printf("ultrasonic:                                                           laser:\n");
                 for(uint8_t i = 0; i < ULTRASONIC_NUM_MAX; i++)
                 {
                     printf("%4d ",i + 1);
                 }
+                for(uint8_t i = 0; i < 13; i++)
+                {
+                    printf("%4d ",i + 1);
+                }
                 printf("\n");
+#endif
                 for(uint8_t i = 0; i < ULTRASONIC_NUM_MAX; i++)
                 {
                     printf("%4d ",this->distance[i]);
                 }
+extern uint16_t laser_test_data[13];
+                for(uint8_t i = 0; i <13; i++)
+                {
+                    printf("%4d ",laser_test_data[i]);
+                }
                 printf("\n");
+
             }
         }
     }
