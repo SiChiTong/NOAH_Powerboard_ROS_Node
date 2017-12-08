@@ -16,9 +16,9 @@
 
 #define GROUP_PERIOD                        100//ms
 
-#define DISTANCE_MAX                        400
+#define DISTANCE_MAX                        4.00
 #define ERR_COMMUNICATE_TIME_OUT            1
-#define DISTANCE_ERR_TIME_OUT               255 
+#define DISTANCE_ERR_TIME_OUT               2.55 
 
 
 
@@ -39,21 +39,53 @@ class Ultrasonic
         int start_measurement(uint8_t ul_id);
         void rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::ConstPtr &c_msg);
         void update_status(void);
-        void pub_ultrasonic_data_to_navigation(uint16_t *data);
+        void pub_ultrasonic_data_to_navigation(double *data);
         bool is_log_on;
         can_long_frame  long_frame;
         ros::Time start_measure_time[ULTRASONIC_NUM_MAX];
         uint8_t err_status[ULTRASONIC_NUM_MAX];
 
 
-        uint16_t distance[ULTRASONIC_NUM_MAX] = {0};
-        uint8_t id_group[4][4] = 
+        double distance[ULTRASONIC_NUM_MAX] = {0};
+#if 1
+        uint8_t id_group[6][3] = 
         {
-            {10,  11,   3,   7 },
-            {0,   13,   5,   8 },
-            {1,   9,  4,  0xff},
-            {2,  6,  12,  0xff}
+            //{10,  11,   3,   7 },
+            //{0,   13,   5,   8 },
+            //{1,   9,  4,  0xff},
+            //{2,  6,  12,  0xff}
+
+            {0,  3,   7 },
+            {13,  9,  5},
+            {11, 4,  0xff},
+            //{10,  2,  0xff},
+            {0xff,  2,  0xff},
+            {1,  8,  0xff},
+            {12,  6,  0xff}
+		
         };
+#else
+        uint8_t id_group[14][1] = 
+        {
+
+            {0 },
+            {1 },
+            {2},
+            {3},
+            //{10,  2,  0xff},
+            {4},
+            {5},
+            {6},
+            {7},
+            {8},
+            //{10,  2,  0xff},
+            {9},
+            {10},
+            {11},
+            {12},
+            {13}
+        };
+#endif
         sensor_msgs::Range ultrasonic_data;
         ros::Publisher ultrasonic_pub_to_navigation;
 

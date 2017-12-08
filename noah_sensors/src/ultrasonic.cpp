@@ -37,7 +37,7 @@ void Ultrasonic::update_status(void)
 {
     for(uint8_t i = 0; i < ULTRASONIC_NUM_MAX; i++)
     {
-        if(ros::Time::now() - start_measure_time[i] >= ros::Duration(2))
+        if(ros::Time::now() - start_measure_time[i] >= ros::Duration(5))
         {
             this->err_status[i] = ERR_COMMUNICATE_TIME_OUT;
             this->distance[i] = DISTANCE_ERR_TIME_OUT;
@@ -146,16 +146,21 @@ void Ultrasonic::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::C
     {
         if(id.CanID_Struct.ACK == 1)
         {
+	    uint16_t distance = 0;
+            static uint32_t cnt = 0;
+            cnt++;
             this->start_measure_time[ul_id] = ros::Time::now();
-            this->distance[ul_id] = msg->Data[0];
-            this->distance[ul_id] += msg->Data[1]<<8;
 
-            if(this->distance[ul_id] > 200)
-                this->distance[ul_id] = 200;
+            distance = msg->Data[0];
+            distance += msg->Data[1]<<8;
+            this->distance[ul_id] = double(distance)/100;
+
+            if(this->distance[ul_id] > 2.00)
+                this->distance[ul_id] = 2.00;
 
             //if(this->is_log_on == true)
             {
-#if 1
+#if 0
                 printf("\n");
                 printf("\n");
                 printf("\n");
@@ -170,30 +175,37 @@ void Ultrasonic::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::C
                 }
                 printf("\n");
 #endif
-                for(uint8_t i = 0; i < ULTRASONIC_NUM_MAX; i++)
-                {
-                    printf("%4d ",this->distance[i]);
-                }
+	        //if(cnt %5 ==0)
+		{
+
+			for(uint8_t i = 0; i < ULTRASONIC_NUM_MAX; i++)
+			{
+				printf("%4f ",this->distance[i]);
+			}
+			printf("\n");
+		}		
+#if 0
 extern uint16_t laser_test_data[13];
                 for(uint8_t i = 0; i <13; i++)
                 {
                     printf("%4d ",laser_test_data[i]);
                 }
                 printf("\n");
+#endif
 
             }
         }
     }
 }
 
-void Ultrasonic::pub_ultrasonic_data_to_navigation(uint16_t * ul_data)
+void Ultrasonic::pub_ultrasonic_data_to_navigation(double * ul_data)
 {
     uint32_t en_sonar = ultrasonic_en;
     static bool close_all_flag = 0;
     this->ultrasonic_data.header.stamp = ros::Time::now();
     this->ultrasonic_data.radiation_type = ULTRASOUND;
     this->ultrasonic_data.field_of_view = 1;
-    this->ultrasonic_data.min_range = 0.23;
+    this->ultrasonic_data.min_range = 0.03;
     this->ultrasonic_data.max_range = 1.5;
     if(close_all_flag == 0)
     {
@@ -205,8 +217,8 @@ void Ultrasonic::pub_ultrasonic_data_to_navigation(uint16_t * ul_data)
 
                 if(i >= 3)
                 {
-                    this->ultrasonic_data.min_range = 0.13;
-                    this->ultrasonic_data.max_range = 1.2;
+                    this->ultrasonic_data.min_range = 0.03;
+                    this->ultrasonic_data.max_range = 2.0;
                 }
                 this->ultrasonic_data.header.frame_id = this->ultrasonic_frames[i];
                 this->ultrasonic_data.range = 5.0;
@@ -219,8 +231,8 @@ void Ultrasonic::pub_ultrasonic_data_to_navigation(uint16_t * ul_data)
 
                 if(i >= 3)
                 {
-                    this->ultrasonic_data.min_range = 0.13;
-                    this->ultrasonic_data.max_range = 1.2;
+                    this->ultrasonic_data.min_range = 0.03;
+                    this->ultrasonic_data.max_range = 2.0;
                 }
                 this->ultrasonic_data.header.frame_id = this->ultrasonic_frames[i];
                 this->ultrasonic_data.range = this->distance[i];

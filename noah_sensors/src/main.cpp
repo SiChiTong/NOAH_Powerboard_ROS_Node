@@ -61,7 +61,7 @@ int main(int argc, char **argv)
             }
         }
 #if 1//ultrasonic
-        if(cnt % (uint32_t)(rate / 15) == 0)
+        if(cnt % (uint32_t)(rate / 20) == 0)
         {   
             static uint8_t period = 0;
             period++;
@@ -87,7 +87,7 @@ int main(int argc, char **argv)
 #endif
 
 
-#if 1 //laser
+#if 0 //laser
         if(cnt % (uint32_t)(rate / 90) == 0)
         {   
             static uint8_t i = 0;

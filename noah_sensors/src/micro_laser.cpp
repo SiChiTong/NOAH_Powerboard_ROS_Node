@@ -149,8 +149,9 @@ void Laser::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::ConstP
     {
         if(id.CanID_Struct.ACK == 1)
         {
+	    
             this->start_measure_time[ul_id] = ros::Time::now();
-            this->distance[ul_id] += msg->Data[0];
+            this->distance[ul_id] += double(msg->Data[0])/100;
             extern uint16_t laser_test_data[13];
             laser_test_data[ul_id] = msg->Data[0];
         }

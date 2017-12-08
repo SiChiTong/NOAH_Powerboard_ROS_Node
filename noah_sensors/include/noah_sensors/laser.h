@@ -15,9 +15,9 @@
 #define LASER_NUM_MAX                 13 
 
 
-#define LASER_DISTANCE_MAX                        120 
+#define LASER_DISTANCE_MAX                        1.20 
 #define LASER_ERR_COMMUNICATE_TIME_OUT            1
-#define LASER_DISTANCE_ERR_TIME_OUT               255 
+#define LASER_DISTANCE_ERR_TIME_OUT               2.55 
 #if 0
 enum{
     INFRARED = 0,
@@ -50,7 +50,7 @@ class Laser
         uint8_t err_status[LASER_NUM_MAX];
 
 
-        uint16_t distance[LASER_NUM_MAX] = {0};
+        double distance[LASER_NUM_MAX] = {0};
         sensor_msgs::Range laser_data;
         ros::Publisher lasercloud_pub;
         ros::Publisher laser_pub;
