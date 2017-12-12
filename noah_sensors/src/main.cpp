@@ -75,6 +75,7 @@ int main(int argc, char **argv)
                 if(ultrasonic->id_group[period][i] < ULTRASONIC_NUM_MAX)
                 {
                     ultrasonic->start_measurement(ultrasonic->id_group[period][i]);
+                    //ultrasonic->broadcast_test();
                 }
             }
            

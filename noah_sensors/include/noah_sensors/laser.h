@@ -43,7 +43,7 @@ class Laser
         int start_measurement(uint8_t ul_id);
         void rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::ConstPtr &c_msg);
         void update_status(void);
-        void pub_laser_data_to_navigation(uint16_t *data);
+        void pub_laser_data_to_navigation(double *data);
         bool is_log_on;
         can_long_frame  long_frame;
         ros::Time start_measure_time[LASER_NUM_MAX];
@@ -64,7 +64,7 @@ class Laser
         ros::Publisher  pub_to_can_node;
         std::string laser_frames[LASER_NUM_MAX] = {"laser_frame_0","laser_frame_1","laser_frame_2","laser_frame_3","laser_frame_4","laser_frame_5","laser_frame_6","laser_frame_7","laser_frame_8","laser_frame_9","laser_frame_10","laser_frame_11","laser_frame_12"};
 
-        uint32_t laser_en = 0xffffffff;
+        //uint32_t laser_en = 0xffffffff;
         uint8_t laser_real_num = LASER_NUM_MAX;
 
         bool is_laser_can_id(CAN_ID_UNION id);

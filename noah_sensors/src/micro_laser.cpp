@@ -151,22 +151,22 @@ void Laser::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::ConstP
         {
 	    
             this->start_measure_time[ul_id] = ros::Time::now();
-            this->distance[ul_id] += double(msg->Data[0])/100;
+            this->distance[ul_id] = double(msg->Data[0])/100;
             extern uint16_t laser_test_data[13];
             laser_test_data[ul_id] = msg->Data[0];
         }
     }
 }
 
-void Laser::pub_laser_data_to_navigation(uint16_t * ul_data)
+void Laser::pub_laser_data_to_navigation(double * ul_data)
 {
     uint32_t en_laser = laser_en;
     static bool close_all_flag = 0;
     this->laser_data.header.stamp = ros::Time::now();
     this->laser_data.radiation_type = INFRARED;
-    this->laser_data.field_of_view = 1;
-    this->laser_data.min_range = 0.23;
-    this->laser_data.max_range = 1.5;
+    this->laser_data.field_of_view = 0.2;
+    this->laser_data.min_range = 0.1;
+    this->laser_data.max_range = 1.2;
     if(close_all_flag == 0)
     {
         for(int i=0;i<laser_real_num;i++)
@@ -177,7 +177,7 @@ void Laser::pub_laser_data_to_navigation(uint16_t * ul_data)
 
                 if(i >= 3)
                 {
-                    this->laser_data.min_range = 0.13;
+                    this->laser_data.min_range = 0.1;
                     this->laser_data.max_range = 1.2;
                 }
                 this->laser_data.header.frame_id = this->laser_frames[i];
@@ -191,7 +191,7 @@ void Laser::pub_laser_data_to_navigation(uint16_t * ul_data)
 
                 if(i >= 3)
                 {
-                    this->laser_data.min_range = 0.13;
+                    this->laser_data.min_range = 0.1;
                     this->laser_data.max_range = 1.2;
                 }
                 this->laser_data.header.frame_id = this->laser_frames[i];

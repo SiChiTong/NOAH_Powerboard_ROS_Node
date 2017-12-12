@@ -21,9 +21,16 @@
 #include <iostream>
 #include <pthread.h>
 
+#include <json.hpp>
+
 #include <ultrasonic.h>
 #include <laser.h>
+#include <common.h>
 
+using json = nlohmann::json;
+
+uint32_t sonar_en = 0xffffffff;
+uint32_t laser_en = 0xffffffff;
 void sensor_en_cb(const std_msgs::String::ConstPtr &msg)
 {
     ROS_INFO("%s",__func__);

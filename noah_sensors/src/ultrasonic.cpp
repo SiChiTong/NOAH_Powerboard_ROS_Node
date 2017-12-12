@@ -71,7 +71,28 @@ int Ultrasonic::start_measurement(uint8_t ul_id)
     return error;
 }
 
+#define BROADCAST_CAN_SRC_ID    0x6f
+int Ultrasonic::broadcast_test(void)     
+{
+    int error = 0; 
+    mrobot_driver_msgs::vci_can can_msg;
+    CAN_ID_UNION id;
+    memset(&id, 0x0, sizeof(CAN_ID_UNION));
+    id.CanID_Struct.SourceID = CAN_SOURCE_ID_START_MEASUREMENT;
+    id.CanID_Struct.SrcMACID = 1;
+    id.CanID_Struct.DestMACID = BROADCAST_CAN_SRC_ID;
+    id.CanID_Struct.FUNC_ID = 0x02;
+    id.CanID_Struct.ACK = 0;
+    id.CanID_Struct.res = 0;
 
+    can_msg.ID = id.CANx_ID;
+    can_msg.DataLen = 2;
+    can_msg.Data.resize(2);
+    can_msg.Data[0] = 0x00;
+    can_msg.Data[1] = 0;
+    this->pub_to_can_node.publish(can_msg);
+    return error;
+}
 
 void pub_json_msg_to_app( const nlohmann::json j_msg)
 {
@@ -176,6 +197,12 @@ void Ultrasonic::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::C
                 printf("\n");
 #endif
 	        //if(cnt %5 ==0)
+
+
+
+
+
+#if 0
 		{
 
 			for(uint8_t i = 0; i < ULTRASONIC_NUM_MAX; i++)
@@ -184,6 +211,13 @@ void Ultrasonic::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::C
 			}
 			printf("\n");
 		}		
+#endif
+
+
+
+
+
+
 #if 0
 extern uint16_t laser_test_data[13];
                 for(uint8_t i = 0; i <13; i++)
@@ -200,13 +234,13 @@ extern uint16_t laser_test_data[13];
 
 void Ultrasonic::pub_ultrasonic_data_to_navigation(double * ul_data)
 {
-    uint32_t en_sonar = ultrasonic_en;
+    uint32_t en_sonar = sonar_en;
     static bool close_all_flag = 0;
     this->ultrasonic_data.header.stamp = ros::Time::now();
     this->ultrasonic_data.radiation_type = ULTRASOUND;
-    this->ultrasonic_data.field_of_view = 1;
+    this->ultrasonic_data.field_of_view = 0.61;
     this->ultrasonic_data.min_range = 0.03;
-    this->ultrasonic_data.max_range = 1.5;
+    this->ultrasonic_data.max_range = 2.0;
     if(close_all_flag == 0)
     {
         for(int i=0;i<ultrasonic_real_num;i++)

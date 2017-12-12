@@ -26,6 +26,7 @@ add_executable( noah_sensors
 	src/ultrasonic.cpp
 	src/micro_laser.cpp
 	src/hall.cpp
+	src/common.cpp
 )
 target_link_libraries(noah_sensors
   ${catkin_LIBRARIES} 
