@@ -22,6 +22,7 @@
 #include <ultrasonic.h>
 #include <laser.h>
 #include <hall.h>
+#include <common.h>
 uint16_t laser_test_data[13] = {0};
 void sigintHandler(int sig)
 {
@@ -61,7 +62,7 @@ int main(int argc, char **argv)
             }
         }
 #if 1//ultrasonic
-        if(cnt % (uint32_t)(rate / 20) == 0)
+        if(cnt % (uint32_t)(rate / 15) == 0)
         {   
             static uint8_t period = 0;
             period++;
@@ -74,11 +75,11 @@ int main(int argc, char **argv)
             {
                 if(ultrasonic->id_group[period][i] < ULTRASONIC_NUM_MAX)
                 {
-                    ultrasonic->start_measurement(ultrasonic->id_group[period][i]);
-                    //ultrasonic->broadcast_test();
+                    if(sonar_en & (1<<ultrasonic->id_group[period][i]))                    
+                        ultrasonic->start_measurement(ultrasonic->id_group[period][i]);
                 }
             }
-           
+
         }
         if(cnt % (uint32_t)(rate / 10) == 0)
         {
@@ -89,10 +90,11 @@ int main(int argc, char **argv)
 
 
 #if 0 //laser
-        if(cnt % (uint32_t)(rate / 90) == 0)
+        if(cnt % (uint32_t)(rate / 80) == 0)
         {   
             static uint8_t i = 0;
-            laser->start_measurement(i % LASER_NUM_MAX);
+            if(laser_en & (1<<(i % LASER_NUM_MAX)))                    
+                laser->start_measurement(i % LASER_NUM_MAX);
             i++;
         }
         if(cnt % (uint32_t)(rate / 10) == 0)

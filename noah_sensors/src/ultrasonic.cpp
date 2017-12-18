@@ -202,7 +202,7 @@ void Ultrasonic::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::C
 
 
 
-#if 0
+#if 1
 		{
 
 			for(uint8_t i = 0; i < ULTRASONIC_NUM_MAX; i++)
