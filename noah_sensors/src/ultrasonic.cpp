@@ -128,7 +128,21 @@ void pub_json_msg_to_app( const nlohmann::json j_msg)
     //this->noah_powerboard_pub.publish(pub_json_msg);
 }
 
+void Ultrasonic::update_measure_en(uint32_t ul_en)
+{
+    if(ul_en == measure_en_ack) 
+        return;
 
+    for(uint8_t i = 0; i < ULTRASONIC_NUM_MAX; i++)
+    {
+        if( (ul_en^measure_en_ack) &(1<<i) ) 
+        {
+            this->ultrasonic_en(i,(ul_en>>i) &0x01);
+            ROS_ERROR("set %d to %d",i, (ul_en>>i) &0x01);
+        }
+    }
+
+}
 bool Ultrasonic::is_ultrasonic_can_id(CAN_ID_UNION id)
 {
     if((id.CanID_Struct.SrcMACID >= 0x60)&&(id.CanID_Struct.SrcMACID <= 0x6f))
@@ -219,7 +233,6 @@ void Ultrasonic::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::C
                 }
                 printf("\n");
 #endif
-	        //if(cnt %5 ==0)
 
 
 
@@ -251,6 +264,25 @@ extern uint16_t laser_test_data[13];
 #endif
 
             }
+        }
+    }
+    
+    if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_MEASUREMENT_EN)
+    {
+        if(id.CanID_Struct.ACK == 1)
+        {   
+            if(msg->Data[0] == 0)
+            {
+                measure_en_ack &= ~(1<<ul_id);
+            }
+            else if(msg->Data[0] == 1)
+            {
+                measure_en_ack |= 1<<ul_id;
+            }
+            ROS_WARN("get ultrasonic id %d enable is %d ",ul_id,msg->Data[0]);
+            ROS_WARN("measure_en_ack: %x ",measure_en_ack);
+            ROS_WARN("measure_en: %x ",sonar_en);
+
         }
     }
 }
