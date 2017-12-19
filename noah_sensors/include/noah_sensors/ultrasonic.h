@@ -11,7 +11,9 @@
 #define _ULTRASONIC__H
 
 #define ULTRASONIC_CAN_SRC_MAC_ID_BASE      0x60
+
 #define CAN_SOURCE_ID_START_MEASUREMENT     0x80
+#define CAN_SOURCE_ID_MEASUREMENT_EN         0x81
 
 #define ULTRASONIC_NUM_MAX                 14 
 
@@ -38,6 +40,7 @@ class Ultrasonic
         }
         
         int start_measurement(uint8_t ul_id);
+        void ultrasonic_en(uint8_t ul_id, bool en);
         int broadcast_test(void);
         void rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::ConstPtr &c_msg);
         void update_status(void);
@@ -49,7 +52,7 @@ class Ultrasonic
 
 
         double distance[ULTRASONIC_NUM_MAX] = {0};
-#if 1
+#if 0
         uint8_t id_group[6][3] = 
         {
             //{10,  11,   3,   7 },

@@ -48,7 +48,7 @@ int main(int argc, char **argv)
     Ultrasonic *ultrasonic = new Ultrasonic(is_log_on); 
     Laser *laser = new Laser(is_log_on); 
     Hall *hall = new Hall(is_log_on); 
-    float rate = 1000;
+    uint32_t rate = 1000;
     ros::Rate loop_rate(rate);
     uint32_t cnt = 0;
     bool flag = 0;
@@ -62,7 +62,7 @@ int main(int argc, char **argv)
             }
         }
 #if 1//ultrasonic
-        if(cnt % (uint32_t)(rate / 15) == 0)
+        if(cnt % (uint32_t)(rate / 10 ) == 0)
         {   
             static uint8_t period = 0;
             period++;
@@ -77,6 +77,7 @@ int main(int argc, char **argv)
                 {
                     if(sonar_en & (1<<ultrasonic->id_group[period][i]))                    
                         ultrasonic->start_measurement(ultrasonic->id_group[period][i]);
+                        //ultrasonic->broadcast_test();
                 }
             }
 
@@ -89,7 +90,7 @@ int main(int argc, char **argv)
 #endif
 
 
-#if 0 //laser
+#if 1 //laser
         if(cnt % (uint32_t)(rate / 80) == 0)
         {   
             static uint8_t i = 0;

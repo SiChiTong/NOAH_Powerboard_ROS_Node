@@ -71,7 +71,30 @@ int Ultrasonic::start_measurement(uint8_t ul_id)
     return error;
 }
 
-#define BROADCAST_CAN_SRC_ID    0x6f
+void Ultrasonic::ultrasonic_en(uint8_t ul_id, bool en)     
+{
+    if(ul_id > 15)
+    {
+        return ;
+    }
+    mrobot_driver_msgs::vci_can can_msg;
+    CAN_ID_UNION id;
+    memset(&id, 0x0, sizeof(CAN_ID_UNION));
+    id.CanID_Struct.SourceID = CAN_SOURCE_ID_MEASUREMENT_EN;
+    id.CanID_Struct.SrcMACID = 1;
+    id.CanID_Struct.DestMACID = ULTRASONIC_CAN_SRC_MAC_ID_BASE+ ul_id;
+    id.CanID_Struct.FUNC_ID = 0x02;
+    id.CanID_Struct.ACK = 0;
+    id.CanID_Struct.res = 0;
+
+    can_msg.ID = id.CANx_ID;
+    can_msg.DataLen = 2;
+    can_msg.Data.resize(2);
+    can_msg.Data[0] = 0x00;
+    can_msg.Data[1] = en;
+    this->pub_to_can_node.publish(can_msg);
+}
+#define BROADCAST_CAN_SRC_ID    0x60
 int Ultrasonic::broadcast_test(void)     
 {
     int error = 0; 
@@ -133,7 +156,7 @@ void Ultrasonic::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::C
     mrobot_driver_msgs::vci_can long_msg;
     CAN_ID_UNION id;
     uint8_t ul_id;
-
+    //ROS_INFO("%s",__func__);
     long_msg = this->long_frame.frame_construct(c_msg);
     mrobot_driver_msgs::vci_can* msg = &long_msg;
     if( msg->ID == 0 ) 
@@ -167,7 +190,7 @@ void Ultrasonic::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::C
     {
         if(id.CanID_Struct.ACK == 1)
         {
-	    uint16_t distance = 0;
+            uint16_t distance = 0;
             static uint32_t cnt = 0;
             cnt++;
             this->start_measure_time[ul_id] = ros::Time::now();
