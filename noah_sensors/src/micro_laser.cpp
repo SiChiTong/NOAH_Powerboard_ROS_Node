@@ -38,7 +38,7 @@ void Laser::update_status(void)
     {
         //ros::Duration duration = ros::Time::now() - start_measure_time[i];
         //if(duration.toSec() > 2)
-        if(ros::Time::now() - start_measure_time[i] >= ros::Duration(2))
+        if(ros::Time::now() - start_measure_time[i] >= ros::Duration(1))
         {
             this->err_status[i] = LASER_ERR_COMMUNICATE_TIME_OUT;
             this->distance[i] = LASER_DISTANCE_ERR_TIME_OUT;

@@ -37,12 +37,36 @@ void Ultrasonic::update_status(void)
 {
     for(uint8_t i = 0; i < ULTRASONIC_NUM_MAX; i++)
     {
-        if(ros::Time::now() - start_measure_time[i] >= ros::Duration(5))
+        if(ros::Time::now() - start_measure_time[i] >= ros::Duration(1.5))
         {
             this->err_status[i] = ERR_COMMUNICATE_TIME_OUT;
             this->distance[i] = DISTANCE_ERR_TIME_OUT;
         }
     }
+}
+
+void Ultrasonic::get_version(uint8_t ul_id)     
+{
+    if(ul_id > 15)
+    {
+        return ;
+    }
+    mrobot_driver_msgs::vci_can can_msg;
+    CAN_ID_UNION id;
+    memset(&id, 0x0, sizeof(CAN_ID_UNION));
+    id.CanID_Struct.SourceID = CAN_SOURCE_ID_GET_VERSION;
+    id.CanID_Struct.SrcMACID = 1;
+    id.CanID_Struct.DestMACID = ULTRASONIC_CAN_SRC_MAC_ID_BASE+ ul_id;
+    id.CanID_Struct.FUNC_ID = 0x02;
+    id.CanID_Struct.ACK = 0;
+    id.CanID_Struct.res = 0;
+
+    can_msg.ID = id.CANx_ID;
+    can_msg.DataLen = 2;
+    can_msg.Data.resize(2);
+    can_msg.Data[0] = 0x00;
+    can_msg.Data[1] = 0;
+    this->pub_to_can_node.publish(can_msg);
 }
 
 int Ultrasonic::start_measurement(uint8_t ul_id)     
@@ -130,7 +154,7 @@ void pub_json_msg_to_app( const nlohmann::json j_msg)
 
 void Ultrasonic::update_measure_en(uint32_t ul_en)
 {
-    if(ul_en == measure_en_ack) 
+    if(ul_en<<(32 - ULTRASONIC_NUM_MAX) == measure_en_ack<<(32 - ULTRASONIC_NUM_MAX)) 
         return;
 
     for(uint8_t i = 0; i < ULTRASONIC_NUM_MAX; i++)
@@ -216,6 +240,7 @@ void Ultrasonic::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::C
             if(this->distance[ul_id] > 2.00)
                 this->distance[ul_id] = 2.00;
 
+            measure_en_ack |= 1<<ul_id; //we can receive measurement data, so this ultrasonic is enable !
             //if(this->is_log_on == true)
             {
 #if 0
@@ -282,6 +307,27 @@ extern uint16_t laser_test_data[13];
             ROS_WARN("get ultrasonic id %d enable is %d ",ul_id,msg->Data[0]);
             ROS_WARN("measure_en_ack: %x ",measure_en_ack);
             ROS_WARN("measure_en: %x ",sonar_en);
+
+        }
+    }
+
+    if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_GET_VERSION)
+    {
+        uint8_t len;
+        if(id.CanID_Struct.ACK == 1)
+        {   
+            if(msg->Data[0] > 0)
+            {
+                len = msg->Data[0];
+                version[ul_id].resize(len);
+                version[ul_id].clear();
+                for(uint8_t i = 0; i < len; i++)
+                {
+                    version[ul_id].push_back(*(char *)&(msg->Data[i+1]));
+                }
+                //memcpy(version[ul_id].cbegin(),&msg->Data[1], len);
+                ROS_WARN("ultrasonic %d version is %s",ul_id,version[ul_id].data());
+            }
 
         }
     }

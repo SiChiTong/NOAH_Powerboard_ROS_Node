@@ -56,9 +56,16 @@ int main(int argc, char **argv)
     {
         if(flag == 0)
         {
-            if(cnt % (uint32_t)(rate * 2) == (uint32_t)rate/2)
+            //if(cnt % (uint32_t)(rate * 2) == (uint32_t)rate/2)
             {
+                usleep(500*1000);
                 flag = 1;
+                for(uint8_t i = 0; i < ULTRASONIC_NUM_MAX; i++)
+                {
+                    ultrasonic->get_version(i); 
+                    ROS_INFO("start to get ultrasonic %d version",i);
+                    //usleep(10000);
+                }
             }
         }
 #if 1//ultrasonic
@@ -85,9 +92,14 @@ int main(int argc, char **argv)
         if(cnt % (uint32_t)(rate / 10) == 0)
         {
             ultrasonic->update_status();
-            ultrasonic->update_measure_en(sonar_en);
             ultrasonic->pub_ultrasonic_data_to_navigation(ultrasonic->distance);
         }
+
+        if(cnt % (uint32_t)(rate / 20) == 0)
+        {
+            ultrasonic->update_measure_en(sonar_en);
+        }
+
 #endif
 
 
