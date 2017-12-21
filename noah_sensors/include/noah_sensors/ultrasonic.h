@@ -16,11 +16,12 @@
 #define CAN_SOURCE_ID_MEASUREMENT_EN        0x81
 #define CAN_SOURCE_ID_GET_VERSION           0x82
 
-#define ULTRASONIC_NUM_MAX                 14 
+#define ULTRASONIC_NUM_MAX                  14 
+#define FILTER_BUF_SIZE                     3 
 
 #define GROUP_PERIOD                        100//ms
 
-#define DISTANCE_MAX                        4.00
+#define DISTANCE_MAX                        2.00
 #define ERR_COMMUNICATE_TIME_OUT            1
 #define DISTANCE_ERR_TIME_OUT               2.55 
 
@@ -53,7 +54,10 @@ class Ultrasonic
         ros::Time start_measure_time[ULTRASONIC_NUM_MAX];
         uint8_t err_status[ULTRASONIC_NUM_MAX];
 
+        double max_distance = DISTANCE_MAX;
         double distance[ULTRASONIC_NUM_MAX] = {0};
+        double distance_buf[ULTRASONIC_NUM_MAX][FILTER_BUF_SIZE] = {{0}};
+        uint8_t distance_buf_proc[ULTRASONIC_NUM_MAX][FILTER_BUF_SIZE] = {{0}};
         std::string version[ULTRASONIC_NUM_MAX];
         sensor_msgs::Range ultrasonic_data;
         ros::Publisher ultrasonic_pub_to_navigation;

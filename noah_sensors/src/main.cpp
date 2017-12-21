@@ -69,7 +69,7 @@ int main(int argc, char **argv)
             }
         }
 #if 1//ultrasonic
-        if(cnt % (uint32_t)(rate / 10 ) == 0)
+        if(cnt % (uint32_t)(rate / 16 ) == 0)
         {   
             static uint8_t period = 0;
             period++;
@@ -83,8 +83,8 @@ int main(int argc, char **argv)
                 if(ultrasonic->id_group[period][i] < ULTRASONIC_NUM_MAX)
                 {
                     if(sonar_en & (1<<ultrasonic->id_group[period][i]))                    
-                        ultrasonic->start_measurement(ultrasonic->id_group[period][i]);
-                        //ultrasonic->broadcast_test();
+                        //ultrasonic->start_measurement(ultrasonic->id_group[period][i]);
+                        ultrasonic->broadcast_test();
                 }
             }
 

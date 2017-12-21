@@ -223,24 +223,56 @@ void Ultrasonic::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::C
         ROS_ERROR("ultrasonic CAN id not right");
         return ; 
     }
-
+    if(ul_id >= ULTRASONIC_NUM_MAX)
+    {
+        ROS_ERROR("wtf ! ! !");
+        return;
+    }
     if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_START_MEASUREMENT)
     {
         if(id.CanID_Struct.ACK == 1)
         {
             uint16_t distance = 0;
             static uint32_t cnt = 0;
-            cnt++;
             this->start_measure_time[ul_id] = ros::Time::now();
 
             distance = msg->Data[0];
             distance += msg->Data[1]<<8;
             this->distance[ul_id] = double(distance)/100;
 
-            if(this->distance[ul_id] > 2.00)
-                this->distance[ul_id] = 2.00;
+            if((this->distance[ul_id] >= DISTANCE_MAX - 0.00001) || (abs(this->distance[ul_id]) <= 0.00001))  //distance > DISTANCE_MAX or do not have obstacle
+            {
+                this->distance[ul_id] = DISTANCE_MAX;
+                //this->distance_buf[ul_id][cnt] = DISTANCE_MAX;
+                this->distance_buf_proc[ul_id][cnt] = 0;
+            }
+            else
+            {
+                uint8_t filter_flag = 1;
+                this->distance_buf_proc[ul_id][cnt] = 1;
+                for(uint8_t j = 0; j < FILTER_BUF_SIZE; j++) 
+                {
+                    filter_flag *= this->distance_buf_proc[ul_id][cnt];
+                }
+                if(filter_flag == 0)
+                {
+                    this->distance[ul_id] = DISTANCE_MAX;
+                }
+            }
 
             measure_en_ack |= 1<<ul_id; //we can receive measurement data, so this ultrasonic is enable !
+
+            if(cnt < FILTER_BUF_SIZE - 1)
+            {
+                cnt++;
+            }
+            else
+            {
+                cnt = 0;
+            }
+
+
+
             //if(this->is_log_on == true)
             {
 #if 0
