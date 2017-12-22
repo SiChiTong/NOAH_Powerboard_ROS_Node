@@ -97,7 +97,7 @@ int Ultrasonic::start_measurement(uint8_t ul_id)
 
 void Ultrasonic::ultrasonic_en(uint8_t ul_id, bool en)     
 {
-    if(ul_id > 15)
+    if(ul_id >= ULTRASONIC_NUM_MAX)
     {
         return ;
     }
@@ -119,7 +119,7 @@ void Ultrasonic::ultrasonic_en(uint8_t ul_id, bool en)
     this->pub_to_can_node.publish(can_msg);
 }
 #define BROADCAST_CAN_SRC_ID    0x60
-int Ultrasonic::broadcast_test(void)     
+int Ultrasonic::broadcast_measurement(uint8_t group)     
 {
     int error = 0; 
     mrobot_driver_msgs::vci_can can_msg;
@@ -136,8 +136,36 @@ int Ultrasonic::broadcast_test(void)
     can_msg.DataLen = 2;
     can_msg.Data.resize(2);
     can_msg.Data[0] = 0x00;
-    can_msg.Data[1] = 0;
+    can_msg.Data[1] = group;
     this->pub_to_can_node.publish(can_msg);
+    return error;
+}
+
+int Ultrasonic::set_group(uint8_t ul_id, uint8_t group)     
+{
+    int error = 0; 
+    if(ul_id >= ULTRASONIC_NUM_MAX)
+    {
+        ROS_ERROR("ul_id is not right, set group failed ! !");
+        return -1;
+    }
+    mrobot_driver_msgs::vci_can can_msg;
+    CAN_ID_UNION id;
+    memset(&id, 0x0, sizeof(CAN_ID_UNION));
+    id.CanID_Struct.SourceID = CAN_SOURCE_ID_SET_GROUP;
+    id.CanID_Struct.SrcMACID = 1;
+    id.CanID_Struct.DestMACID = ULTRASONIC_CAN_SRC_MAC_ID_BASE+ ul_id;
+    id.CanID_Struct.FUNC_ID = 0x02;
+    id.CanID_Struct.ACK = 0;
+    id.CanID_Struct.res = 0;
+
+    can_msg.ID = id.CANx_ID;
+    can_msg.DataLen = 2;
+    can_msg.Data.resize(2);
+    can_msg.Data[0] = 0x00;
+    can_msg.Data[1] = group;
+    this->pub_to_can_node.publish(can_msg);
+    ROS_ERROR("set ultrasonic %d to group %d",ul_id, group);
     return error;
 }
 
@@ -228,6 +256,9 @@ void Ultrasonic::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::C
         ROS_ERROR("wtf ! ! !");
         return;
     }
+    
+    this->online[ul_id] = 1;
+
     if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_START_MEASUREMENT)
     {
         if(id.CanID_Struct.ACK == 1)
@@ -343,23 +374,33 @@ extern uint16_t laser_test_data[13];
         }
     }
 
+    if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_SET_GROUP)
+    {
+        if(id.CanID_Struct.ACK == 1)
+        {   
+            if(msg->Data[0] > 0)
+            {
+                group[ul_id] = msg->Data[0];
+                ROS_WARN("ultrasonic %d group is %d",ul_id,group[ul_id]);
+            }
+
+        }
+    }
+
     if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_GET_VERSION)
     {
         uint8_t len;
         if(id.CanID_Struct.ACK == 1)
         {   
-            if(msg->Data[0] > 0)
+            len = msg->Data[0];
+            version[ul_id].resize(len);
+            version[ul_id].clear();
+            for(uint8_t i = 0; i < len; i++)
             {
-                len = msg->Data[0];
-                version[ul_id].resize(len);
-                version[ul_id].clear();
-                for(uint8_t i = 0; i < len; i++)
-                {
-                    version[ul_id].push_back(*(char *)&(msg->Data[i+1]));
-                }
-                //memcpy(version[ul_id].cbegin(),&msg->Data[1], len);
-                ROS_WARN("ultrasonic %d version is %s",ul_id,version[ul_id].data());
+                version[ul_id].push_back(*(char *)&(msg->Data[i+1]));
             }
+            //memcpy(version[ul_id].cbegin(),&msg->Data[1], len);
+            ROS_WARN("ultrasonic %d version is %s",ul_id,version[ul_id].data());
 
         }
     }

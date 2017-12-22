@@ -15,6 +15,7 @@
 #define CAN_SOURCE_ID_START_MEASUREMENT     0x80
 #define CAN_SOURCE_ID_MEASUREMENT_EN        0x81
 #define CAN_SOURCE_ID_GET_VERSION           0x82
+#define CAN_SOURCE_ID_SET_GROUP             0x83
 
 #define ULTRASONIC_NUM_MAX                  14 
 #define FILTER_BUF_SIZE                     3 
@@ -25,6 +26,14 @@
 #define ERR_COMMUNICATE_TIME_OUT            1
 #define DISTANCE_ERR_TIME_OUT               2.55 
 
+enum
+{
+    
+    ULTRASONIC_MODE_FORWARD     = 0,
+    ULTRASONIC_MODE_BACKWARD    = 1,
+    ULTRASONIC_MODE_TURNING     = 2,
+    ULTRASONIC_MODE_MAX,
+};
 
 
 class Ultrasonic
@@ -44,20 +53,41 @@ class Ultrasonic
         int start_measurement(uint8_t ul_id);
         void get_version(uint8_t ul_id);
         void ultrasonic_en(uint8_t ul_id, bool en);
-        int broadcast_test(void);
+        int broadcast_measurement(uint8_t group);
+        int set_group(uint8_t ul_id, uint8_t group);
         void rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::ConstPtr &c_msg);
         void update_status(void);
         void pub_ultrasonic_data_to_navigation(double *data);
         void update_measure_en(uint32_t ul_en);
+
+        uint8_t group_init_flag = 0;
         bool is_log_on;
         can_long_frame  long_frame;
         ros::Time start_measure_time[ULTRASONIC_NUM_MAX];
         uint8_t err_status[ULTRASONIC_NUM_MAX];
+        uint8_t online[ULTRASONIC_NUM_MAX];
+        uint8_t work_mode = ULTRASONIC_MODE_FORWARD;
 
+        uint8_t group_mode_forward[2][4] = 
+                {
+                    {10,11,0xff,0xff},
+                    {0,1,12,13},
+                };
+        uint8_t group_mode_backward[1][2] = 
+                {
+                    {6,7},
+                };
+        uint8_t group_mode_turning[1][14] = 
+                {
+                    {0,1,2,3,4,5,6,7,8,9,10,11,12,13},
+                };
         double max_distance = DISTANCE_MAX;
         double distance[ULTRASONIC_NUM_MAX] = {0};
         double distance_buf[ULTRASONIC_NUM_MAX][FILTER_BUF_SIZE] = {{0}};
         uint8_t distance_buf_proc[ULTRASONIC_NUM_MAX][FILTER_BUF_SIZE] = {{0}};
+
+        uint8_t group[ULTRASONIC_NUM_MAX] = {0};
+
         std::string version[ULTRASONIC_NUM_MAX];
         sensor_msgs::Range ultrasonic_data;
         ros::Publisher ultrasonic_pub_to_navigation;
