@@ -184,13 +184,15 @@ void Ultrasonic::update_measure_en(uint32_t ul_en)
 {
     if(ul_en<<(32 - ULTRASONIC_NUM_MAX) == measure_en_ack<<(32 - ULTRASONIC_NUM_MAX)) 
         return;
-
-    for(uint8_t i = 0; i < ULTRASONIC_NUM_MAX; i++)
+    if(ros::Time::now() - sensor_en_start_time < ros::Duration(4))
     {
-        if( (ul_en^measure_en_ack) &(1<<i) ) 
+        for(uint8_t i = 0; i < ULTRASONIC_NUM_MAX; i++)
         {
-            this->ultrasonic_en(i,(ul_en>>i) &0x01);
-            ROS_ERROR("set %d to %d",i, (ul_en>>i) &0x01);
+            if( (ul_en^measure_en_ack) &(1<<i) ) 
+            {
+                this->ultrasonic_en(i,(ul_en>>i) &0x01);
+                ROS_ERROR("set %d to %d",i, (ul_en>>i) &0x01);
+            }
         }
     }
 
@@ -380,7 +382,21 @@ extern uint16_t laser_test_data[13];
         {   
             if(msg->Data[0] > 0)
             {
-                group[ul_id] = msg->Data[0];
+                //group[ul_id] = msg->Data[0];
+                group_id_t group_id;
+                group_id.id = ul_id;
+                group_id.group = msg->Data[0];
+                if(group_id_vec.size() > 0)
+                {
+                    for(vector<group_id_t>::iterator it = group_id_vec.begin(); it != group_id_vec.end(); it++)
+                    {
+                        if( ( (*it).group == group_id.group) && ( (*it).id == group_id.id))
+                        //if( ( group_id_vec[i].group == group_id.group) && ( (*it).id == group_id.id))
+                        {
+                            group_id_vec.erase(it); 
+                        }
+                    }
+                }
                 ROS_WARN("ultrasonic %d group is %d",ul_id,group[ul_id]);
             }
 

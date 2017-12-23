@@ -52,11 +52,14 @@ int main(int argc, char **argv)
     uint32_t rate = 1000;
     ros::Rate loop_rate(rate);
     uint32_t cnt = 0;
+    static uint8_t pre_mode = ULTRASONIC_MODE_NONE;
     //bool ul_init_flag = 0;
     ros::Time ul_init_start_time = ros::Time::now();
-    ultrasonic->work_mode = ULTRASONIC_MODE_TURNING;
+    ultrasonic->work_mode = ULTRASONIC_MODE_BACKWARD;
     while(ros::ok())
     {
+
+        /*---------------------  test code  --------------------------*/
         if(ultrasonic->group_init_flag == 0)
         {
             for(uint8_t i = 0; i < ULTRASONIC_NUM_MAX; i++)
@@ -69,6 +72,26 @@ int main(int argc, char **argv)
             {
                 if(ultrasonic->work_mode == ULTRASONIC_MODE_TURNING)
                 {
+                    if(pre_mode != ULTRASONIC_MODE_TURNING)
+                    {
+                        pre_mode = ULTRASONIC_MODE_TURNING;
+                        ultrasonic->group_id_vec.clear();
+                        group_id_t group_id;
+
+                        for(uint8_t i=0; i<sizeof(ultrasonic->group_mode_turning) / sizeof(ultrasonic->group_mode_turning[0]); i++)
+                        {
+                            for(uint8_t j=0; j<sizeof(ultrasonic->group_mode_turning[0]) / sizeof(ultrasonic->group_mode_turning[0][0]); j++)
+                            {
+                                //ultrasonic->set_group(ultrasonic->group_mode_turning[i][j],ULTRASONIC_MODE_TURNING * ULTRASONIC_NUM_MAX + i + 1); 
+                                group_id.id = ultrasonic->group_mode_turning[i][j];
+                                group_id.group = ULTRASONIC_MODE_TURNING * ULTRASONIC_NUM_MAX + i + 1;
+                                if(group_id.id < ULTRASONIC_NUM_MAX)
+                                {
+                                    ultrasonic->group_id_vec.push_back(group_id);
+                                }
+                            }
+                        }
+                    }
                     for(uint8_t i=0; i<sizeof(ultrasonic->group_mode_turning) / sizeof(ultrasonic->group_mode_turning[0]); i++)
                     {
                         for(uint8_t j=0; j<sizeof(ultrasonic->group_mode_turning[0]) / sizeof(ultrasonic->group_mode_turning[0][0]); j++)
@@ -77,9 +100,32 @@ int main(int argc, char **argv)
                             usleep(30*1000);
                         }
                     }
+                    if(ultrasonic->group_id_vec.size() == 0)
+                    {
+                        ultrasonic->group_init_flag = 1;
+                    }
                 }
                 else if(ultrasonic->work_mode == ULTRASONIC_MODE_FORWARD)
                 {
+                    if(pre_mode != ULTRASONIC_MODE_FORWARD)
+                    {
+                        pre_mode = ULTRASONIC_MODE_FORWARD;
+                        ultrasonic->group_id_vec.clear();
+                        group_id_t group_id;
+
+                        for(uint8_t i=0; i<sizeof(ultrasonic->group_mode_forward) / sizeof(ultrasonic->group_mode_forward[0]); i++)
+                        {
+                            for(uint8_t j=0; j<sizeof(ultrasonic->group_mode_forward[0]) / sizeof(ultrasonic->group_mode_forward[0][0]); j++)
+                            {
+                                group_id.id = ultrasonic->group_mode_forward[i][j];
+                                group_id.group = ULTRASONIC_MODE_FORWARD * ULTRASONIC_NUM_MAX + i + 1;
+                                if(group_id.id < ULTRASONIC_NUM_MAX)
+                                {
+                                    ultrasonic->group_id_vec.push_back(group_id);
+                                }
+                            }
+                        }
+                    }
                     for(uint8_t i=0; i<sizeof(ultrasonic->group_mode_forward) / sizeof(ultrasonic->group_mode_forward[0]); i++)
                     {
                         for(uint8_t j=0; j<sizeof(ultrasonic->group_mode_forward[0]) / sizeof(ultrasonic->group_mode_forward[0][0]); j++)
@@ -88,9 +134,32 @@ int main(int argc, char **argv)
                             usleep(30*1000);
                         }
                     }
+                    if(ultrasonic->group_id_vec.size() == 0)
+                    {
+                        ultrasonic->group_init_flag = 1;
+                    }
                 }
                 else if(ultrasonic->work_mode == ULTRASONIC_MODE_BACKWARD)
                 {
+                    if(pre_mode != ULTRASONIC_MODE_BACKWARD)
+                    {
+                        pre_mode = ULTRASONIC_MODE_BACKWARD;
+                        ultrasonic->group_id_vec.clear();
+                        group_id_t group_id;
+
+                        for(uint8_t i=0; i<sizeof(ultrasonic->group_mode_backward) / sizeof(ultrasonic->group_mode_backward[0]); i++)
+                        {
+                            for(uint8_t j=0; j<sizeof(ultrasonic->group_mode_backward[0]) / sizeof(ultrasonic->group_mode_backward[0][0]); j++)
+                            {
+                                group_id.id = ultrasonic->group_mode_backward[i][j];
+                                group_id.group = ULTRASONIC_MODE_BACKWARD * ULTRASONIC_NUM_MAX + i + 1;
+                                if(group_id.id < ULTRASONIC_NUM_MAX)
+                                {
+                                    ultrasonic->group_id_vec.push_back(group_id);
+                                }
+                            }
+                        }
+                    }
                     for(uint8_t i=0; i<sizeof(ultrasonic->group_mode_backward) / sizeof(ultrasonic->group_mode_backward[0]); i++)
                     {
                         for(uint8_t j=0; j<sizeof(ultrasonic->group_mode_backward[0]) / sizeof(ultrasonic->group_mode_backward[0][0]); j++)
@@ -99,21 +168,30 @@ int main(int argc, char **argv)
                             usleep(30*1000);
                         }
                     }
+                    if(ultrasonic->group_id_vec.size() == 0)
+                    {
+                        ultrasonic->group_init_flag = 1;
+                    }
                 }
-#if 0
-#endif
-                //ultrasonic->set_group(12,1); 
-                //usleep(1000);
-                //ultrasonic->set_group(6,2); 
-                //usleep(1000);
-                //ultrasonic->set_group(8,3); 
-                //usleep(1000);
             }
             else
             {
                 ultrasonic->group_init_flag = 1;
+                ROS_ERROR("SET GROUP TIME OUT ! ! !");
+                if(ultrasonic->group_id_vec.size() > 0)
+                {
+                    for(vector<group_id_t>::iterator it = ultrasonic->group_id_vec.begin(); it != ultrasonic->group_id_vec.end(); it++)
+                    {
+                        ROS_ERROR("id %d set group %d failed !!!!!!!" ,(*it).id,(*it).group);
+                        {
+                            //group_id_vec.erase(it); 
+                        }
+                    }
+                }
             }
         }
+
+        /*---------------------  test code  --------------------------*/
 
         else if(ultrasonic->group_init_flag == 1)
         {
@@ -122,26 +200,6 @@ int main(int argc, char **argv)
             if(cnt % (uint32_t)(rate / 9 ) == 0)
             {   
                 static uint8_t ul_id = 0;
-#if 0
-                static uint8_t period = 0;
-                period++;
-                if(period >= sizeof(ultrasonic->id_group) / sizeof(ultrasonic->id_group[0]))
-                {
-                    period = 0;
-                }
-                //ROS_INFO("group num: %d",period); 
-
-                for(uint8_t i = 0; i < sizeof(ultrasonic->id_group[0]) / sizeof(ultrasonic->id_group[0][0]); i++)
-                {
-                    if(ultrasonic->id_group[period][i] < ULTRASONIC_NUM_MAX)
-                    {
-                        if(sonar_en & (1<<ultrasonic->id_group[period][i]))                    
-                        {
-                            //ultrasonic->start_measurement(ultrasonic->id_group[period][i]);
-                        }
-                    }
-                }
-#endif
                 static uint8_t group = 0;
                 if(ultrasonic->work_mode == ULTRASONIC_MODE_FORWARD)
                 {
@@ -189,6 +247,8 @@ int main(int argc, char **argv)
                 }
 
             }
+        /*---------------------  test code  --------------------------*/
+
             if(cnt % (uint32_t)(rate / 10) == 0)
             {
                 ultrasonic->update_status();

@@ -31,9 +31,11 @@ using json = nlohmann::json;
 
 uint32_t sonar_en = 0xffffffff;
 uint32_t laser_en = 0xffffffff;
+ros::Time  sensor_en_start_time;
 void sensor_en_cb(const std_msgs::String::ConstPtr &msg)
 {
     ROS_INFO("%s",__func__);
+    sensor_en_start_time = ros::Time::now();
     auto j = json::parse(msg->data.c_str());
     if(j.find("params") != j.end())
     {

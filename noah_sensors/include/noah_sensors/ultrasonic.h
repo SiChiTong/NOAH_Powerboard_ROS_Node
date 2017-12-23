@@ -33,8 +33,14 @@ enum
     ULTRASONIC_MODE_BACKWARD    = 1,
     ULTRASONIC_MODE_TURNING     = 2,
     ULTRASONIC_MODE_MAX,
+    ULTRASONIC_MODE_NONE,
 };
 
+typedef struct
+{
+    uint8_t id;
+    uint8_t group;
+}group_id_t;
 
 class Ultrasonic
 {
@@ -48,6 +54,7 @@ class Ultrasonic
             pub_to_can_node = n.advertise<mrobot_driver_msgs::vci_can>("ultrasonic_to_can", 1000);
             sub_from_can_node = n.subscribe("can_to_ultrasonic", 1000, &Ultrasonic::rcv_from_can_node_callback, this);
             ultrasonic_pub_to_navigation = n.advertise<sensor_msgs::Range>("sonar_msg",20);
+            group_id_vec.clear();
         }
         
         int start_measurement(uint8_t ul_id);
@@ -81,6 +88,8 @@ class Ultrasonic
                 {
                     {0,1,2,3,4,5,6,7,8,9,10,11,12,13},
                 };
+
+        vector<group_id_t> group_id_vec;
         double max_distance = DISTANCE_MAX;
         double distance[ULTRASONIC_NUM_MAX] = {0};
         double distance_buf[ULTRASONIC_NUM_MAX][FILTER_BUF_SIZE] = {{0}};
