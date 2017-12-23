@@ -394,6 +394,7 @@ extern uint16_t laser_test_data[13];
                         //if( ( group_id_vec[i].group == group_id.group) && ( (*it).id == group_id.id))
                         {
                             group_id_vec.erase(it); 
+                            break;
                         }
                     }
                 }
