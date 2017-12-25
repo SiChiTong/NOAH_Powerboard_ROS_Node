@@ -23,6 +23,7 @@
 #include <laser.h>
 #include <hall.h>
 #include <common.h>
+#include<stdlib.h>
 uint16_t laser_test_data[13] = {0};
 void sigintHandler(int sig)
 {
@@ -31,6 +32,9 @@ void sigintHandler(int sig)
 }
 
 #define ULTRASONIC_INIT_TIME_OUT        5.0     //unit: Second
+
+#define MODE_TEST_DURATION_MAX          1000
+#define MODE_TEST_DURATION_MIN          100
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "noah_sensors");
@@ -53,9 +57,12 @@ int main(int argc, char **argv)
     ros::Rate loop_rate(rate);
     uint32_t cnt = 0;
     static uint8_t pre_mode = ULTRASONIC_MODE_NONE;
+    ros::Time mode_test_start_time = ros::Time::now();
+    ros::Duration mode_test_duration(random()%(MODE_TEST_DURATION_MAX - MODE_TEST_DURATION_MIN) + MODE_TEST_DURATION_MIN);//random 100~1000 seconds
+    
     //bool ul_init_flag = 0;
     ros::Time ul_init_start_time = ros::Time::now();
-    ultrasonic->work_mode = ULTRASONIC_MODE_BACKWARD;
+    ultrasonic->work_mode = ULTRASONIC_MODE_TURNING;
     while(ros::ok())
     {
 
@@ -64,7 +71,7 @@ int main(int argc, char **argv)
         {
             for(uint8_t i = 0; i < ULTRASONIC_NUM_MAX; i++)
             {
-                ultrasonic->get_version(i); 
+                //ultrasonic->get_version(i); 
                 usleep(1000);
                 //ROS_INFO("start to get ultrasonic %d version",i);
             }
@@ -197,7 +204,7 @@ int main(int argc, char **argv)
         {
 
 #if 1//ultrasonic
-            if(cnt % (uint32_t)(rate / 9 ) == 0)
+            if(cnt % (uint32_t)(rate / 15 ) == 0)
             {   
                 static uint8_t ul_id = 0;
                 static uint8_t group = 0;
@@ -261,7 +268,20 @@ int main(int argc, char **argv)
             }
 
 #endif
+            if(ros::Time::now() - mode_test_start_time >= ros::Duration(mode_test_duration)) 
+            {
+                ultrasonic->work_mode++;
+                ultrasonic->group_init_flag = 0;
+                if(ultrasonic->work_mode >= ULTRASONIC_MODE_MAX - 1)
+                {
+                    ultrasonic->work_mode = ULTRASONIC_MODE_FORWARD;
+                }
+                mode_test_start_time = ros::Time::now();
+                ul_init_start_time = ros::Time::now();
+                mode_test_duration = ros::Duration(random()%(MODE_TEST_DURATION_MAX - MODE_TEST_DURATION_MIN) + MODE_TEST_DURATION_MIN);
+                ROS_INFO("random time %f, next work mode is %d",mode_test_duration.toSec(),ultrasonic->work_mode);
 
+            }
 
 #if 0 //laser
             if(cnt % (uint32_t)(rate / 80) == 0)

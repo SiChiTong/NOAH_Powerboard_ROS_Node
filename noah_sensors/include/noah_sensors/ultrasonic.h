@@ -82,7 +82,7 @@ class Ultrasonic
                 };
         uint8_t group_mode_backward[1][2] = 
                 {
-                    {6,7},
+                    {5,6},
                 };
         uint8_t group_mode_turning[1][14] = 
                 {
