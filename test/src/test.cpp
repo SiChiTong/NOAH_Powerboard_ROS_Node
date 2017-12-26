@@ -66,11 +66,12 @@ int main(int argc, char **argv)
     ros::Publisher test_power_pub = n.advertise<std_msgs::UInt8MultiArray>("app_pub_power",1000);
     ros::Publisher starline_test_pub = n.advertise<std_msgs::String>("map_server_mrobot/region_params_changer/sensor_params",1000);
     ros::Publisher sensor_to_starline_pub = n.advertise<std_msgs::UInt8MultiArray>("sensor_to_starline_node",1000);
+    ros::Publisher ultrasonic_mode_test_pub = n.advertise<std_msgs::UInt8MultiArray>("ultrasonic_set_work_mode",1000);
     ros::Rate loop_rate(1);
     json j;
     static uint32_t cnt = 0;
     static uint8_t flag = 0;
-    uint32_t sonar_en = 0x12345678;
+    uint32_t sonar_en = ~((1<<12) | (1<<8)  );
     uint32_t laser_en = 0x87654321;
     sleep(1);
     while(ros::ok())
@@ -87,7 +88,7 @@ int main(int argc, char **argv)
 
                // flag = 1;
 
-#if 1 
+#if 0 
 
                 std_msgs::String led;
                 if(cnt % 4 == 0)
@@ -113,7 +114,7 @@ int main(int argc, char **argv)
                 test_navigation_pub.publish(led);
 
 #endif
-#if 1
+#if 0       //sensor_to_starline
 
             {
             
@@ -133,14 +134,38 @@ int main(int argc, char **argv)
             }
 
 #endif
-#if 1
+#if 1   //ultrasonic work mode test
+
+            {
+                static uint32_t work_mode_test_cnt = 0;
+                static uint8_t work_mode_test = 0;
+                work_mode_test_cnt++;
+                if(work_mode_test_cnt % 15 == 14)
+                {
+                    if(work_mode_test < 2)
+                    {
+                        work_mode_test++;
+                    }
+                    else
+                    {
+                        work_mode_test = 0;
+                    }
+                    std_msgs::UInt8MultiArray ul_work_mode;
+                    ul_work_mode.data.push_back(work_mode_test);
+                    ultrasonic_mode_test_pub.publish(ul_work_mode);
+                    ROS_INFO("set ultrasonic mode : %d",work_mode_test);
+                }
+            }
+
+#endif
+#if 0
                 std_msgs::UInt8MultiArray test_power;
                 test_power.data.push_back(0);
                 test_power_pub.publish(test_power);
                 ROS_INFO("power request");
 #endif
 
-#if 1
+#if 0
                 j.clear();
                 j = 
                 {
@@ -165,7 +190,7 @@ int main(int argc, char **argv)
 #endif
 
 
-#if 1
+#if 0
                 j.clear();
                 j = 
                 {
