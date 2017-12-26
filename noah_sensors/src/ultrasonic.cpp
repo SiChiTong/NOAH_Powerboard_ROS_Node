@@ -423,6 +423,21 @@ extern uint16_t laser_test_data[13];
     }
 }
 
+
+void Ultrasonic::work_mode_callback(const std_msgs::UInt8MultiArray set_mode)
+{
+    if(set_mode.data.size() == 1)
+    {
+        if((set_mode.data[0] < ULTRASONIC_MODE_MAX) && (set_mode.data[0] >= 0))
+        {
+            this->work_mode = set_mode.data[0];
+            this->group_init_flag = 0;
+            this->set_work_mode_start_time = ros::Time::now();
+        }
+    }
+}
+
+
 void Ultrasonic::pub_ultrasonic_data_to_navigation(double * ul_data)
 {
     uint32_t en_sonar = sonar_en;

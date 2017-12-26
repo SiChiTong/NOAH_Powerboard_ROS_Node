@@ -33,8 +33,19 @@ void sigintHandler(int sig)
 
 #define ULTRASONIC_INIT_TIME_OUT        5.0     //unit: Second
 
-#define MODE_TEST_DURATION_MAX          1000
-#define MODE_TEST_DURATION_MIN          100
+#define MODE_TEST_DURATION_MAX          1000    //unit: Second
+#define MODE_TEST_DURATION_MIN          100     //unit: Second
+
+/*
+
+ultrasonic work mode:
+
+    ULTRASONIC_MODE_FORWARD     = 0,
+    ULTRASONIC_MODE_BACKWARD    = 1,
+    ULTRASONIC_MODE_TURNING     = 2,
+*/
+
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "noah_sensors");
@@ -61,7 +72,6 @@ int main(int argc, char **argv)
     ros::Duration mode_test_duration(random()%(MODE_TEST_DURATION_MAX - MODE_TEST_DURATION_MIN) + MODE_TEST_DURATION_MIN);//random 100~1000 seconds
     
     //bool ul_init_flag = 0;
-    ros::Time ul_init_start_time = ros::Time::now();
     ultrasonic->work_mode = ULTRASONIC_MODE_TURNING;
     while(ros::ok())
     {
@@ -75,7 +85,7 @@ int main(int argc, char **argv)
                 usleep(1000);
                 //ROS_INFO("start to get ultrasonic %d version",i);
             }
-            if(ros::Time::now() - ul_init_start_time <= ros::Duration(ULTRASONIC_INIT_TIME_OUT))
+            if(ros::Time::now() - ultrasonic->set_work_mode_start_time <= ros::Duration(ULTRASONIC_INIT_TIME_OUT))
             {
                 if(ultrasonic->work_mode == ULTRASONIC_MODE_TURNING)
                 {
@@ -177,24 +187,43 @@ int main(int argc, char **argv)
                     }
                     if(ultrasonic->group_id_vec.size() == 0)
                     {
+                        std_msgs::UInt8MultiArray ack;
+                        ack.data.push_back(0);
+                        ack.data.push_back(ultrasonic->work_mode);
+                        ultrasonic->work_mode_ack_pub.publish(ack);
                         ultrasonic->group_init_flag = 1;
                     }
                 }
             }
             else
             {
+                std_msgs::UInt8MultiArray ack;
+                uint8_t err_size = ultrasonic->group_id_vec.size();
+
                 ultrasonic->group_init_flag = 1;
-                ROS_ERROR("SET GROUP TIME OUT ! ! !");
-                if(ultrasonic->group_id_vec.size() > 0)
+
+                if(err_size > 0)
                 {
+                    ROS_ERROR("SET GROUP TIME OUT ! ! !");
+                    ack.data.push_back(err_size);
+                    ack.data.push_back(ultrasonic->work_mode);
                     for(vector<group_id_t>::iterator it = ultrasonic->group_id_vec.begin(); it != ultrasonic->group_id_vec.end(); it++)
                     {
+                        
                         ROS_ERROR("id %d set group %d failed !!!!!!!" ,(*it).id,(*it).group);
+
+                        ack.data.push_back((*it).id);
                         {
                             //group_id_vec.erase(it); 
                         }
                     }
                 }
+                else if(err_size == 0)
+                {
+                    ack.data.push_back(0);
+                    ack.data.push_back(ultrasonic->work_mode);
+                }
+                ultrasonic->work_mode_ack_pub.publish(ack);
             }
         }
 
@@ -204,7 +233,7 @@ int main(int argc, char **argv)
         {
 
 #if 1//ultrasonic
-            if(cnt % (uint32_t)(rate / 15 ) == 0)
+            if(cnt % (uint32_t)(rate / 11 ) == 0)
             {   
                 static uint8_t ul_id = 0;
                 static uint8_t group = 0;
@@ -268,6 +297,7 @@ int main(int argc, char **argv)
             }
 
 #endif
+#if 0
             if(ros::Time::now() - mode_test_start_time >= ros::Duration(mode_test_duration)) 
             {
                 ultrasonic->work_mode++;
@@ -277,11 +307,12 @@ int main(int argc, char **argv)
                     ultrasonic->work_mode = ULTRASONIC_MODE_FORWARD;
                 }
                 mode_test_start_time = ros::Time::now();
-                ul_init_start_time = ros::Time::now();
+                ultrasonic->set_work_mode_start_time = ros::Time::now();
                 mode_test_duration = ros::Duration(random()%(MODE_TEST_DURATION_MAX - MODE_TEST_DURATION_MIN) + MODE_TEST_DURATION_MIN);
                 ROS_INFO("random time %f, next work mode is %d",mode_test_duration.toSec(),ultrasonic->work_mode);
 
             }
+#endif
 
 #if 0 //laser
             if(cnt % (uint32_t)(rate / 80) == 0)

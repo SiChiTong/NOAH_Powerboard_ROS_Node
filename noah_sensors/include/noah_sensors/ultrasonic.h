@@ -53,7 +53,13 @@ class Ultrasonic
             sensor_en = n.subscribe("/map_server_mrobot/region_params_changer/sensor_params",1000,sensor_en_cb);
             pub_to_can_node = n.advertise<mrobot_driver_msgs::vci_can>("ultrasonic_to_can", 1000);
             sub_from_can_node = n.subscribe("can_to_ultrasonic", 1000, &Ultrasonic::rcv_from_can_node_callback, this);
+
+            work_mode_sub = n.subscribe("ultrasonic_set_work_mode", 10, &Ultrasonic::work_mode_callback, this);
+
             ultrasonic_pub_to_navigation = n.advertise<sensor_msgs::Range>("sonar_msg",20);
+            work_mode_ack_pub = n.advertise<std_msgs::UInt8MultiArray>("ultrasonic_work_mode_ack",20);
+            set_work_mode_start_time = ros::Time::now();
+
             group_id_vec.clear();
         }
         
@@ -63,6 +69,7 @@ class Ultrasonic
         int broadcast_measurement(uint8_t group);
         int set_group(uint8_t ul_id, uint8_t group);
         void rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::ConstPtr &c_msg);
+        void work_mode_callback(const std_msgs::UInt8MultiArray data);
         void update_status(void);
         void pub_ultrasonic_data_to_navigation(double *data);
         void update_measure_en(uint32_t ul_en);
@@ -71,6 +78,7 @@ class Ultrasonic
         bool is_log_on;
         can_long_frame  long_frame;
         ros::Time start_measure_time[ULTRASONIC_NUM_MAX];
+        ros::Time set_work_mode_start_time;
         uint8_t err_status[ULTRASONIC_NUM_MAX];
         uint8_t online[ULTRASONIC_NUM_MAX];
         uint8_t work_mode = ULTRASONIC_MODE_FORWARD;
@@ -100,6 +108,7 @@ class Ultrasonic
         std::string version[ULTRASONIC_NUM_MAX];
         sensor_msgs::Range ultrasonic_data;
         ros::Publisher ultrasonic_pub_to_navigation;
+        ros::Publisher work_mode_ack_pub;
 
 
 #if 0
@@ -147,6 +156,8 @@ class Ultrasonic
         ros::Subscriber noah_ultrasonic_sub;
         ros::Subscriber sub_from_can_node;
         ros::Subscriber sensor_en;
+        ros::Subscriber work_mode_sub;
+
 
         ros::Publisher  ultrasonic_pub;
         ros::Publisher  pub_to_can_node;
