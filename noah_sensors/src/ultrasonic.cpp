@@ -9,6 +9,9 @@
 #include "std_msgs/String.h"
 #include "std_msgs/UInt8MultiArray.h" 
 #include "pthread.h"
+
+#include <algorithm>
+
 #include <math.h>
 #include <stdio.h>     
 #include <stdlib.h>     
@@ -31,7 +34,6 @@
 #include <roscan/can_long_frame.h>
 #include <ultrasonic.h>
 #include <common.h>
-
 
 void Ultrasonic::update_status(void)
 {
@@ -178,7 +180,19 @@ void Ultrasonic::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::C
 
             if(this->distance[ul_id] > 2.00)
                 this->distance[ul_id] = 2.00;
-
+#if 1
+            if((ul_id == 12) || (ul_id == 13))
+            {
+                if( (abs(this->distance[13]) >= 0.000001)  &&  (abs(this->distance[12]) >= 0.000001) )
+                {
+                    this->distance[12] = min(this->distance[12],this->distance[13]);
+                }
+                else
+                {
+                    this->distance[12] = max(this->distance[12],this->distance[13]);
+                }
+            }
+#endif
             //if(this->is_log_on == true)
             {
 #if 0
@@ -243,7 +257,7 @@ void Ultrasonic::pub_ultrasonic_data_to_navigation(double * ul_data)
     this->ultrasonic_data.max_range = 2.0;
     if(close_all_flag == 0)
     {
-        for(int i=0;i<ultrasonic_real_num;i++)
+        for(int i=0;i<ultrasonic_real_num - 1;i++)
         {
             if(en_sonar == 0)
             {
