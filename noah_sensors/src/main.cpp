@@ -33,8 +33,8 @@ void sigintHandler(int sig)
 
 #define ULTRASONIC_INIT_TIME_OUT        5.0     //unit: Second
 
-#define MODE_TEST_DURATION_MAX          1000    //unit: Second
-#define MODE_TEST_DURATION_MIN          100     //unit: Second
+#define MODE_TEST_DURATION_MAX          4000    //unit: Second
+#define MODE_TEST_DURATION_MIN          1000     //unit: Second
 
 /*
 
@@ -72,7 +72,7 @@ int main(int argc, char **argv)
     ros::Duration mode_test_duration(random()%(MODE_TEST_DURATION_MAX - MODE_TEST_DURATION_MIN) + MODE_TEST_DURATION_MIN);//random 100~1000 seconds
     
     //bool ul_init_flag = 0;
-    ultrasonic->work_mode = ULTRASONIC_MODE_TURNING;
+    ultrasonic->work_mode = ULTRASONIC_MODE_FORWARD;
     while(ros::ok())
     {
 
@@ -94,7 +94,7 @@ int main(int argc, char **argv)
                         pre_mode = ULTRASONIC_MODE_TURNING;
                         ultrasonic->group_id_vec.clear();
                         group_id_t group_id;
-
+                        ultrasonic->current_work_mode_ul = 0;
                         for(uint8_t i=0; i<sizeof(ultrasonic->group_mode_turning) / sizeof(ultrasonic->group_mode_turning[0]); i++)
                         {
                             for(uint8_t j=0; j<sizeof(ultrasonic->group_mode_turning[0]) / sizeof(ultrasonic->group_mode_turning[0][0]); j++)
@@ -105,6 +105,10 @@ int main(int argc, char **argv)
                                 if(group_id.id < ULTRASONIC_NUM_MAX)
                                 {
                                     ultrasonic->group_id_vec.push_back(group_id);
+                                    if(group_id.id < 32)
+                                    {
+                                        ultrasonic->current_work_mode_ul |= 1<<group_id.id;
+                                    }
                                 }
                             }
                         }
@@ -114,7 +118,7 @@ int main(int argc, char **argv)
                         for(uint8_t j=0; j<sizeof(ultrasonic->group_mode_turning[0]) / sizeof(ultrasonic->group_mode_turning[0][0]); j++)
                         {
                             ultrasonic->set_group(ultrasonic->group_mode_turning[i][j],ULTRASONIC_MODE_TURNING * ULTRASONIC_NUM_MAX + i + 1); 
-                            usleep(30*1000);
+                            usleep(50*1000);
                         }
                     }
                     if(ultrasonic->group_id_vec.size() == 0)
@@ -129,6 +133,7 @@ int main(int argc, char **argv)
                         pre_mode = ULTRASONIC_MODE_FORWARD;
                         ultrasonic->group_id_vec.clear();
                         group_id_t group_id;
+                        ultrasonic->current_work_mode_ul = 0;
 
                         for(uint8_t i=0; i<sizeof(ultrasonic->group_mode_forward) / sizeof(ultrasonic->group_mode_forward[0]); i++)
                         {
@@ -139,6 +144,10 @@ int main(int argc, char **argv)
                                 if(group_id.id < ULTRASONIC_NUM_MAX)
                                 {
                                     ultrasonic->group_id_vec.push_back(group_id);
+                                    if(group_id.id < 32)
+                                    {
+                                        ultrasonic->current_work_mode_ul |= 1<<group_id.id;
+                                    }
                                 }
                             }
                         }
@@ -163,6 +172,7 @@ int main(int argc, char **argv)
                         pre_mode = ULTRASONIC_MODE_BACKWARD;
                         ultrasonic->group_id_vec.clear();
                         group_id_t group_id;
+                        ultrasonic->current_work_mode_ul = 0;
 
                         for(uint8_t i=0; i<sizeof(ultrasonic->group_mode_backward) / sizeof(ultrasonic->group_mode_backward[0]); i++)
                         {
@@ -173,6 +183,10 @@ int main(int argc, char **argv)
                                 if(group_id.id < ULTRASONIC_NUM_MAX)
                                 {
                                     ultrasonic->group_id_vec.push_back(group_id);
+                                    if(group_id.id < 32)
+                                    {
+                                        ultrasonic->current_work_mode_ul |= 1<<group_id.id;
+                                    }
                                 }
                             }
                         }
@@ -314,7 +328,7 @@ int main(int argc, char **argv)
             }
 #endif
 
-#if 0 //laser
+#if 1 //laser
             if(cnt % (uint32_t)(rate / 80) == 0)
             {   
                 static uint8_t i = 0;

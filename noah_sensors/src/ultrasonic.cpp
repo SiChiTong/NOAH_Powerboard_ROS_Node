@@ -481,7 +481,7 @@ void Ultrasonic::pub_ultrasonic_data_to_navigation(double * ul_data)
                 usleep(2000);
                 this->ultrasonic_pub_to_navigation.publish(this->ultrasonic_data);
             }
-            else if(en_sonar & (0x00000001<<i))
+            else if( (en_sonar & (0x00000001<<i)) && (current_work_mode_ul & (0x000000001 << i)) )
             {
                 close_all_flag = 0;
 

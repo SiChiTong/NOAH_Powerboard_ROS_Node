@@ -82,19 +82,23 @@ class Ultrasonic
         uint8_t err_status[ULTRASONIC_NUM_MAX];
         uint8_t online[ULTRASONIC_NUM_MAX];
         uint8_t work_mode = ULTRASONIC_MODE_FORWARD;
+        uint32_t current_work_mode_ul = 0;
 
         uint8_t group_mode_forward[2][4] = 
                 {
                     {10,11,0xff,0xff},
                     {0,1,12,13},
+                    //{13},
                 };
         uint8_t group_mode_backward[1][2] = 
                 {
                     {5,6},
                 };
-        uint8_t group_mode_turning[1][14] = 
+        uint8_t group_mode_turning[3][6] = 
                 {
-                    {0,1,2,3,4,5,6,7,8,9,10,11,12,13},
+                    {10,11,5,6,0xff,0xff},
+                    {0,1,12,13,0xff,0xff},
+                    {2,4,3,7,8,9}
                 };
 
         vector<group_id_t> group_id_vec;
