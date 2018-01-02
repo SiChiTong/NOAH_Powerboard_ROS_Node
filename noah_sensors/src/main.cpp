@@ -89,7 +89,7 @@ int main(int argc, char **argv)
 #endif
 
 
-#if 0 //laser
+#if 1 //laser
         if(cnt % (uint32_t)(rate / 80) == 0)
         {   
             static uint8_t i = 0;
