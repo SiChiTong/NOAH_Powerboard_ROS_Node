@@ -434,7 +434,10 @@ class NoahPowerboard
             
             pub_to_can_node = n.advertise<mrobot_driver_msgs::vci_can>("noah_powerboard_to_can", 1000);
             sub_from_can_node = n.subscribe("can_to_noah_powerboard", 1000, &NoahPowerboard::rcv_from_can_node_callback, this);
-        sys_powerboard = &sys_powerboard_ram;
+            sub_from_basestate = n.subscribe("basestate", 10, &NoahPowerboard::basestate_callback, this);
+
+            sys_powerboard = &sys_powerboard_ram;
+            emg_stop = false;
         }
         int PowerboardParamInit(void);
         int SetLedEffect(powerboard_t *powerboard);
@@ -454,6 +457,7 @@ class NoahPowerboard
         void PubChargeStatus(uint8_t status);
 
         void rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::ConstPtr &c_msg);
+        void basestate_callback(std_msgs::UInt8MultiArray data);
         
 
         json j;
@@ -501,9 +505,11 @@ class NoahPowerboard
         ros::Publisher pub_charge_status_to_move_base;
         ros::Publisher pub_to_can_node;//publish to roscan node
         ros::Subscriber sub_from_can_node;
+        ros::Subscriber sub_from_basestate;
 //        json j;
 //        void pub_json_msg_to_app(const nlohmann::json j_msg);
         powerboard_t    sys_powerboard_ram; 
+        uint8_t emg_stop;
 
 
 };

@@ -1351,7 +1351,20 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
 }
 
 
-
+void NoahPowerboard::basestate_callback(std_msgs::UInt8MultiArray data)
+{
+    if(data.data.size() == 7)
+    {
+        if(data.data[2] & (1<<4))
+        {
+           emg_stop = true;
+        }
+        else
+        {
+           emg_stop = false;
+        }
+    }
+}
 void NoahPowerboard:: from_navigation_rcv_callback(const std_msgs::String::ConstPtr &msg)
 {
     int value = atoi(msg->data.c_str());
@@ -1648,12 +1661,14 @@ void NoahPowerboard::update_sys_status(void)
 {
     uint16_t sys_status = this->sys_powerboard->sys_status;
     uint16_t  power_percent = this->sys_powerboard->bat_info.bat_percent;
-    static bool charging_low_flag = 0;
-    static bool charging_medium_flag = 0;
-    static bool charging_full_flag = 0;
-    static bool power_low_flag = 0;
-    static bool power_medium_flag = 0;
-
+    /*
+       static bool charging_low_flag = 0;
+       static bool charging_medium_flag = 0;
+       static bool charging_full_flag = 0;
+       static bool power_low_flag = 0;
+       static bool power_medium_flag = 0;
+     */
+    static uint8_t prv_led_effect = LIGHTS_MODE_NONE;
 
     /* ---- set led effect ----*/
     set_leds_effect_t set_led_effect;
@@ -1664,100 +1679,135 @@ void NoahPowerboard::update_sys_status(void)
         if(power_percent < VBAT_POWER_CHARGING_LOW)
         {
             //ROS_INFO("sys status is charging, power low, %d",power_percent);
-            if(charging_low_flag == 0)
+            //if(charging_low_flag == 0)
+            if(prv_led_effect != LIGHTS_MODE_CHARGING_POWER_LOW)
             {
                 ROS_INFO("set led effect charging low power");
+                prv_led_effect == LIGHTS_MODE_CHARGING_POWER_LOW;
                 set_led_effect.mode = LIGHTS_MODE_CHARGING_POWER_LOW;
                 do
                 {
                     boost::mutex::scoped_lock(this->mtx);        
                     this->set_leds_effect_vector.push_back(set_led_effect);
                 }while(0);
-                charging_low_flag = 1;
-                charging_medium_flag = 0;
-                charging_full_flag = 0;
-                power_low_flag = 0;
-                power_medium_flag = 0;
+                /*
+                   charging_low_flag = 1;
+                   charging_medium_flag = 0;
+                   charging_full_flag = 0;
+                   power_low_flag = 0;
+                   power_medium_flag = 0;
+                 */
             }
         }
         else if(power_percent < VBAT_POWER_CHARGING_FULL)
         {
             //ROS_INFO("sys status is charging, power medium, %d",power_percent);
-            if(charging_medium_flag == 0)
+            //if(charging_medium_flag == 0)
+            if(prv_led_effect != LIGHTS_MODE_CHARGING_POWER_MEDIUM)
             {
                 ROS_INFO("set led effect charging medium power");
+                prv_led_effect = LIGHTS_MODE_CHARGING_POWER_MEDIUM;
                 set_led_effect.mode = LIGHTS_MODE_CHARGING_POWER_MEDIUM;
                 do
                 {
                     boost::mutex::scoped_lock(this->mtx);        
                     this->set_leds_effect_vector.push_back(set_led_effect);
                 }while(0);
-                charging_low_flag = 0;
-                charging_medium_flag = 1;
-                charging_full_flag = 0;
-                power_low_flag = 0;
-                power_medium_flag = 0;
+                /*
+                   charging_low_flag = 0;
+                   charging_medium_flag = 1;
+                   charging_full_flag = 0;
+                   power_low_flag = 0;
+                   power_medium_flag = 0;
+                 */
             }
         }
         else if(power_percent == VBAT_POWER_CHARGING_FULL)
         {
             //ROS_INFO("sys status is charging, power full, %d",power_percent);
-            if(charging_full_flag == 0)
+            //if(charging_full_flag == 0)
+            if(prv_led_effect != LIGHTS_MODE_CHARGING_FULL)
             {
                 ROS_INFO("set led effect charging full power");
+                prv_led_effect = LIGHTS_MODE_CHARGING_FULL;
                 set_led_effect.mode = LIGHTS_MODE_CHARGING_FULL;
                 do
                 {
                     boost::mutex::scoped_lock(this->mtx);        
                     this->set_leds_effect_vector.push_back(set_led_effect);
                 }while(0);
-                charging_low_flag = 0;
-                charging_medium_flag = 0;
-                charging_full_flag = 1;
-                power_low_flag = 0;
-                power_medium_flag = 0;
+                /*
+                   charging_low_flag = 0;
+                   charging_medium_flag = 0;
+                   charging_full_flag = 1;
+                   power_low_flag = 0;
+                   power_medium_flag = 0;
+                 */
             }
         }
-        
+
     }
-    else
+    else if(emg_state == true)
+    {
+        if(prv_led_effect != LIGHTS_MODE_EMERGENCY_STOP)
+        {
+        
+            ROS_INFO("set led effect emgency stop ");
+            prv_led_effect = LIGHTS_MODE_EMERGENCY_STOP;
+            set_led_effect.mode = LIGHTS_MODE_EMERGENCY_STOP;
+            do
+            {
+                boost::mutex::scoped_lock(this->mtx);        
+                this->set_leds_effect_vector.push_back(set_led_effect);
+            }while(0);
+        }
+    }
+    else 
     {
         if(power_percent < VBAT_POWER_LOW_WARNING_PERCENTAGE)
         {
             //ROS_INFO("sys status is not charging, power low warning, %d",power_percent);
-            if(power_low_flag == 0)
+            //if(power_low_flag == 0)
+            if(prv_led_effect != LIGHTS_MODE_LOW_POWER)
             {
                 ROS_INFO("set led effect not charging low warning power");
+                prv_led_effect = LIGHTS_MODE_LOW_POWER;
                 set_led_effect.mode = LIGHTS_MODE_LOW_POWER;
                 do
                 {
                     boost::mutex::scoped_lock(this->mtx);        
                     this->set_leds_effect_vector.push_back(set_led_effect);
                 }while(0);
-                power_low_flag = 1;
-                power_medium_flag = 0;
-                charging_low_flag = 0;
-                charging_medium_flag = 0;
-                charging_full_flag = 0;
+                /*
+                   power_low_flag = 1;
+                   power_medium_flag = 0;
+                   charging_low_flag = 0;
+                   charging_medium_flag = 0;
+                   charging_full_flag = 0;
+                 */
             }
         }
         else 
         {
             //ROS_INFO("sys status is not charging, power normal, %d",power_percent);
-            if(power_medium_flag == 0)
+            //if(power_medium_flag == 0)
+            if(prv_led_effect != LIGHTS_MODE_NOMAL)
             {
                 ROS_INFO("set led effect not charging normal power");
+                prv_led_effect = LIGHTS_MODE_NOMAL;
                 set_led_effect.mode = LIGHTS_MODE_NOMAL;
                 do
                 {
                     boost::mutex::scoped_lock(this->mtx);        
                     this->set_leds_effect_vector.push_back(set_led_effect);
                 }while(0);
-                power_low_flag = 0;
-                power_medium_flag = 1;
-                charging_low_flag = 0;
-                charging_medium_flag = 0;
-                charging_full_flag = 0;
+                /*
+                   power_low_flag = 0;
+                   power_medium_flag = 1;
+                   charging_low_flag = 0;
+                   charging_medium_flag = 0;
+                   charging_full_flag = 0;
+                 */
             }
         }
     }
