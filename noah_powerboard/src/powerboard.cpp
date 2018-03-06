@@ -1331,7 +1331,7 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                     ROS_INFO("set door ctrl  on");
                     module_ctrl_t param;  
                     param.group_num = 1;
-                    param.module = POWER_VSYS_24V_NV;    
+                    param.module = POWER_DOOR_CTRL;    
                     param.on_off = MODULE_CTRL_ON;
                     this->module_set_vector.push_back(param);
                 }
@@ -1340,7 +1340,7 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                     ROS_INFO("set door ctrl off");
                     module_ctrl_t param;  
                     param.group_num = 1;
-                    param.module = POWER_VSYS_24V_NV;    
+                    param.module = POWER_DOOR_CTRL;    
                     param.on_off = MODULE_CTRL_OFF;
                     this->module_set_vector.push_back(param);
                 }
@@ -1380,25 +1380,33 @@ void NoahPowerboard:: from_navigation_rcv_callback(const std_msgs::String::Const
     {
         case 0:
             ROS_INFO("camera led ctrl:get 00"); 
-            param.module = POWER_CAMERA_LED;    
+            param.module = POWER_CAMERA_FRONT_LED |POWER_CAMERA_BACK_LED  ;    
             param.on_off = MODULE_CTRL_OFF;
             this->module_set_vector.push_back(param);
             break;
         case 1:
             ROS_INFO("camera led ctrl:get 01"); 
-            param.module = POWER_CAMERA_LED;    
+            param.module = POWER_CAMERA_BACK_LED;    
             param.on_off = MODULE_CTRL_ON;
+            this->module_set_vector.push_back(param);
+
+            param.module = POWER_CAMERA_FRONT_LED;    
+            param.on_off = MODULE_CTRL_OFF;
             this->module_set_vector.push_back(param);
             break;
         case 10:
             ROS_INFO("camera led ctrl:get 10"); 
-            param.module = POWER_CAMERA_LED;    
+            param.module = POWER_CAMERA_FRONT_LED;    
             param.on_off = MODULE_CTRL_ON;
+            this->module_set_vector.push_back(param);
+
+            param.module = POWER_CAMERA_BACK_LED;    
+            param.on_off = MODULE_CTRL_OFF;
             this->module_set_vector.push_back(param);
             break;
         case 11:
             ROS_INFO("camera led ctrl:get 11"); 
-            param.module = POWER_CAMERA_LED;    
+            param.module = POWER_CAMERA_FRONT_LED |POWER_CAMERA_BACK_LED  ;    
             param.on_off = MODULE_CTRL_ON;
             this->module_set_vector.push_back(param);
             break;
@@ -1590,6 +1598,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
         if(get_version_ack.get_version_type == 1)//software version
         {
             memcpy(&get_version_ack.sw_version[0], &msg->Data[1], SW_VERSION_SIZE);
+            ros::param::set(software_version_param,get_version_ack.sw_version);
         }
         else if(get_version_ack.get_version_type == 2)//protocol version
         {
@@ -1747,7 +1756,7 @@ void NoahPowerboard::update_sys_status(void)
         }
 
     }
-    else if(emg_state == true)
+    else if(emg_stop == true)
     {
         if(prv_led_effect != LIGHTS_MODE_EMERGENCY_STOP)
         {

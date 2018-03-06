@@ -91,7 +91,10 @@ typedef enum
     POWER_CHARGE_FAN          = 0x00200000,
     POWER_POLE_MOTOR          = 0x00400000,
     POWER_5V_KEYPAD           = 0x00800000,
-    POWER_CAMERA_LED          = 0x01000000,
+    POWER_CAMERA_FRONT_LED    = 0x01000000,
+    POWER_CAMERA_BACK_LED     = 0x02000000,
+    POWER_CTRL_OUT            = 0x04000000,
+    POWER_DOOR_CTRL           = 0x08000000,
 
     POWER_ALL                 = 0x0FFFFFFF,
 
@@ -510,6 +513,8 @@ class NoahPowerboard
 //        void pub_json_msg_to_app(const nlohmann::json j_msg);
         powerboard_t    sys_powerboard_ram; 
         uint8_t emg_stop;
+
+        std::string software_version_param = "mcu_noah_powerboard_version";
 
 
 };

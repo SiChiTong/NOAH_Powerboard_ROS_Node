@@ -50,6 +50,9 @@ int main(int argc, char **argv)
     get_bat_info_t get_bat_info;
     set_leds_effect_t set_led_effect;
     get_sys_status_t get_sys_status;
+    get_version_t get_version;
+
+    get_version.get_version_type = 1;
 
     get_bat_info.reserve = 0;
 
@@ -69,6 +72,7 @@ int main(int argc, char **argv)
                 {
                     boost::mutex::scoped_lock(powerboard->mtx);        
                     powerboard->set_leds_effect_vector.push_back(set_led_effect);
+                    powerboard->get_version_vector.push_back(get_version);
                 }while(0);
             }
         }
