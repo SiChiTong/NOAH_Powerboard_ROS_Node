@@ -50,7 +50,7 @@ using json = nlohmann::json;
 #define CAN_SOURCE_ID_SET_IR_LED_LIGHTNESS  0x87
 #define CAN_SOURCE_ID_GET_IR_LED_LIGHTNESS  0x88
 #define CAN_SOURCE_ID_SET_LED_EFFECT        0x89
-
+#define CAN_SOURCE_ID_POWER_OFF_SIGNAL      0x8a
 
 #define HW_VERSION_SIZE             3
 #define SW_VERSION_SIZE             16
@@ -436,6 +436,8 @@ class NoahPowerboard
             sub_navigation_camera_leds = n.subscribe("lane_follower_node/camera_using_n",1000,&NoahPowerboard::from_navigation_rcv_callback,this);
             
             pub_to_can_node = n.advertise<mrobot_driver_msgs::vci_can>("noah_powerboard_to_can", 1000);
+            
+            device_shutdown_signal_pub = n.advertise<std_msgs::UInt8MultiArray>("device_shutdown_signal", 1000);
             sub_from_can_node = n.subscribe("can_to_noah_powerboard", 1000, &NoahPowerboard::rcv_from_can_node_callback, this);
             sub_from_basestate = n.subscribe("basestate", 10, &NoahPowerboard::basestate_callback, this);
 
@@ -509,6 +511,7 @@ class NoahPowerboard
         ros::Publisher pub_to_can_node;//publish to roscan node
         ros::Subscriber sub_from_can_node;
         ros::Subscriber sub_from_basestate;
+        ros::Publisher device_shutdown_signal_pub;//publish to roscan node
 //        json j;
 //        void pub_json_msg_to_app(const nlohmann::json j_msg);
         powerboard_t    sys_powerboard_ram; 

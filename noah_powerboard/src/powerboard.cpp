@@ -1663,6 +1663,20 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
         }
 
     }
+    if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_POWER_OFF_SIGNAL)
+    {
+
+        if(id.CanID_Struct.ACK == 0)
+        {
+            ROS_INFO("shutdown signal : mcu upload"); 
+            std_msgs::UInt8MultiArray shutdown_signal;
+            uint8_t time_second = msg->Data[0];
+            shutdown_signal.data.push_back(time_second);
+
+            device_shutdown_signal_pub.publish(shutdown_signal);
+        }
+
+    }
 }
 
 
