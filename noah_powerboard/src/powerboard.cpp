@@ -454,6 +454,8 @@ set_ir_duty_restart:
             {
                 ROS_INFO("get sys status:send cmd to mcu");
             }
+            
+            pNoahPowerboard->sys_powerboard->ir_cmd.set_ir_percent = set_ir_duty.duty;
             pNoahPowerboard->InfraredLedCtrl(pNoahPowerboard->sys_powerboard);
 
             bool set_ir_duty_ack_flag = 0;
@@ -1203,7 +1205,8 @@ int NoahPowerboard::InfraredLedCtrl(powerboard_t *sys)     // done
     can_msg.DataLen = 2;
     can_msg.Data.resize(2);
     can_msg.Data[0] = 0x00;
-    can_msg.Data[1] = sys->ir_cmd.lightness_percent; 
+    can_msg.Data[1] = sys->ir_cmd.set_ir_percent; 
+    ROS_WARN("start to set ir duty to %d",sys->ir_cmd.set_ir_percent);
     this->pub_to_can_node.publish(can_msg);
     return error;
 }
@@ -1587,7 +1590,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
             this->set_ir_duty_ack_vector.push_back(set_ir_duty_ack);
         }while(0);
 
-        this->sys_powerboard->ir_cmd.lightness_percent = set_ir_duty_ack.duty;
+        this->sys_powerboard->ir_cmd.set_ir_percent = set_ir_duty_ack.duty;
     }
 
     if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_READ_VERSION)
@@ -1836,3 +1839,31 @@ void NoahPowerboard::update_sys_status(void)
     }
 }
 
+
+void NoahPowerboard::get_ir_duty_param(void)
+{
+    int param_duty = 0;
+    static int current_duty = 0;
+    n.getParam("/noah_powerboard/ir_duty",param_duty);
+    if(param_duty >= 0)
+    {
+        if(param_duty >= 100)
+        {
+            param_duty = 100;
+        }
+        if(param_duty < 0)
+        {
+            param_duty = 0;
+        }
+
+        if(current_duty != param_duty)
+        {
+            set_ir_duty_t duty_tmp;
+            duty_tmp.reserve = 0; 
+            duty_tmp.duty = param_duty; 
+            this->set_ir_duty_vector.push_back(duty_tmp);
+            current_duty = duty_tmp.duty;
+            ROS_WARN("set ir duty to %d",duty_tmp.duty);
+        }
+    }
+}

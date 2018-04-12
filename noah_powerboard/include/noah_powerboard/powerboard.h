@@ -348,8 +348,8 @@ typedef struct
 #define IR_CMD_READ     0
 #define IR_CMD_WRITE    1
     uint8_t cmd;
-    uint8_t set_ir_percent;
-    uint8_t lightness_percent;
+    int set_ir_percent;
+    //uint8_t lightness_percent;
 }ir_cmd_t;
 
 #define VBAT_POWER_OFF_PERCENTAGE           10  // %
@@ -463,6 +463,8 @@ class NoahPowerboard
 
         void rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::ConstPtr &c_msg);
         void basestate_callback(std_msgs::UInt8MultiArray data);
+
+        void get_ir_duty_param(void);
         
 
         json j;

@@ -40,6 +40,12 @@ int main(int argc, char **argv)
         ROS_INFO("can data log is off");
     }
     NoahPowerboard *powerboard = new NoahPowerboard(is_log_on);
+    if(ros::param::has("/noah_powerboard/ir_duty"))
+    {
+        ros::param::get("/noah_powerboard/ir_duty",powerboard->sys_powerboard->ir_cmd.set_ir_percent);
+        ROS_WARN("init ir duty is %d",powerboard->sys_powerboard->ir_cmd.set_ir_percent);
+    }
+
     float rate = 1000;
     ros::Rate loop_rate(rate);
     uint32_t cnt = 0;
@@ -74,6 +80,18 @@ int main(int argc, char **argv)
                     powerboard->set_leds_effect_vector.push_back(set_led_effect);
                     powerboard->get_version_vector.push_back(get_version);
                 }while(0);
+
+#if 0
+                set_ir_duty_t set_ir_duty_tmp;
+                set_ir_duty_tmp.reserve = 0;
+                set_ir_duty_tmp.duty = 55;
+                do
+                {
+                    boost::mutex::scoped_lock(powerboard->mtx);        
+                    powerboard->set_ir_duty_vector.push_back(set_ir_duty_tmp);
+                }while(0);
+#endif
+
             }
         }
         if(cnt % (uint32_t)(rate * 5) == (uint32_t)rate*3)
@@ -98,6 +116,10 @@ int main(int argc, char **argv)
         if(cnt % (uint32_t)(rate * 1) == (uint32_t)rate/2)
         {
             powerboard->update_sys_status();
+        }
+        if(cnt % (uint32_t)(rate / 8) == 0)
+        {
+            powerboard->get_ir_duty_param();
         }
         cnt++;
         ros::spinOnce();
