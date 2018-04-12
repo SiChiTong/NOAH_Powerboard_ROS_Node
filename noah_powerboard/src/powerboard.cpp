@@ -1353,7 +1353,7 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
 
 void NoahPowerboard::basestate_callback(std_msgs::UInt8MultiArray data)
 {
-    if(data.data.size() == 7)
+    //if(data.data.size() == 7)
     {
         if(data.data[2] & (1<<4))
         {
