@@ -440,6 +440,7 @@ class NoahPowerboard
             device_shutdown_signal_pub = n.advertise<std_msgs::UInt8MultiArray>("device_shutdown_signal", 1000);
             sub_from_can_node = n.subscribe("can_to_noah_powerboard", 1000, &NoahPowerboard::rcv_from_can_node_callback, this);
             sub_from_basestate = n.subscribe("basestate", 10, &NoahPowerboard::basestate_callback, this);
+            sub_from_serials_leds_turnning_ctrl = n.subscribe("serials_leds_turnning_ctrl", 10, &NoahPowerboard::serials_leds_turning_effect_callback, this);
 
             sys_powerboard = &sys_powerboard_ram;
             emg_stop = false;
@@ -463,6 +464,7 @@ class NoahPowerboard
 
         void rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::ConstPtr &c_msg);
         void basestate_callback(std_msgs::UInt8MultiArray data);
+        void serials_leds_turning_effect_callback(std_msgs::UInt8MultiArray data);
 
         void get_ir_duty_param(void);
         
@@ -513,11 +515,13 @@ class NoahPowerboard
         ros::Publisher pub_to_can_node;//publish to roscan node
         ros::Subscriber sub_from_can_node;
         ros::Subscriber sub_from_basestate;
+        ros::Subscriber sub_from_serials_leds_turnning_ctrl;
         ros::Publisher device_shutdown_signal_pub;//publish to roscan node
 //        json j;
 //        void pub_json_msg_to_app(const nlohmann::json j_msg);
         powerboard_t    sys_powerboard_ram; 
         uint8_t emg_stop;
+        uint8_t turnning_direction;
 
         std::string software_version_param = "mcu_noah_powerboard_version";
         std::string hardware_version_param = "noah_powerboard_hardware_version";
