@@ -1368,6 +1368,17 @@ void NoahPowerboard::basestate_callback(std_msgs::UInt8MultiArray data)
         }
     }
 }
+void NoahPowerboard::serials_leds_turning_effect_callback(std_msgs::UInt8MultiArray effects)
+{
+    ROS_INFO("%s",__func__);
+    if(effects.data.size() == 1)
+    {
+        if(effects.data[0] < 3)
+        {
+            turnning_direction = effects.data[0];
+        }
+    }
+}
 void NoahPowerboard:: from_navigation_rcv_callback(const std_msgs::String::ConstPtr &msg)
 {
     int value = atoi(msg->data.c_str());
@@ -1812,7 +1823,39 @@ void NoahPowerboard::update_sys_status(void)
             }while(0);
         }
     }
-    else 
+    else if(turnning_direction > 0)
+    {
+         
+        if(turnning_direction == 1)//left
+        {
+            if(prv_led_effect != LIGHTS_MODE_TURN_LEFT)
+            {
+                ROS_INFO("set led effect turnning left");
+                prv_led_effect = LIGHTS_MODE_TURN_LEFT;
+                set_led_effect.mode = LIGHTS_MODE_TURN_LEFT;
+                do
+                {
+                    boost::mutex::scoped_lock(this->mtx);        
+                    this->set_leds_effect_vector.push_back(set_led_effect);
+                }while(0);
+            }
+        }
+        else if(turnning_direction == 2)//right
+        {
+            if(prv_led_effect != LIGHTS_MODE_TURN_RIGHT)
+            {
+                ROS_INFO("set led effect turnning right");
+                prv_led_effect = LIGHTS_MODE_TURN_RIGHT;
+                set_led_effect.mode = LIGHTS_MODE_TURN_RIGHT;
+                do
+                {
+                    boost::mutex::scoped_lock(this->mtx);        
+                    this->set_leds_effect_vector.push_back(set_led_effect);
+                }while(0);
+            }
+        }
+    }
+    else
     {
         if(power_percent < VBAT_POWER_LOW_WARNING_PERCENTAGE)
         {
