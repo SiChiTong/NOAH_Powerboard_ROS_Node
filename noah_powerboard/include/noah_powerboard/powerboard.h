@@ -227,9 +227,9 @@ typedef voltage_data_t get_adc_ack_t;
 typedef struct
 {
     uint8_t get_version_type;
-    char    hw_version[HW_VERSION_SIZE];
-    char    sw_version[SW_VERSION_SIZE];
-    char    protocol_version[PROTOCOL_VERSION_SIZE];
+    std::string    hw_version;
+    std::string    sw_version;
+    std::string    protocol_version;
 }get_version_ack_t;
 
 
@@ -375,9 +375,9 @@ typedef struct
 #define VERSION_TYPE_PROTOCOL       1
     uint8_t                     get_version_type;
 
-    char                        hw_version[HW_VERSION_SIZE];
-    char                        sw_version[SW_VERSION_SIZE];
-    char                        protocol_version[PROTOCOL_VERSION_SIZE];
+    std::string                 hw_version;
+    std::string                 sw_version;
+    std::string                 protocol_version;
 
 #define SYS_STATUS_OFF              0
 #define SYS_STATUS_TURNING_ON       1
@@ -520,6 +520,8 @@ class NoahPowerboard
         uint8_t emg_stop;
 
         std::string software_version_param = "mcu_noah_powerboard_version";
+        std::string hardware_version_param = "noah_powerboard_hardware_version";
+        std::string protocol_version_param = "noah_powerboard_protocol_version";
 
 
 };

@@ -79,6 +79,12 @@ int main(int argc, char **argv)
                     boost::mutex::scoped_lock(powerboard->mtx);        
                     powerboard->set_leds_effect_vector.push_back(set_led_effect);
                     powerboard->get_version_vector.push_back(get_version);
+
+                    get_version.get_version_type = 2;
+                    powerboard->get_version_vector.push_back(get_version);
+
+                    get_version.get_version_type = 3;
+                    powerboard->get_version_vector.push_back(get_version);
                 }while(0);
 
 #if 0

@@ -1595,21 +1595,45 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
 
     if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_READ_VERSION)
     {
+        uint8_t len;
+        len = msg->Data[1];
         ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_READ_VERSION");
         get_version_ack_t get_version_ack;
         get_version_ack.get_version_type = msg->Data[0];
         if(get_version_ack.get_version_type == 1)//software version
         {
-            memcpy(&get_version_ack.sw_version[0], &msg->Data[1], SW_VERSION_SIZE);
-            ros::param::set(software_version_param,get_version_ack.sw_version);
+            sys_powerboard->sw_version.resize(len);
+            sys_powerboard->sw_version.clear();
+            for(uint8_t i = 0; i < len; i++)
+            {
+                sys_powerboard->sw_version.push_back(*(char *)&(msg->Data[i+2]));
+                get_version_ack.sw_version.push_back(*(char *)&(msg->Data[i+2]));
+            }
+
+            n.setParam(software_version_param,sys_powerboard->sw_version.data());
         }
         else if(get_version_ack.get_version_type == 2)//protocol version
         {
-            memcpy(&get_version_ack.protocol_version[0], &msg->Data[1], PROTOCOL_VERSION_SIZE);
+            sys_powerboard->protocol_version.resize(len);
+            sys_powerboard->protocol_version.clear();
+            for(uint8_t i = 0; i < len; i++)
+            {
+                sys_powerboard->protocol_version.push_back(*(char *)&(msg->Data[i+2]));
+                get_version_ack.protocol_version.push_back(*(char *)&(msg->Data[i+2]));
+            }
+            n.setParam(protocol_version_param,sys_powerboard->protocol_version.data());
         }
         else if(get_version_ack.get_version_type == 3)//hardware version
         {
-            memcpy(&get_version_ack.hw_version[0], &msg->Data[1], HW_VERSION_SIZE);
+            sys_powerboard->hw_version.resize(len);
+            sys_powerboard->hw_version.clear();
+            ROS_ERROR("hardware version length: %d",len);
+            for(uint8_t i = 0; i < len; i++)
+            {
+                sys_powerboard->hw_version.push_back(*(char *)&(msg->Data[i+2]));
+                get_version_ack.hw_version.push_back(*(char *)&(msg->Data[i+2]));
+            }
+            n.setParam(hardware_version_param,sys_powerboard->hw_version.data());
         }
 
         do
