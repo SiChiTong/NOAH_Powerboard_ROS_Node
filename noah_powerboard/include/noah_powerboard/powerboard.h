@@ -444,6 +444,7 @@ class NoahPowerboard
 
             sys_powerboard = &sys_powerboard_ram;
             emg_stop = false;
+            turnning_direction = 0;
         }
         int PowerboardParamInit(void);
         int SetLedEffect(powerboard_t *powerboard);

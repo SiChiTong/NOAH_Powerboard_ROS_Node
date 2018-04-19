@@ -216,7 +216,7 @@ module_set_restart:
                         }
 
 
-                        if(module_set_ack.module & POWER_VSYS_24V_NV)
+                        if(module_set_ack.module & POWER_DOOR_CTRL)
                         {
                             if(pNoahPowerboard->is_log_on == true)
                             {
@@ -230,7 +230,7 @@ module_set_restart:
                                 {
                                     "data",
                                     {
-                                        {"door_ctrl_state",(bool)(module_set_ack.module_status_ack & POWER_VSYS_24V_NV)},
+                                        {"door_ctrl_state",(bool)(module_set_ack.module_status_ack & POWER_DOOR_CTRL)},
                                         {"error_code", CAN_SOURCE_ID_SET_MODULE_STATE},
                                     } 
                                 }
@@ -268,7 +268,7 @@ module_set_restart:
                 ROS_ERROR("CAN NOT COMMUNICATE with powerboard mcu, module ctrl failed !");
                 err_cnt = 0;
 
-                if(module_set.module & POWER_VSYS_24V_NV)
+                if(module_set.module & POWER_DOOR_CTRL)
                 {
                     ROS_ERROR("set door ctrl time out !");
 
@@ -279,7 +279,7 @@ module_set_restart:
                         {
                             "data",
                             {
-                                {"door_ctrl_state",(bool)(module_set_ack.module_status_ack & POWER_VSYS_24V_NV)},
+                                {"door_ctrl_state",(bool)(module_set_ack.module_status_ack & POWER_DOOR_CTRL)},
                                 {"error_code", -1},
                             } 
                         }
@@ -1638,7 +1638,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
         {
             sys_powerboard->hw_version.resize(len);
             sys_powerboard->hw_version.clear();
-            ROS_ERROR("hardware version length: %d",len);
+            //ROS_ERROR("hardware version length: %d",len);
             for(uint8_t i = 0; i < len; i++)
             {
                 sys_powerboard->hw_version.push_back(*(char *)&(msg->Data[i+2]));
