@@ -97,6 +97,7 @@ class NoahPowerboard;
 #define GET_VERSION_TIME_OUT        1000//ms
 #define GET_ADC_TIME_OUT            1000//ms
 #define SET_LED_EFFECT_TIME_OUT     1000//ms
+#define SET_REMOTE_POWER_CTRL_TIME_OUT     1000//ms
 void *CanProtocolProcess(void* arg)
 {
     module_ctrl_t module_set;
@@ -106,6 +107,7 @@ void *CanProtocolProcess(void* arg)
     get_version_t get_version;
     get_adc_t   get_adc;
     set_leds_effect_t set_led_effect;
+    remote_power_ctrl_t remote_power_ctrl;
 
     NoahPowerboard *pNoahPowerboard =  (NoahPowerboard*)arg;
 
@@ -116,6 +118,7 @@ void *CanProtocolProcess(void* arg)
     bool get_version_flag = 0;
     bool get_adc_flag = 0;
     bool set_led_effect_flag = 0;
+    bool remote_power_ctrl_flag = 0;
     while(ros::ok())
     {
         /* --------  module ctrl protocol  -------- */
@@ -1028,6 +1031,123 @@ set_leds_effect_restart:
         }
         /* -------- serial led protocol end -------- */
 
+
+        /* --------  remote device power ctrl  protocol begin -------- */
+        do
+        {
+            boost::mutex::scoped_lock(mtx);
+            if(!pNoahPowerboard->remote_power_ctrl_vector.empty())
+            {
+                auto a = pNoahPowerboard->remote_power_ctrl_vector.begin(); 
+                remote_power_ctrl = *a;
+                {
+                    remote_power_ctrl_flag = 1;            
+                }
+
+                pNoahPowerboard->remote_power_ctrl_vector.erase(a);
+
+            }
+
+        }while(0);
+
+        if(remote_power_ctrl_flag == 1)
+        {   
+            uint8_t flag = 0;
+            uint32_t time_out_cnt = 0;
+            static uint8_t err_cnt = 0;
+
+            remote_power_ctrl_flag = 0;
+
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("remote_power_ctrl.remote_power_ctrl = %d",remote_power_ctrl.remote_power_ctrl);
+                ROS_INFO("get set remote_power_ctrl cmd");
+            }
+            do
+            {
+                boost::mutex::scoped_lock(mtx);
+                pNoahPowerboard->remote_power_ctrl_ack_vector.clear();
+            }while(0);
+
+set_remote_power_ctrl_restart:
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("remote power control :send cmd to mcu");
+            }
+            pNoahPowerboard->sys_powerboard->remote_power_ctrl_set = remote_power_ctrl;
+
+            pNoahPowerboard->RemotePowerCtrl(pNoahPowerboard->sys_powerboard);
+            bool remote_power_ctrl_ack_flag = 0;
+            remote_power_ctrl_t remote_power_ctrl_ack;
+            while(time_out_cnt < SET_REMOTE_POWER_CTRL_TIME_OUT/10)
+            {
+                time_out_cnt++;
+                do
+                {
+                    boost::mutex::scoped_lock(mtx);
+                    if(!pNoahPowerboard->remote_power_ctrl_ack_vector.empty())
+                    {
+                        if(pNoahPowerboard->is_log_on == true)
+                        {
+                            ROS_INFO("remote_power_ctrl_ack_vector is not empty");
+                        }
+                        auto b = pNoahPowerboard->remote_power_ctrl_ack_vector.begin();
+
+                        remote_power_ctrl_ack = *b;
+
+                        pNoahPowerboard->remote_power_ctrl_ack_vector.erase(b);
+
+                        if(remote_power_ctrl_ack.remote_power_ctrl == remote_power_ctrl.remote_power_ctrl)
+                        {
+                            remote_power_ctrl_ack_flag = 1;
+                            if(pNoahPowerboard->is_log_on == true)
+                            {
+                                ROS_INFO("get right set remote power ctrl ack");
+                            }
+                        }
+                    }
+                }while(0);
+                if(remote_power_ctrl_ack_flag == 1)
+                {
+                    remote_power_ctrl_ack_flag = 0;
+                    if(pNoahPowerboard->is_log_on == true)
+                    {
+                        //ROS_INFO("get right set led effect ack");
+                    }
+                    pNoahPowerboard->sys_powerboard->remote_power_ctrl_set = remote_power_ctrl_ack;
+                    if(pNoahPowerboard->is_log_on == true)
+                    {
+                        ROS_INFO("get set remote power ctrl:%d",remote_power_ctrl_ack.remote_power_ctrl);
+                    }
+                    break;
+                }
+                else
+                {
+                    usleep(10*1000);
+                }
+            }
+            if(time_out_cnt < SET_REMOTE_POWER_CTRL_TIME_OUT/10)
+            {
+                //ROS_INFO("set led effect flow OK");
+                err_cnt = 0;
+                time_out_cnt = 0;
+            }
+            else
+            {
+                ROS_ERROR("set remote power ctrl time out");
+                time_out_cnt = 0;
+                if(err_cnt++ < 4)
+                {
+                    ROS_ERROR("set remote power ctrl start to resend msg....");
+                    goto set_remote_power_ctrl_restart;
+                }
+                ROS_ERROR("CAN NOT COMMUNICATE with powerboard mcu, set remote power ctrl failed !");
+                err_cnt = 0;
+            }
+
+        }
+        /* -------- serial led protocol end -------- */
+
         usleep(10 * 1000);
     }
 }
@@ -1213,6 +1333,28 @@ int NoahPowerboard::InfraredLedCtrl(powerboard_t *sys)     // done
 
 
 
+int NoahPowerboard::RemotePowerCtrl(powerboard_t *sys)     // done
+{
+    int error = 0; 
+    mrobot_driver_msgs::vci_can can_msg;
+    CAN_ID_UNION id;
+    memset(&id, 0x0, sizeof(CAN_ID_UNION));
+    id.CanID_Struct.SourceID = CAN_SOURCE_ID_REMOTE_POWRER_CTRL;
+    id.CanID_Struct.SrcMACID = 0;//CAN_SUB_PB_SRC_ID;
+    id.CanID_Struct.DestMACID = NOAH_POWERBOARD_CAN_SRCMAC_ID;
+    id.CanID_Struct.FUNC_ID = 0x02;
+    id.CanID_Struct.ACK = 0;
+    id.CanID_Struct.res = 0;
+
+    can_msg.ID = id.CANx_ID;
+    can_msg.DataLen = 2;
+    can_msg.Data.resize(2);
+    can_msg.Data[0] = 0x00;
+    can_msg.Data[1] = sys->remote_power_ctrl_set.remote_power_ctrl; 
+    ROS_WARN("start to set remote power ctrl to %d",sys->remote_power_ctrl_set.remote_power_ctrl);
+    this->pub_to_can_node.publish(can_msg);
+    return error;
+}
 
 void NoahPowerboard::pub_json_msg_to_app( const nlohmann::json j_msg)
 {
@@ -1458,7 +1600,22 @@ void NoahPowerboard::power_from_app_rcv_callback(std_msgs::UInt8MultiArray data)
         }
     }
 }
-
+void NoahPowerboard::remote_power_ctrl_callback(std_msgs::UInt8MultiArray data)
+{
+    ROS_INFO("%s",__func__);
+    if(data.data.size() == 1)
+    {
+        ROS_INFO("%s: data length is right",__func__);
+        ROS_INFO("%s:  data[0]: %d",__func__,data.data[0]);
+        if( (data.data[0] == 1) || (data.data[0] == 2) )
+        {
+            remote_power_ctrl_t remote_power_ctrl;
+            remote_power_ctrl.remote_power_ctrl = data.data[0];
+            this->remote_power_ctrl_vector.push_back(remote_power_ctrl);
+            ROS_INFO("callback: get remote_power_ctrl:%d",remote_power_ctrl.remote_power_ctrl);
+        }
+    }
+}
 void NoahPowerboard::PubChargeStatus(uint8_t status)
 {
     static uint8_t last_status = 0;
@@ -1714,6 +1871,22 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
             device_shutdown_signal_pub.publish(shutdown_signal);
         }
 
+    }
+
+
+    if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_REMOTE_POWRER_CTRL)
+    {
+        ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_REMOTE_POWRER_CTRL");
+        remote_power_ctrl_t remote_power_ctrl_ack;
+        remote_power_ctrl_ack.remote_power_ctrl = msg->Data[0];
+
+        do
+        {
+            boost::mutex::scoped_lock(this->mtx);        
+            this->remote_power_ctrl_ack_vector.push_back(remote_power_ctrl_ack);
+        }while(0);
+
+        this->sys_powerboard->remote_power_ctrl_set.remote_power_ctrl = remote_power_ctrl_ack.remote_power_ctrl;
     }
 }
 

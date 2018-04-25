@@ -51,6 +51,7 @@ using json = nlohmann::json;
 #define CAN_SOURCE_ID_GET_IR_LED_LIGHTNESS  0x88
 #define CAN_SOURCE_ID_SET_LED_EFFECT        0x89
 #define CAN_SOURCE_ID_POWER_OFF_SIGNAL      0x8a
+#define CAN_SOURCE_ID_REMOTE_POWRER_CTRL    0x8b
 
 #define HW_VERSION_SIZE             3
 #define SW_VERSION_SIZE             16
@@ -252,6 +253,17 @@ typedef struct
 typedef set_leds_effect_t set_leds_effect_ack_t;
 #pragma pack()
 
+
+
+//
+#pragma pack(1)
+typedef struct
+{
+    uint8_t remote_power_ctrl;
+}remote_power_ctrl_t;
+
+#pragma pack()
+//
 #pragma pack(1)
 typedef struct 
 {
@@ -397,6 +409,7 @@ typedef struct
     ir_cmd_t                    ir_cmd;
     module_ctrl_t               module_status_set;
     module_ctrl_t               module_status;
+    remote_power_ctrl_t         remote_power_ctrl_set;
 
 #define SEND_DATA_BUF_LEN           255
     uint8_t                     send_data_buf[SEND_DATA_BUF_LEN];
@@ -441,6 +454,7 @@ class NoahPowerboard
             sub_from_can_node = n.subscribe("can_to_noah_powerboard", 1000, &NoahPowerboard::rcv_from_can_node_callback, this);
             sub_from_basestate = n.subscribe("basestate", 10, &NoahPowerboard::basestate_callback, this);
             sub_from_serials_leds_turnning_ctrl = n.subscribe("serials_leds_turnning_ctrl", 10, &NoahPowerboard::serials_leds_turning_effect_callback, this);
+            sub_from_remote_power_ctrl = n.subscribe("remote_power_ctrl", 100, &NoahPowerboard::remote_power_ctrl_callback, this);
 
             sys_powerboard = &sys_powerboard_ram;
             emg_stop = false;
@@ -455,6 +469,8 @@ class NoahPowerboard
         int InfraredLedCtrl(powerboard_t *sys);
         int SetModulePowerOnOff(powerboard_t *sys);
         int GetModulePowerOnOff(powerboard_t *sys);
+        int RemotePowerCtrl(powerboard_t *sys);
+
         int send_serial_data(powerboard_t *sys);
         int handle_receive_data(powerboard_t *sys);
         void from_app_rcv_callback(const std_msgs::String::ConstPtr &msg);
@@ -466,6 +482,7 @@ class NoahPowerboard
         void rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::ConstPtr &c_msg);
         void basestate_callback(std_msgs::UInt8MultiArray data);
         void serials_leds_turning_effect_callback(std_msgs::UInt8MultiArray data);
+        void remote_power_ctrl_callback(std_msgs::UInt8MultiArray data);
 
         void get_ir_duty_param(void);
         
@@ -499,6 +516,9 @@ class NoahPowerboard
         vector<set_leds_effect_t>       set_leds_effect_vector;
         vector<set_leds_effect_t>       set_leds_effect_ack_vector;
 
+        vector<remote_power_ctrl_t>     remote_power_ctrl_vector;
+        vector<remote_power_ctrl_t>     remote_power_ctrl_ack_vector;
+
         boost::mutex mtx;
         bool is_log_on;
 
@@ -517,7 +537,8 @@ class NoahPowerboard
         ros::Subscriber sub_from_can_node;
         ros::Subscriber sub_from_basestate;
         ros::Subscriber sub_from_serials_leds_turnning_ctrl;
-        ros::Publisher device_shutdown_signal_pub;//publish to roscan node
+        ros::Publisher device_shutdown_signal_pub;
+        ros::Subscriber sub_from_remote_power_ctrl;
 //        json j;
 //        void pub_json_msg_to_app(const nlohmann::json j_msg);
         powerboard_t    sys_powerboard_ram; 
@@ -527,7 +548,6 @@ class NoahPowerboard
         std::string software_version_param = "mcu_noah_powerboard_version";
         std::string hardware_version_param = "noah_powerboard_hardware_version";
         std::string protocol_version_param = "noah_powerboard_protocol_version";
-
 
 };
 int handle_receive_data(powerboard_t *sys);
