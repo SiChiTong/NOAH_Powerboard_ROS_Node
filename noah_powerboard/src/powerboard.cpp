@@ -1119,6 +1119,18 @@ set_remote_power_ctrl_restart:
                     {
                         ROS_INFO("get set remote power ctrl:%d",remote_power_ctrl_ack.remote_power_ctrl);
                     }
+                    if(remote_power_ctrl_ack.status == 0)
+                    {
+                        ROS_WARN("remote power ctrl is in operation ...");
+                    }
+                    else if(remote_power_ctrl_ack.status == 1)
+                    {
+                        ROS_WARN("remote power ctrl parameter error !");
+                    }
+                    else if(remote_power_ctrl_ack.status == 2)
+                    {
+                        ROS_WARN("remote power ctrl error: device is not power on yet !");
+                    }
                     break;
                 }
                 else
@@ -1683,7 +1695,8 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
     {
         get_bat_info_ack_t get_bat_info_ack;
         get_bat_info_ack.bat_vol = *(uint16_t *)&msg->Data[1];
-        get_bat_info_ack.bat_percent = *(uint16_t *)&msg->Data[3];
+        get_bat_info_ack.bat_percent = msg->Data[3];
+        //ROS_INFO("msg->Data[3]: %d",msg->Data[3]);
 
         do
         {
@@ -1879,6 +1892,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
         ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_REMOTE_POWRER_CTRL");
         remote_power_ctrl_t remote_power_ctrl_ack;
         remote_power_ctrl_ack.remote_power_ctrl = msg->Data[0];
+        remote_power_ctrl_ack.status = msg->Data[1];
 
         do
         {
@@ -1894,49 +1908,32 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
 void NoahPowerboard::update_sys_status(void)
 {
     uint16_t sys_status = this->sys_powerboard->sys_status;
-    uint16_t  power_percent = this->sys_powerboard->bat_info.bat_percent;
-    /*
-       static bool charging_low_flag = 0;
-       static bool charging_medium_flag = 0;
-       static bool charging_full_flag = 0;
-       static bool power_low_flag = 0;
-       static bool power_medium_flag = 0;
-     */
+    uint8_t  power_percent = this->sys_powerboard->bat_info.bat_percent;
     static uint8_t prv_led_effect = LIGHTS_MODE_NONE;
 
     /* ---- set led effect ----*/
     set_leds_effect_t set_led_effect;
     set_led_effect.reserve = 0;
-    //ROS_INFO("sys status 0x%x",sys_status);
+
+
     if((sys_status & STATE_IS_RECHARGE_IN) || (sys_status & STATE_IS_CHARGER_IN))
     {
         if(power_percent < VBAT_POWER_CHARGING_LOW)
         {
-            //ROS_INFO("sys status is charging, power low, %d",power_percent);
-            //if(charging_low_flag == 0)
             if(prv_led_effect != LIGHTS_MODE_CHARGING_POWER_LOW)
             {
                 ROS_INFO("set led effect charging low power");
-                prv_led_effect == LIGHTS_MODE_CHARGING_POWER_LOW;
+                prv_led_effect = LIGHTS_MODE_CHARGING_POWER_LOW;
                 set_led_effect.mode = LIGHTS_MODE_CHARGING_POWER_LOW;
                 do
                 {
                     boost::mutex::scoped_lock(this->mtx);        
                     this->set_leds_effect_vector.push_back(set_led_effect);
                 }while(0);
-                /*
-                   charging_low_flag = 1;
-                   charging_medium_flag = 0;
-                   charging_full_flag = 0;
-                   power_low_flag = 0;
-                   power_medium_flag = 0;
-                 */
             }
         }
         else if(power_percent < VBAT_POWER_CHARGING_FULL)
         {
-            //ROS_INFO("sys status is charging, power medium, %d",power_percent);
-            //if(charging_medium_flag == 0)
             if(prv_led_effect != LIGHTS_MODE_CHARGING_POWER_MEDIUM)
             {
                 ROS_INFO("set led effect charging medium power");
@@ -1947,19 +1944,10 @@ void NoahPowerboard::update_sys_status(void)
                     boost::mutex::scoped_lock(this->mtx);        
                     this->set_leds_effect_vector.push_back(set_led_effect);
                 }while(0);
-                /*
-                   charging_low_flag = 0;
-                   charging_medium_flag = 1;
-                   charging_full_flag = 0;
-                   power_low_flag = 0;
-                   power_medium_flag = 0;
-                 */
             }
         }
         else if(power_percent == VBAT_POWER_CHARGING_FULL)
         {
-            //ROS_INFO("sys status is charging, power full, %d",power_percent);
-            //if(charging_full_flag == 0)
             if(prv_led_effect != LIGHTS_MODE_CHARGING_FULL)
             {
                 ROS_INFO("set led effect charging full power");
@@ -1970,13 +1958,6 @@ void NoahPowerboard::update_sys_status(void)
                     boost::mutex::scoped_lock(this->mtx);        
                     this->set_leds_effect_vector.push_back(set_led_effect);
                 }while(0);
-                /*
-                   charging_low_flag = 0;
-                   charging_medium_flag = 0;
-                   charging_full_flag = 1;
-                   power_low_flag = 0;
-                   power_medium_flag = 0;
-                 */
             }
         }
 
@@ -2032,8 +2013,6 @@ void NoahPowerboard::update_sys_status(void)
     {
         if(power_percent < VBAT_POWER_LOW_WARNING_PERCENTAGE)
         {
-            //ROS_INFO("sys status is not charging, power low warning, %d",power_percent);
-            //if(power_low_flag == 0)
             if(prv_led_effect != LIGHTS_MODE_LOW_POWER)
             {
                 ROS_INFO("set led effect not charging low warning power");
@@ -2044,19 +2023,10 @@ void NoahPowerboard::update_sys_status(void)
                     boost::mutex::scoped_lock(this->mtx);        
                     this->set_leds_effect_vector.push_back(set_led_effect);
                 }while(0);
-                /*
-                   power_low_flag = 1;
-                   power_medium_flag = 0;
-                   charging_low_flag = 0;
-                   charging_medium_flag = 0;
-                   charging_full_flag = 0;
-                 */
             }
         }
         else 
         {
-            //ROS_INFO("sys status is not charging, power normal, %d",power_percent);
-            //if(power_medium_flag == 0)
             if(prv_led_effect != LIGHTS_MODE_NOMAL)
             {
                 ROS_INFO("set led effect not charging normal power");
@@ -2067,13 +2037,6 @@ void NoahPowerboard::update_sys_status(void)
                     boost::mutex::scoped_lock(this->mtx);        
                     this->set_leds_effect_vector.push_back(set_led_effect);
                 }while(0);
-                /*
-                   power_low_flag = 0;
-                   power_medium_flag = 1;
-                   charging_low_flag = 0;
-                   charging_medium_flag = 0;
-                   charging_full_flag = 0;
-                 */
             }
         }
     }

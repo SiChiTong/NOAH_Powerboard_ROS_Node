@@ -185,7 +185,7 @@ typedef struct
 typedef struct
 {
     uint8_t reserve;
-    uint16_t bat_percent;
+    uint8_t bat_percent;
     uint16_t bat_vol;
 }get_bat_info_ack_t;
 
@@ -260,6 +260,7 @@ typedef set_leds_effect_t set_leds_effect_ack_t;
 typedef struct
 {
     uint8_t remote_power_ctrl;
+    uint8_t status;
 }remote_power_ctrl_t;
 
 #pragma pack()
