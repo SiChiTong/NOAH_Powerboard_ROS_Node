@@ -458,6 +458,7 @@ class NoahPowerboard
             sub_from_remote_power_ctrl = n.subscribe("remote_power_ctrl", 100, &NoahPowerboard::remote_power_ctrl_callback, this);
 
             sys_powerboard = &sys_powerboard_ram;
+            sys_powerboard->sys_status = 0;
             emg_stop = false;
             turnning_direction = 0;
         }

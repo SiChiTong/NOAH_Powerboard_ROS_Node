@@ -123,7 +123,7 @@ int main(int argc, char **argv)
         {
             powerboard->update_sys_status();
         }
-        if(cnt % (uint32_t)(rate / 8) == 0)
+        if(cnt % (uint32_t)(rate / 2) == 0)
         {
             powerboard->get_ir_duty_param();
         }

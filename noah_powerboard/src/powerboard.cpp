@@ -263,7 +263,7 @@ module_set_restart:
             {
                 ROS_ERROR("module ctrl time out");
                 time_out_cnt = 0;
-                if(err_cnt++ < 3)
+                if(err_cnt++ < 4)
                 {
                     ROS_ERROR("module ctrl start to resend msg....");
                     goto module_set_restart;
@@ -1019,7 +1019,7 @@ set_leds_effect_restart:
             {
                 ROS_ERROR("set led effect time out");
                 time_out_cnt = 0;
-                if(err_cnt++ < 3)
+                if(err_cnt++ < 4)
                 {
                     ROS_ERROR("set led effect start to resend msg....");
                     goto set_leds_effect_restart;
