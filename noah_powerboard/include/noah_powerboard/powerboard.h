@@ -64,7 +64,7 @@ typedef enum
     POWER_5V_MOTOR            = 0x00000001,
     POWER_5V_RECHARGE         = 0x00000002,
     POWER_5V_SENSOR_BOARD     = 0x00000004,
-    POWER_5V_SWITCH           = 0x00000008,
+    //POWER_5V_SWITCH           = 0x00000008,
     POWER_5V_ROUTER           = 0x00000010,  
     POWER_5V_EN               = 0x00000020,
 
@@ -75,23 +75,20 @@ typedef enum
     POWER_12V_NV              = 0x00000400, 
     POWER_12V_EN              = 0x00000800,
 
-
     POWER_24V_EN              = 0x00001000,
     POWER_24V_PRINTER         = 0x00002000,
     POWER_24V_EXTEND          = 0x00004000,
     POWER_VSYS_24V_NV         = 0x00008000,
-
 
     POWER_485                 = 0x00010000,
     POWER_SYS_LED             = 0x00020000,
     POWER_RECHARGE_LED        = 0x00040000,
     POWER_SLAM                = 0x00080000,
 
-
     POWER_LED_MCU             = 0x00100000,
     POWER_CHARGE_FAN          = 0x00200000,
-    POWER_POLE_MOTOR          = 0x00400000,
-    POWER_5V_KEYPAD           = 0x00800000,
+    //POWER_POLE_MOTOR          = 0x00400000,
+    //POWER_5V_KEYPAD           = 0x00800000,
 
     POWER_CAMERA_FRONT_LED    = 0x01000000,
     POWER_CAMERA_BACK_LED     = 0x02000000,
@@ -103,8 +100,8 @@ typedef enum
     POWER_3V3_CARD_EN_3       = 0x40000000,
     POWER_3V3_CARD_EN_4       = 0x80000000,
 
-    POWER_ALL                 = 0xFFFFFFFF,
 
+    POWER_ALL                 = 0xFFFFFFFF,
 } module_ctrl_e;
 
 #pragma pack(1)

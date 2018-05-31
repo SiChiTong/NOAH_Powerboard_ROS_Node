@@ -241,6 +241,59 @@ module_set_restart:
                             pNoahPowerboard->pub_json_msg_to_app(pNoahPowerboard->j);
                         }
 
+
+                        if((module_set_ack.module & POWER_3V3_CARD_EN_1) || (module_set_ack.module & POWER_3V3_CARD_EN_2) || \
+                          (module_set_ack.module & POWER_3V3_CARD_EN_3) || (module_set_ack.module & POWER_3V3_CARD_EN_4) )
+                        {
+                            bool on_off_status = false;
+                            int door_id;
+                            if(module_set_ack.module & POWER_3V3_CARD_EN_1)
+                            {
+                                door_id = 1;
+                                on_off_status = (bool)(module_set_ack.module_status_ack & POWER_3V3_CARD_EN_1);
+
+                            }
+                            if(module_set_ack.module & POWER_3V3_CARD_EN_2)
+                            {
+                                door_id = 2;
+                                on_off_status = (bool)(module_set_ack.module_status_ack & POWER_3V3_CARD_EN_2);
+                            }
+                            if(module_set_ack.module & POWER_3V3_CARD_EN_3)
+                            {
+                                door_id = 3;
+                                on_off_status = (bool)(module_set_ack.module_status_ack & POWER_3V3_CARD_EN_3);
+                            }
+                            if(module_set_ack.module & POWER_3V3_CARD_EN_4)
+                            {
+                                door_id = 4;
+                                on_off_status = (bool)(module_set_ack.module_status_ack & POWER_3V3_CARD_EN_4);
+                            }
+                            
+                            if(pNoahPowerboard->is_log_on == true)
+                            {
+                                ROS_INFO("module %d",module_set_ack.module);
+                            }
+
+                            pNoahPowerboard->j.clear();
+                            pNoahPowerboard->j = 
+                            {
+                                {"sub_name","set_module_state"},
+                                {
+                                    "data",
+                                    {
+                                        {"door_ctrl_state",on_off_status},
+                                        {"error_code", CAN_SOURCE_ID_SET_MODULE_STATE},
+                                        {"door_id", door_id},
+                                    } 
+                                }
+                            };
+                            pNoahPowerboard->pub_json_msg_to_app(pNoahPowerboard->j);
+                        }
+
+
+
+                        
+
                         break;
                     }
                     else
@@ -1487,6 +1540,7 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                     bool on_off = j["data"]["set_state"];
                     module_ctrl_t param;  
 
+                    param.group_num = 1;
                     ROS_WARN("get door id");//
 
                     if(on_off == true)
