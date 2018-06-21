@@ -1646,23 +1646,23 @@ void NoahPowerboard:: from_navigation_rcv_callback(const std_msgs::String::Const
             break;
         case 1:
             ROS_INFO("camera led ctrl:get 01"); 
-            param.module = POWER_CAMERA_BACK_LED;    
+            param.module = POWER_CAMERA_BACK_LED | POWER_CAMERA_FRONT_LED;    
             param.on_off = MODULE_CTRL_ON;
             this->module_set_vector.push_back(param);
 
-            param.module = POWER_CAMERA_FRONT_LED;    
-            param.on_off = MODULE_CTRL_OFF;
-            this->module_set_vector.push_back(param);
+            //param.module = POWER_CAMERA_FRONT_LED;    
+            //param.on_off = MODULE_CTRL_OFF;
+            //this->module_set_vector.push_back(param);
             break;
         case 10:
             ROS_INFO("camera led ctrl:get 10"); 
-            param.module = POWER_CAMERA_FRONT_LED;    
+            param.module = POWER_CAMERA_FRONT_LED | POWER_CAMERA_BACK_LED;    
             param.on_off = MODULE_CTRL_ON;
             this->module_set_vector.push_back(param);
 
-            param.module = POWER_CAMERA_BACK_LED;    
-            param.on_off = MODULE_CTRL_OFF;
-            this->module_set_vector.push_back(param);
+            //param.module = POWER_CAMERA_BACK_LED;    
+            //param.on_off = MODULE_CTRL_OFF;
+            //this->module_set_vector.push_back(param);
             break;
         case 11:
             ROS_INFO("camera led ctrl:get 11"); 
@@ -1700,7 +1700,7 @@ void NoahPowerboard::power_from_app_rcv_callback(std_msgs::UInt8MultiArray data)
         }
         if(value == 0)
         {
-            this->PubPower(this->sys_powerboard);
+            //this->PubPower(this->sys_powerboard);
         }
     }
 }

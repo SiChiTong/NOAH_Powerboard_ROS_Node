@@ -100,7 +100,8 @@ int main(int argc, char **argv)
 
             }
         }
-        if(cnt % (uint32_t)(rate * 5) == (uint32_t)rate*3)
+        //if(cnt % (uint32_t)(rate * 5) == (uint32_t)rate*3)
+        if(cnt % (uint32_t)(rate / 1) == 0)
         {
             //test_fun((void*)powerboard); 
             do
@@ -109,7 +110,8 @@ int main(int argc, char **argv)
                 powerboard->get_sys_status_vector.push_back(get_sys_status);
             }while(0);
         }
-        if(cnt % (uint32_t)(rate * 5) == (uint32_t)rate*2)
+        //if(cnt % (uint32_t)(rate * 10) == (uint32_t)rate*2)
+        if(cnt % (uint32_t)(rate / 1) == rate/2)
         {
             //test_fun((void*)powerboard); 
             do
@@ -123,9 +125,13 @@ int main(int argc, char **argv)
         {
             powerboard->update_sys_status();
         }
-        if(cnt % (uint32_t)(rate / 2) == 0)
+        if(cnt % (uint32_t)(rate * 3) == 0)
         {
             powerboard->get_ir_duty_param();
+        }
+        if(cnt % (uint32_t)(rate / 2) == 0)
+        {
+            powerboard->PubPower(powerboard->sys_powerboard);
         }
         cnt++;
         ros::spinOnce();
