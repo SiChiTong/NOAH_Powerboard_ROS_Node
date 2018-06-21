@@ -448,7 +448,7 @@ class NoahPowerboard
             pub_charge_status_to_move_base = n.advertise<std_msgs::UInt8MultiArray>("charge_status_to_move_base",1000);
             resp_navigation_camera_leds = n.advertise<std_msgs::String>("resp_lane_follower_node/camera_using_n",1000);
             power_pub_to_app = n.advertise<std_msgs::UInt8MultiArray>("app_sub_power",1);
-            power_sub_from_app = n.subscribe("app_pub_power",1000,&NoahPowerboard::power_from_app_rcv_callback,this);
+            //power_sub_from_app = n.subscribe("app_pub_power",1000,&NoahPowerboard::power_from_app_rcv_callback,this);
             noah_powerboard_sub = n.subscribe("rx_noah_powerboard_node",1000,&NoahPowerboard::from_app_rcv_callback,this);
             sub_navigation_camera_leds = n.subscribe("lane_follower_node/camera_using_n",1000,&NoahPowerboard::from_navigation_rcv_callback,this);
             
@@ -536,7 +536,7 @@ class NoahPowerboard
         ros::Subscriber sub_navigation_camera_leds;
         ros::Publisher resp_navigation_camera_leds;
         ros::Publisher power_pub_to_app;
-        ros::Subscriber power_sub_from_app;
+        //ros::Subscriber power_sub_from_app;
         ros::Publisher pub_charge_status_to_move_base;
         ros::Publisher pub_to_can_node;//publish to roscan node
         ros::Subscriber sub_from_can_node;

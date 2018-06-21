@@ -2,39 +2,29 @@
  *  powerboard.cpp 
  *  Communicate Protocol.
  *  Author: Kaka Xie 
- *  Date:2017/10/13
  */
 
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include "std_msgs/UInt8MultiArray.h" 
-#include "pthread.h"
 #include <math.h>
 #include <stdio.h>     
 #include <stdlib.h>     
 #include <unistd.h>     
 #include <sys/types.h>  
 #include <sys/stat.h>   
-#include <fcntl.h>      
-#include <termios.h>   
 #include <errno.h>     
 #include <string.h>
 #include <time.h>
 #include <signal.h>
 #include <iostream>
 #include <vector>
-#include "stdlib.h"
-#include "cstdlib"
-#include "string"
-#include "sstream"
-#include "../include/noah_powerboard/powerboard.h"
+#include <powerboard.h>
 #include <boost/thread/thread.hpp>
 #include <boost/thread/mutex.hpp>
 #include <mrobot_driver_msgs/vci_can.h>
-//#include <roscan/can_long_frame.h>
 #include <roscan/can_long_frame.h>
 
-#define TEST_WAIT_TIME     90*1000
 
 #define PowerboardInfo     ROS_INFO
 
@@ -1466,72 +1456,6 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                 }
             }
 
-            if(j["data"]["dev_name"] == "_24v_dcdc")
-            {
-                if(j["data"]["set_state"] == true)
-                {
-                    ROS_INFO("set 24v dcdc on");
-                    module_ctrl_t param;  
-                    param.group_num = 1;
-                    param.module = POWER_24V_EN;    
-                    param.on_off = MODULE_CTRL_ON;
-                    this->module_set_vector.push_back(param);
-                }
-                else if(j["data"]["set_state"] == false)
-                {
-                    ROS_INFO("set 24v dcdc off");
-                    module_ctrl_t param;  
-                    param.group_num = 1;
-                    param.module = POWER_24V_EN;    
-                    param.on_off = MODULE_CTRL_OFF;
-                    this->module_set_vector.push_back(param);
-                }
-            }
-
-            if(j["data"]["dev_name"] == "_5v_dcdc")
-            {
-                if(j["data"]["set_state"] == true)
-                {
-                    ROS_INFO("set 5v dcdc on");
-                    module_ctrl_t param;  
-                    param.group_num = 1;
-                    param.module = POWER_5V_EN;    
-                    param.on_off = MODULE_CTRL_ON;
-                    this->module_set_vector.push_back(param);
-                }
-                else if(j["data"]["set_state"] == false)
-                {
-                    ROS_INFO("set 5v dcdc off");
-                    module_ctrl_t param;  
-                    param.group_num = 1;
-                    param.module = POWER_5V_EN;    
-                    param.on_off = MODULE_CTRL_OFF;
-                    this->module_set_vector.push_back(param);
-                }
-            }
-
-            if(j["data"]["dev_name"] == "_12v_dcdc")
-            {
-                if(j["data"]["set_state"] == true)
-                {
-                    ROS_INFO("set 12v dcdc on");
-                    module_ctrl_t param;  
-                    param.group_num = 1;
-                    param.module = POWER_12V_EN;    
-                    param.on_off = MODULE_CTRL_ON;
-                    this->module_set_vector.push_back(param);
-                }
-                else if(j["data"]["set_state"] == false)
-                {
-                    ROS_INFO("set 12v dcdc off");
-                    module_ctrl_t param;  
-                    param.group_num = 1;
-                    param.module = POWER_12V_EN;    
-                    param.on_off = MODULE_CTRL_OFF;
-                    this->module_set_vector.push_back(param);
-                }
-            }
-
             if(j["data"]["dev_name"] == "door_ctrl_state")
             {
                 if(j["data"].find("door_id") != j["data"].end())
@@ -1688,6 +1612,8 @@ void NoahPowerboard::PubPower(powerboard_t *sys)
     bytes_msg.data.push_back(status >> 8);
     power_pub_to_app.publish(bytes_msg);
 }
+
+#if 0
 void NoahPowerboard::power_from_app_rcv_callback(std_msgs::UInt8MultiArray data)
 {
     if(data.data.size() == 1)
@@ -1704,6 +1630,7 @@ void NoahPowerboard::power_from_app_rcv_callback(std_msgs::UInt8MultiArray data)
         }
     }
 }
+#endif
 void NoahPowerboard::remote_power_ctrl_callback(std_msgs::UInt8MultiArray data)
 {
     ROS_INFO("%s",__func__);
