@@ -51,16 +51,16 @@ void test_fun(void * arg)
 #if 1
     pNoahPowerboard->module_set_vector.push_back(param);
     set_ir_duty_t set_ir_duty;
-    
+
     set_ir_duty.duty = 90;
     set_ir_duty.reserve = 0;
-    
+
     pNoahPowerboard->set_ir_duty_vector.push_back(set_ir_duty);
 
     get_version_t get_version;
     get_version.get_version_type = 1;
     pNoahPowerboard->get_version_vector.push_back(get_version);
-    
+
     get_version.get_version_type = 2;
     pNoahPowerboard->get_version_vector.push_back(get_version);
 
@@ -233,7 +233,7 @@ module_set_restart:
 
 
                         if((module_set_ack.module & POWER_3V3_CARD_EN_1) || (module_set_ack.module & POWER_3V3_CARD_EN_2) || \
-                          (module_set_ack.module & POWER_3V3_CARD_EN_3) || (module_set_ack.module & POWER_3V3_CARD_EN_4) )
+                                (module_set_ack.module & POWER_3V3_CARD_EN_3) || (module_set_ack.module & POWER_3V3_CARD_EN_4) )
                         {
                             bool on_off_status = false;
                             int door_id;
@@ -258,7 +258,7 @@ module_set_restart:
                                 door_id = 4;
                                 on_off_status = (bool)(module_set_ack.module_status_ack & POWER_3V3_CARD_EN_4);
                             }
-                            
+
                             if(pNoahPowerboard->is_log_on == true)
                             {
                                 ROS_INFO("module %d",module_set_ack.module);
@@ -282,7 +282,7 @@ module_set_restart:
 
 
 
-                        
+
 
                         break;
                     }
@@ -338,7 +338,7 @@ module_set_restart:
         }
         /* --------  module ctrl protocol end -------- */
 
-        
+
         /* --------  bat info protocol begin -------- */
         do
         {
@@ -500,7 +500,7 @@ set_ir_duty_restart:
             {
                 ROS_INFO("get sys status:send cmd to mcu");
             }
-            
+
             pNoahPowerboard->sys_powerboard->ir_cmd.set_ir_percent = set_ir_duty.duty;
             pNoahPowerboard->InfraredLedCtrl(pNoahPowerboard->sys_powerboard);
 
@@ -1427,6 +1427,9 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
 {
     //ROS_INFO("Rcv test data");
     auto j = json::parse(msg->data.c_str());
+    std::string j_str = j.dump();
+    ROS_WARN("%s",j_str.data());
+
     if(j.find("pub_name") != j.end())
     {
 
@@ -1460,61 +1463,75 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
             {
                 if(j["data"].find("door_id") != j["data"].end())
                 {
-                    uint8_t door_id = j["data"]["door_id"]; 
-                    bool on_off = j["data"]["set_state"];
-                    module_ctrl_t param;  
-
-                    param.group_num = 1;
-                    ROS_WARN("get door id");//
-
-                    if(on_off == true)
+                    ROS_INFO("start to check door id ...");
+                    if(j["data"]["door_id"].empty())
                     {
-                        param.on_off = MODULE_CTRL_ON;
+                        ROS_WARN("door id value is NULL !");//
+                        if(j["data"]["set_state"] == true)
+                        {
+                            ROS_INFO("set door ctrl  on");
+                            module_ctrl_t param;  
+                            param.group_num = 1;
+                            param.module = POWER_DOOR_CTRL | POWER_VSYS_24V_NV;    
+                            param.on_off = MODULE_CTRL_ON;
+                            this->module_set_vector.push_back(param);
+                        }
+                        else if(j["data"]["set_state"] == false)
+                        {
+                            ROS_INFO("set door ctrl off");
+                            module_ctrl_t param;  
+                            param.group_num = 1;
+                            param.module = POWER_DOOR_CTRL | POWER_VSYS_24V_NV;    
+                            param.on_off = MODULE_CTRL_OFF;
+                            this->module_set_vector.push_back(param);
+                        }
                     }
                     else
                     {
-                        param.on_off = MODULE_CTRL_OFF;
-                    }
-                    switch(door_id)
-                    {
-                        case 1:
-                            param.module = POWER_3V3_CARD_EN_1;    
-                            break;
-                        case 2:
-                            param.module = POWER_3V3_CARD_EN_2;    
-                            break;
-                        case 3:
-                            param.module = POWER_3V3_CARD_EN_3;    
-                            break;
-                        case 4:
-                            param.module = POWER_3V3_CARD_EN_4;    
-                            break;
-                        default :
-                            ROS_ERROR("door ctrl id  error !");
-                            break;
-                    }
-                    ROS_INFO("set door %d ctrl %d",door_id, param.on_off);
-                    this->module_set_vector.push_back(param);
-                }
-                else
-                {
-                    ROS_WARN("not get door id");//
-                    if(j["data"]["set_state"] == true)
-                    {
-                        ROS_INFO("set door ctrl  on");
+                        ROS_INFO("door id is not NULL");
+                        uint8_t door_id = j["data"]["door_id"]; 
+                        //bool on_off = j["data"]["set_state"];
+                        bool on_off;
+                        if(j["data"].find("set_state") != j["data"].end())
+                        {
+                            on_off = j["data"]["set_state"];
+                        }
+                        else
+                        {
+                            return;
+                        }
                         module_ctrl_t param;  
+
                         param.group_num = 1;
-                        param.module = POWER_DOOR_CTRL | POWER_VSYS_24V_NV;    
-                        param.on_off = MODULE_CTRL_ON;
-                        this->module_set_vector.push_back(param);
-                    }
-                    else if(j["data"]["set_state"] == false)
-                    {
-                        ROS_INFO("set door ctrl off");
-                        module_ctrl_t param;  
-                        param.group_num = 1;
-                        param.module = POWER_DOOR_CTRL | POWER_VSYS_24V_NV;    
-                        param.on_off = MODULE_CTRL_OFF;
+                        ROS_WARN("get door id");//
+
+                        if(on_off == true)
+                        {
+                            param.on_off = MODULE_CTRL_ON;
+                        }
+                        else
+                        {
+                            param.on_off = MODULE_CTRL_OFF;
+                        }
+                        switch(door_id)
+                        {
+                            case 1:
+                                param.module = POWER_3V3_CARD_EN_1;    
+                                break;
+                            case 2:
+                                param.module = POWER_3V3_CARD_EN_2;    
+                                break;
+                            case 3:
+                                param.module = POWER_3V3_CARD_EN_3;    
+                                break;
+                            case 4:
+                                param.module = POWER_3V3_CARD_EN_4;    
+                                break;
+                            default :
+                                ROS_ERROR("door ctrl id  error !");
+                                break;
+                        }
+                        ROS_INFO("set door %d ctrl %d",door_id, param.on_off);
                         this->module_set_vector.push_back(param);
                     }
                 }
@@ -1528,13 +1545,13 @@ void NoahPowerboard::basestate_callback(std_msgs::UInt8MultiArray data)
 {
     //if(data.data.size() == 7)
     {
-        if(data.data[2] & (1<<4))
+        if((data.data[2] & (1<<4)) || (data.data[3]))
         {
-           emg_stop = true;
+            emg_stop = true;
         }
         else
         {
-           emg_stop = false;
+            emg_stop = false;
         }
     }
 }
@@ -1985,7 +2002,7 @@ void NoahPowerboard::update_sys_status(void)
     {
         if(prv_led_effect != LIGHTS_MODE_EMERGENCY_STOP)
         {
-        
+
             ROS_INFO("set led effect emgency stop ");
             prv_led_effect = LIGHTS_MODE_EMERGENCY_STOP;
             set_led_effect.mode = LIGHTS_MODE_EMERGENCY_STOP;
@@ -1998,7 +2015,7 @@ void NoahPowerboard::update_sys_status(void)
     }
     else if(turnning_direction > 0)
     {
-         
+
         if(turnning_direction == 1)//left
         {
             if(prv_led_effect != LIGHTS_MODE_TURN_LEFT)
