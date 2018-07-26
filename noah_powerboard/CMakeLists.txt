@@ -4,13 +4,11 @@ project(noah_powerboard)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
-  #  mrobot_driver_msgs 
-  #  roscan
+  mrobot_driver_msgs 
+  roscan
+  message_generation
 )
 
-catkin_package(
-  CATKIN_DEPENDS roscpp std_msgs
-)
 
 ###########
 ## Build ##
@@ -21,10 +19,29 @@ include_directories(
   include/noah_powerboard
 )
 
+
+## Generate services in the 'srv' folder
+add_service_files(
+    FILES
+    remote_power_ctrl_srv.srv 
+)
+
+generate_messages(
+    DEPENDENCIES
+    std_msgs
+)
+
 add_executable( noah_powerboard_node
     src/main.cpp
 	src/powerboard.cpp
 )
+
+catkin_package(
+  CATKIN_DEPENDS roscpp std_msgs message_runtime
+)
+
+add_dependencies(noah_powerboard_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
 target_link_libraries(noah_powerboard_node
   ${catkin_LIBRARIES} 
 )
@@ -60,11 +77,4 @@ install(DIRECTORY config
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
   USE_SOURCE_PERMISSIONS
 )
-
-
-
-
-
-
-
 

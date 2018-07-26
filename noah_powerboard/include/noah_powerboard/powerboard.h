@@ -4,6 +4,7 @@
 #include <mrobot_driver_msgs/vci_can.h>
 #include <roscan/can_long_frame.h>
 #include <boost/thread/mutex.hpp>  
+#include <noah_powerboard/remote_power_ctrl_srv.h>
 using json = nlohmann::json;
 #ifndef LED_H
 #define LED_H
@@ -438,6 +439,8 @@ typedef enum
 }light_mode_t;
 
 extern powerboard_t    *sys_powerboard;
+//extern bool service_remote_power_ctrl(noah_powerboard::remote_power_ctrl_srv::Request  &ctrl,  noah_powerboard::remote_power_ctrl_srv::Response &status);
+
 class NoahPowerboard
 {
     public:
@@ -459,6 +462,7 @@ class NoahPowerboard
             sub_from_basestate = n.subscribe("basestate", 10, &NoahPowerboard::basestate_callback, this);
             sub_from_serials_leds_turnning_ctrl = n.subscribe("serials_leds_turnning_ctrl", 10, &NoahPowerboard::serials_leds_turning_effect_callback, this);
             sub_from_remote_power_ctrl = n.subscribe("remote_power_ctrl", 100, &NoahPowerboard::remote_power_ctrl_callback, this);
+            remote_power_ctrl_service = n.advertiseService("remote_power_ctrl",&NoahPowerboard::service_remote_power_ctrl,this);
 
             sys_powerboard = &sys_powerboard_ram;
             sys_powerboard->sys_status = 0;
@@ -530,13 +534,15 @@ class NoahPowerboard
     private:
         uint8_t CalCheckSum(uint8_t *data, uint8_t len);
         int handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf);
+        bool service_remote_power_ctrl(noah_powerboard::remote_power_ctrl_srv::Request  &ctrl, noah_powerboard::remote_power_ctrl_srv::Response &status);
+        //bool service_remote_power_ctrl(remote_power_ctrl_srv::Request  &ctrl, remote_power_ctrl_srv::Response &status);
+
         ros::NodeHandle n;
         ros::Publisher noah_powerboard_pub;
         ros::Subscriber noah_powerboard_sub;
         ros::Subscriber sub_navigation_camera_leds;
         ros::Publisher resp_navigation_camera_leds;
         ros::Publisher power_pub_to_app;
-        //ros::Subscriber power_sub_from_app;
         ros::Publisher pub_charge_status_to_move_base;
         ros::Publisher pub_to_can_node;//publish to roscan node
         ros::Subscriber sub_from_can_node;
@@ -544,8 +550,9 @@ class NoahPowerboard
         ros::Subscriber sub_from_serials_leds_turnning_ctrl;
         ros::Publisher device_shutdown_signal_pub;
         ros::Subscriber sub_from_remote_power_ctrl;
-//        json j;
-//        void pub_json_msg_to_app(const nlohmann::json j_msg);
+
+        ros::ServiceServer remote_power_ctrl_service;
+
         powerboard_t    sys_powerboard_ram; 
         uint8_t emg_stop;
         uint8_t turnning_direction;

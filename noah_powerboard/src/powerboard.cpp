@@ -24,7 +24,7 @@
 #include <boost/thread/mutex.hpp>
 #include <mrobot_driver_msgs/vci_can.h>
 #include <roscan/can_long_frame.h>
-
+//#include <noah_powerboard/remote_power_ctrl_srv.h>
 
 #define PowerboardInfo     ROS_INFO
 
@@ -1422,6 +1422,36 @@ void NoahPowerboard::pub_json_msg_to_app( const nlohmann::json j_msg)
     this->noah_powerboard_pub.publish(pub_json_msg);
 }
 
+//bool NoahPowerboard::service_remote_power_ctrl(remote_power_ctrl_srv::Request  &ctrl,  remote_power_ctrl_srv::Response &status)
+bool NoahPowerboard::service_remote_power_ctrl(noah_powerboard::remote_power_ctrl_srv::Request  &ctrl,  noah_powerboard::remote_power_ctrl_srv::Response &status)
+{
+    ROS_INFO("%s: srv call test",__func__);
+    if((0 == ctrl.power_ctrl) || (1 == ctrl.power_ctrl))
+    {
+        remote_power_ctrl_t remote_power_ctrl;
+        remote_power_ctrl.remote_power_ctrl = ctrl.power_ctrl + 1;
+        this->remote_power_ctrl_vector.push_back(remote_power_ctrl);
+        status.result = 0;
+        return true;
+#if 0
+        {
+            ROS_INFO("%s: exec OK. Request.power_ctrl: %d",__func__, ctrl.power_ctrl);
+            status.result = 0;
+            return true;
+        }
+        //else
+        {
+            ROS_ERROR("%s: exec error! Request.power_ctrl: %d",__func__, ctrl.power_ctrl);
+            status.result = -1;
+            return false;
+        }
+#endif
+    }
+
+    ROS_ERROR("%s: parameter error!  Request.power_ctrl: %d",__func__, ctrl.power_ctrl);
+    status.result = -1;
+    return false;
+}
 
 void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg)
 {

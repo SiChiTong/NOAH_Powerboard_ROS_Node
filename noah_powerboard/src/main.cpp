@@ -14,7 +14,8 @@
 #include <iostream>
 #include <pthread.h>
 
-#include "../include/noah_powerboard/powerboard.h"
+//#include <noah_powerboard/remote_power_ctrl_srv.h>
+#include <powerboard.h>
 
 class NoahPowerboard;
 
