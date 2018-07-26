@@ -1,19 +1,19 @@
-/* 
- *  powerboard.cpp 
+/*
+ *  powerboard.cpp
  *  Communicate Protocol.
- *  Author: Kaka Xie 
+ *  Author: Kaka Xie
  */
 
 #include "ros/ros.h"
 #include "std_msgs/String.h"
-#include "std_msgs/UInt8MultiArray.h" 
+#include "std_msgs/UInt8MultiArray.h"
 #include <math.h>
-#include <stdio.h>     
-#include <stdlib.h>     
-#include <unistd.h>     
-#include <sys/types.h>  
-#include <sys/stat.h>   
-#include <errno.h>     
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <errno.h>
 #include <string.h>
 #include <time.h>
 #include <signal.h>
@@ -24,7 +24,6 @@
 #include <boost/thread/mutex.hpp>
 #include <mrobot_driver_msgs/vci_can.h>
 #include <roscan/can_long_frame.h>
-//#include <noah_powerboard/remote_power_ctrl_srv.h>
 
 #define PowerboardInfo     ROS_INFO
 
@@ -36,7 +35,7 @@ static unsigned char recv_buf_last[BUF_LEN] = {0};
 void test_fun(void * arg)
 {
     NoahPowerboard *pNoahPowerboard =  (NoahPowerboard*)arg;
-    module_ctrl_t param;  
+    module_ctrl_t param;
     static uint8_t cnt = 2;
     param.module = POWER_5V_EN | POWER_12V_EN;
     param.group_num = 1;
@@ -73,7 +72,7 @@ void test_fun(void * arg)
 #endif
     set_leds_effect_t set_led_effect;
 
-    set_led_effect.mode= cnt % (LIGHTS_MODE_EMERGENCY_STOP + 1) ; 
+    set_led_effect.mode= cnt % (LIGHTS_MODE_EMERGENCY_STOP + 1) ;
     pNoahPowerboard->set_leds_effect_vector.push_back(set_led_effect);
 
     cnt++;
@@ -117,11 +116,11 @@ void *CanProtocolProcess(void* arg)
             boost::mutex::scoped_lock(mtx);
             if(!pNoahPowerboard->module_set_vector.empty())
             {
-                auto a = pNoahPowerboard->module_set_vector.begin(); 
+                auto a = pNoahPowerboard->module_set_vector.begin();
                 module_set = *a;
                 if((module_set.module <= POWER_ALL ) && (module_set.on_off <= 1) && (module_set.group_num <= 2))
                 {
-                    module_flag = 1;            
+                    module_flag = 1;
                 }
 
                 pNoahPowerboard->module_set_vector.erase(a);
@@ -131,7 +130,7 @@ void *CanProtocolProcess(void* arg)
         }while(0);
 
         if(module_flag == 1)
-        {   
+        {
             uint8_t flag = 0;
             uint32_t time_out_cnt = 0;
             static uint8_t err_cnt = 0;
@@ -217,7 +216,7 @@ module_set_restart:
                             }
 
                             pNoahPowerboard->j.clear();
-                            pNoahPowerboard->j = 
+                            pNoahPowerboard->j =
                             {
                                 {"sub_name","set_module_state"},
                                 {
@@ -225,7 +224,7 @@ module_set_restart:
                                     {
                                         {"door_ctrl_state",(bool)(module_set_ack.module_status_ack & POWER_DOOR_CTRL)},
                                         {"error_code", CAN_SOURCE_ID_SET_MODULE_STATE},
-                                    } 
+                                    }
                                 }
                             };
                             pNoahPowerboard->pub_json_msg_to_app(pNoahPowerboard->j);
@@ -265,7 +264,7 @@ module_set_restart:
                             }
 
                             pNoahPowerboard->j.clear();
-                            pNoahPowerboard->j = 
+                            pNoahPowerboard->j =
                             {
                                 {"sub_name","set_module_state"},
                                 {
@@ -274,7 +273,7 @@ module_set_restart:
                                         {"door_ctrl_state",on_off_status},
                                         {"error_code", CAN_SOURCE_ID_SET_MODULE_STATE},
                                         {"door_id", door_id},
-                                    } 
+                                    }
                                 }
                             };
                             pNoahPowerboard->pub_json_msg_to_app(pNoahPowerboard->j);
@@ -319,7 +318,7 @@ module_set_restart:
                     ROS_ERROR("set door ctrl time out !");
 
                     pNoahPowerboard->j.clear();
-                    pNoahPowerboard->j = 
+                    pNoahPowerboard->j =
                     {
                         {"sub_name","set_module_state"},
                         {
@@ -327,7 +326,7 @@ module_set_restart:
                             {
                                 {"door_ctrl_state",(bool)(module_set_ack.module_status_ack & POWER_DOOR_CTRL)},
                                 {"error_code", -1},
-                            } 
+                            }
                         }
                     };
                     pNoahPowerboard->pub_json_msg_to_app(pNoahPowerboard->j);
@@ -345,11 +344,11 @@ module_set_restart:
             boost::mutex::scoped_lock(mtx);
             if(!pNoahPowerboard->get_bat_info_vector.empty())
             {
-                auto a = pNoahPowerboard->get_bat_info_vector.begin(); 
+                auto a = pNoahPowerboard->get_bat_info_vector.begin();
                 get_bat_info = *a;
                 if(get_bat_info.reserve == 0 )
                 {
-                    get_bat_info_flag = 1;            
+                    get_bat_info_flag = 1;
                 }
 
                 pNoahPowerboard->get_bat_info_vector.erase(a);
@@ -359,7 +358,7 @@ module_set_restart:
         }while(0);
 
         if(get_bat_info_flag == 1)
-        {   
+        {
             uint8_t flag = 0;
             uint32_t time_out_cnt = 0;
             static uint8_t err_cnt = 0;
@@ -463,11 +462,11 @@ get_bat_info_restart:
             boost::mutex::scoped_lock(mtx);
             if(!pNoahPowerboard->set_ir_duty_vector.empty())
             {
-                auto a = pNoahPowerboard->set_ir_duty_vector.begin(); 
+                auto a = pNoahPowerboard->set_ir_duty_vector.begin();
                 set_ir_duty = *a;
                 if((set_ir_duty.duty <= 100 ) && (set_ir_duty.reserve == 0))
                 {
-                    set_ir_duty_flag = 1;            
+                    set_ir_duty_flag = 1;
                 }
 
                 pNoahPowerboard->set_ir_duty_vector.erase(a);
@@ -477,7 +476,7 @@ get_bat_info_restart:
         }while(0);
 
         if(set_ir_duty_flag == 1)
-        {   
+        {
             uint8_t flag = 0;
             uint32_t time_out_cnt = 0;
             static uint8_t err_cnt = 0;
@@ -578,11 +577,11 @@ set_ir_duty_restart:
             boost::mutex::scoped_lock(mtx);
             if(!pNoahPowerboard->get_sys_status_vector.empty())
             {
-                auto a = pNoahPowerboard->get_sys_status_vector.begin(); 
+                auto a = pNoahPowerboard->get_sys_status_vector.begin();
                 get_sys_status = *a;
                 if(get_sys_status.reserve == 0 )
                 {
-                    get_sys_status_flag = 1;            
+                    get_sys_status_flag = 1;
                 }
 
                 pNoahPowerboard->get_sys_status_vector.erase(a);
@@ -592,7 +591,7 @@ set_ir_duty_restart:
         }while(0);
 
         if(get_sys_status_flag == 1)
-        {   
+        {
             uint8_t flag = 0;
             uint32_t time_out_cnt = 0;
             static uint8_t err_cnt = 0;
@@ -695,11 +694,11 @@ get_sys_status_restart:
             boost::mutex::scoped_lock(mtx);
             if(!pNoahPowerboard->get_version_vector.empty())
             {
-                auto a = pNoahPowerboard->get_version_vector.begin(); 
+                auto a = pNoahPowerboard->get_version_vector.begin();
                 get_version = *a;
                 if(get_version.get_version_type <= 3 )
                 {
-                    get_version_flag = 1;            
+                    get_version_flag = 1;
                 }
 
                 pNoahPowerboard->get_version_vector.erase(a);
@@ -707,7 +706,7 @@ get_sys_status_restart:
         }while(0);
 
         if(get_version_flag == 1)
-        {   
+        {
             uint8_t flag = 0;
             uint32_t time_out_cnt = 0;
             static uint8_t err_cnt = 0;
@@ -747,7 +746,7 @@ get_version_restart:
                     {
                         if(pNoahPowerboard->is_log_on == true)
                         {
-                            ROS_INFO("get_version_ack_vector is not empty"); 
+                            ROS_INFO("get_version_ack_vector is not empty");
                         }
                         auto b = pNoahPowerboard->get_version_ack_vector.begin();
 
@@ -759,7 +758,7 @@ get_version_restart:
                         {
                             ROS_INFO("version type : %d",get_version_ack.get_version_type);
                         }
-                        if( get_version_ack.get_version_type <= 3) 
+                        if( get_version_ack.get_version_type <= 3)
                         {
                             get_version_ack_flag = 1;
                             if(pNoahPowerboard->is_log_on == true)
@@ -829,11 +828,11 @@ get_version_restart:
             boost::mutex::scoped_lock(mtx);
             if(!pNoahPowerboard->get_adc_vector.empty())
             {
-                auto a = pNoahPowerboard->get_adc_vector.begin(); 
+                auto a = pNoahPowerboard->get_adc_vector.begin();
                 get_adc = *a;
                 if((get_adc.frq <= 10 ) ||  (get_adc.frq == 0xff))
                 {
-                    get_adc_flag = 1;            
+                    get_adc_flag = 1;
                 }
 
                 pNoahPowerboard->get_adc_vector.erase(a);
@@ -843,7 +842,7 @@ get_version_restart:
         }while(0);
 
         if(get_adc_flag == 1)
-        {   
+        {
             uint8_t flag = 0;
             uint32_t time_out_cnt = 0;
             static uint8_t err_cnt = 0;
@@ -958,10 +957,10 @@ get_adc_restart:
             boost::mutex::scoped_lock(mtx);
             if(!pNoahPowerboard->set_leds_effect_vector.empty())
             {
-                auto a = pNoahPowerboard->set_leds_effect_vector.begin(); 
+                auto a = pNoahPowerboard->set_leds_effect_vector.begin();
                 set_led_effect = *a;
                 {
-                    set_led_effect_flag = 1;            
+                    set_led_effect_flag = 1;
                 }
 
                 pNoahPowerboard->set_leds_effect_vector.erase(a);
@@ -971,7 +970,7 @@ get_adc_restart:
         }while(0);
 
         if(set_led_effect_flag == 1)
-        {   
+        {
             uint8_t flag = 0;
             uint32_t time_out_cnt = 0;
             static uint8_t err_cnt = 0;
@@ -1081,10 +1080,10 @@ set_leds_effect_restart:
             boost::mutex::scoped_lock(mtx);
             if(!pNoahPowerboard->remote_power_ctrl_vector.empty())
             {
-                auto a = pNoahPowerboard->remote_power_ctrl_vector.begin(); 
+                auto a = pNoahPowerboard->remote_power_ctrl_vector.begin();
                 remote_power_ctrl = *a;
                 {
-                    remote_power_ctrl_flag = 1;            
+                    remote_power_ctrl_flag = 1;
                 }
 
                 pNoahPowerboard->remote_power_ctrl_vector.erase(a);
@@ -1094,7 +1093,7 @@ set_leds_effect_restart:
         }while(0);
 
         if(remote_power_ctrl_flag == 1)
-        {   
+        {
             uint8_t flag = 0;
             uint32_t time_out_cnt = 0;
             static uint8_t err_cnt = 0;
@@ -1218,7 +1217,7 @@ int NoahPowerboard::PowerboardParamInit(void)
 
 int NoahPowerboard::SetLedEffect(powerboard_t *powerboard)     // done
 {
-    int error = 0; 
+    int error = 0;
     mrobot_driver_msgs::vci_can can_msg;
     CAN_ID_UNION id;
     memset(&id, 0x0, sizeof(CAN_ID_UNION));
@@ -1242,7 +1241,7 @@ int NoahPowerboard::SetLedEffect(powerboard_t *powerboard)     // done
 }
 int NoahPowerboard::GetBatteryInfo(powerboard_t *sys)      // done
 {
-    int error = 0; 
+    int error = 0;
     mrobot_driver_msgs::vci_can can_msg;
     CAN_ID_UNION id;
     memset(&id, 0x0, sizeof(CAN_ID_UNION));
@@ -1263,7 +1262,7 @@ int NoahPowerboard::GetBatteryInfo(powerboard_t *sys)      // done
 }
 int NoahPowerboard::SetModulePowerOnOff(powerboard_t *sys)
 {
-    int error = 0; 
+    int error = 0;
 
     mrobot_driver_msgs::vci_can can_msg;
     CAN_ID_UNION id;
@@ -1284,7 +1283,7 @@ int NoahPowerboard::SetModulePowerOnOff(powerboard_t *sys)
     can_msg.Data[2] = 1;///group_num;
     uint32_t state = sys->module_status_set.module;
     *(uint32_t *)&can_msg.Data[3] = state;
-    can_msg.Data[7] = sys->module_status_set.on_off;   
+    can_msg.Data[7] = sys->module_status_set.on_off;
     this->pub_to_can_node.publish(can_msg);
 
 
@@ -1299,7 +1298,7 @@ int NoahPowerboard::GetModulePowerOnOff(powerboard_t *sys)
 
 int NoahPowerboard::GetAdcData(powerboard_t *sys)      // done
 {
-    int error = 0; 
+    int error = 0;
     mrobot_driver_msgs::vci_can can_msg;
     CAN_ID_UNION id;
     memset(&id, 0x0, sizeof(CAN_ID_UNION));
@@ -1321,7 +1320,7 @@ int NoahPowerboard::GetAdcData(powerboard_t *sys)      // done
 
 int NoahPowerboard::GetVersion(powerboard_t *sys)      // done
 {
-    int error = 0; 
+    int error = 0;
     mrobot_driver_msgs::vci_can can_msg;
     CAN_ID_UNION id;
     memset(&id, 0x0, sizeof(CAN_ID_UNION));
@@ -1343,7 +1342,7 @@ int NoahPowerboard::GetVersion(powerboard_t *sys)      // done
 
 int NoahPowerboard::GetSysStatus(powerboard_t *sys)     // done
 {
-    int error = 0; 
+    int error = 0;
     mrobot_driver_msgs::vci_can can_msg;
     CAN_ID_UNION id;
     memset(&id, 0x0, sizeof(CAN_ID_UNION));
@@ -1365,7 +1364,7 @@ int NoahPowerboard::GetSysStatus(powerboard_t *sys)     // done
 
 int NoahPowerboard::InfraredLedCtrl(powerboard_t *sys)     // done
 {
-    int error = 0; 
+    int error = 0;
     mrobot_driver_msgs::vci_can can_msg;
     CAN_ID_UNION id;
     memset(&id, 0x0, sizeof(CAN_ID_UNION));
@@ -1380,7 +1379,7 @@ int NoahPowerboard::InfraredLedCtrl(powerboard_t *sys)     // done
     can_msg.DataLen = 2;
     can_msg.Data.resize(2);
     can_msg.Data[0] = 0x00;
-    can_msg.Data[1] = sys->ir_cmd.set_ir_percent; 
+    can_msg.Data[1] = sys->ir_cmd.set_ir_percent;
     ROS_WARN("start to set ir duty to %d",sys->ir_cmd.set_ir_percent);
     this->pub_to_can_node.publish(can_msg);
     return error;
@@ -1390,7 +1389,7 @@ int NoahPowerboard::InfraredLedCtrl(powerboard_t *sys)     // done
 
 int NoahPowerboard::RemotePowerCtrl(powerboard_t *sys)     // done
 {
-    int error = 0; 
+    int error = 0;
     mrobot_driver_msgs::vci_can can_msg;
     CAN_ID_UNION id;
     memset(&id, 0x0, sizeof(CAN_ID_UNION));
@@ -1405,7 +1404,7 @@ int NoahPowerboard::RemotePowerCtrl(powerboard_t *sys)     // done
     can_msg.DataLen = 2;
     can_msg.Data.resize(2);
     can_msg.Data[0] = 0x00;
-    can_msg.Data[1] = sys->remote_power_ctrl_set.remote_power_ctrl; 
+    can_msg.Data[1] = sys->remote_power_ctrl_set.remote_power_ctrl;
     ROS_WARN("start to set remote power ctrl to %d",sys->remote_power_ctrl_set.remote_power_ctrl);
     this->pub_to_can_node.publish(can_msg);
     return error;
@@ -1422,7 +1421,6 @@ void NoahPowerboard::pub_json_msg_to_app( const nlohmann::json j_msg)
     this->noah_powerboard_pub.publish(pub_json_msg);
 }
 
-//bool NoahPowerboard::service_remote_power_ctrl(remote_power_ctrl_srv::Request  &ctrl,  remote_power_ctrl_srv::Response &status)
 bool NoahPowerboard::service_remote_power_ctrl(noah_powerboard::remote_power_ctrl_srv::Request  &ctrl,  noah_powerboard::remote_power_ctrl_srv::Response &status)
 {
     ROS_INFO("%s: srv call test",__func__);
@@ -1433,19 +1431,6 @@ bool NoahPowerboard::service_remote_power_ctrl(noah_powerboard::remote_power_ctr
         this->remote_power_ctrl_vector.push_back(remote_power_ctrl);
         status.result = 0;
         return true;
-#if 0
-        {
-            ROS_INFO("%s: exec OK. Request.power_ctrl: %d",__func__, ctrl.power_ctrl);
-            status.result = 0;
-            return true;
-        }
-        //else
-        {
-            ROS_ERROR("%s: exec error! Request.power_ctrl: %d",__func__, ctrl.power_ctrl);
-            status.result = -1;
-            return false;
-        }
-#endif
     }
 
     ROS_ERROR("%s: parameter error!  Request.power_ctrl: %d",__func__, ctrl.power_ctrl);
@@ -1472,18 +1457,18 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                 if(j["data"]["set_state"] == true)
                 {
                     ROS_INFO("set 24v printer on");
-                    module_ctrl_t param;  
+                    module_ctrl_t param;
                     param.group_num = 1;
-                    param.module = POWER_24V_PRINTER;    
+                    param.module = POWER_24V_PRINTER;
                     param.on_off = MODULE_CTRL_ON;
                     this->module_set_vector.push_back(param);
                 }
                 else if(j["data"]["set_state"] == false)
                 {
                     ROS_INFO("set 24v printer off");
-                    module_ctrl_t param;  
+                    module_ctrl_t param;
                     param.group_num = 1;
-                    param.module = POWER_24V_PRINTER;    
+                    param.module = POWER_24V_PRINTER;
                     param.on_off = MODULE_CTRL_OFF;
                     this->module_set_vector.push_back(param);
                 }
@@ -1500,18 +1485,18 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                         if(j["data"]["set_state"] == true)
                         {
                             ROS_INFO("set door ctrl  on");
-                            module_ctrl_t param;  
+                            module_ctrl_t param;
                             param.group_num = 1;
-                            param.module = POWER_DOOR_CTRL | POWER_VSYS_24V_NV;    
+                            param.module = POWER_DOOR_CTRL | POWER_VSYS_24V_NV;
                             param.on_off = MODULE_CTRL_ON;
                             this->module_set_vector.push_back(param);
                         }
                         else if(j["data"]["set_state"] == false)
                         {
                             ROS_INFO("set door ctrl off");
-                            module_ctrl_t param;  
+                            module_ctrl_t param;
                             param.group_num = 1;
-                            param.module = POWER_DOOR_CTRL | POWER_VSYS_24V_NV;    
+                            param.module = POWER_DOOR_CTRL | POWER_VSYS_24V_NV;
                             param.on_off = MODULE_CTRL_OFF;
                             this->module_set_vector.push_back(param);
                         }
@@ -1519,7 +1504,7 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                     else
                     {
                         ROS_INFO("door id is not NULL");
-                        uint8_t door_id = j["data"]["door_id"]; 
+                        uint8_t door_id = j["data"]["door_id"];
                         //bool on_off = j["data"]["set_state"];
                         bool on_off;
                         if(j["data"].find("set_state") != j["data"].end())
@@ -1530,7 +1515,7 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                         {
                             return;
                         }
-                        module_ctrl_t param;  
+                        module_ctrl_t param;
 
                         param.group_num = 1;
                         ROS_WARN("get door id");//
@@ -1546,16 +1531,16 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                         switch(door_id)
                         {
                             case 1:
-                                param.module = POWER_3V3_CARD_EN_1;    
+                                param.module = POWER_3V3_CARD_EN_1;
                                 break;
                             case 2:
-                                param.module = POWER_3V3_CARD_EN_2;    
+                                param.module = POWER_3V3_CARD_EN_2;
                                 break;
                             case 3:
-                                param.module = POWER_3V3_CARD_EN_3;    
+                                param.module = POWER_3V3_CARD_EN_3;
                                 break;
                             case 4:
-                                param.module = POWER_3V3_CARD_EN_4;    
+                                param.module = POWER_3V3_CARD_EN_4;
                                 break;
                             default :
                                 ROS_ERROR("door ctrl id  error !");
@@ -1600,7 +1585,7 @@ void NoahPowerboard:: from_navigation_rcv_callback(const std_msgs::String::Const
 {
     int value = atoi(msg->data.c_str());
 
-    module_ctrl_t param;  
+    module_ctrl_t param;
     param.group_num = 1;
 
     ROS_INFO("camera led ctrl:value is %d",value);
@@ -1610,34 +1595,34 @@ void NoahPowerboard:: from_navigation_rcv_callback(const std_msgs::String::Const
     switch(value)
     {
         case 0:
-            ROS_INFO("camera led ctrl:get 00"); 
-            param.module = POWER_CAMERA_FRONT_LED |POWER_CAMERA_BACK_LED  ;    
+            ROS_INFO("camera led ctrl:get 00");
+            param.module = POWER_CAMERA_FRONT_LED |POWER_CAMERA_BACK_LED  ;
             param.on_off = MODULE_CTRL_OFF;
             this->module_set_vector.push_back(param);
             break;
         case 1:
-            ROS_INFO("camera led ctrl:get 01"); 
-            param.module = POWER_CAMERA_BACK_LED | POWER_CAMERA_FRONT_LED;    
+            ROS_INFO("camera led ctrl:get 01");
+            param.module = POWER_CAMERA_BACK_LED | POWER_CAMERA_FRONT_LED;
             param.on_off = MODULE_CTRL_ON;
             this->module_set_vector.push_back(param);
 
-            //param.module = POWER_CAMERA_FRONT_LED;    
+            //param.module = POWER_CAMERA_FRONT_LED;
             //param.on_off = MODULE_CTRL_OFF;
             //this->module_set_vector.push_back(param);
             break;
         case 10:
-            ROS_INFO("camera led ctrl:get 10"); 
-            param.module = POWER_CAMERA_FRONT_LED | POWER_CAMERA_BACK_LED;    
+            ROS_INFO("camera led ctrl:get 10");
+            param.module = POWER_CAMERA_FRONT_LED | POWER_CAMERA_BACK_LED;
             param.on_off = MODULE_CTRL_ON;
             this->module_set_vector.push_back(param);
 
-            //param.module = POWER_CAMERA_BACK_LED;    
+            //param.module = POWER_CAMERA_BACK_LED;
             //param.on_off = MODULE_CTRL_OFF;
             //this->module_set_vector.push_back(param);
             break;
         case 11:
-            ROS_INFO("camera led ctrl:get 11"); 
-            param.module = POWER_CAMERA_FRONT_LED |POWER_CAMERA_BACK_LED  ;    
+            ROS_INFO("camera led ctrl:get 11");
+            param.module = POWER_CAMERA_FRONT_LED |POWER_CAMERA_BACK_LED  ;
             param.on_off = MODULE_CTRL_ON;
             this->module_set_vector.push_back(param);
             break;
@@ -1665,7 +1650,7 @@ void NoahPowerboard::power_from_app_rcv_callback(std_msgs::UInt8MultiArray data)
 {
     if(data.data.size() == 1)
     {
-        uint8_t value = data.data[0]; 
+        uint8_t value = data.data[0];
         if(this->is_log_on == true)
         {
             ROS_INFO("power_from_app_rcv_callback");
@@ -1714,7 +1699,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
 
     long_msg = this->long_frame.frame_construct(c_msg);
     mrobot_driver_msgs::vci_can* msg = &long_msg;
-    if( msg->ID == 0 ) 
+    if( msg->ID == 0 )
     {
         return;
     }
@@ -1744,7 +1729,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
         module_ctrl_ack.module_status_ack  = *(uint32_t *)&msg->Data[6];
         do
         {
-            boost::mutex::scoped_lock(this->mtx);        
+            boost::mutex::scoped_lock(this->mtx);
             this->module_set_ack_vector.push_back(module_ctrl_ack);
         }while(0);
 
@@ -1766,7 +1751,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
 
         do
         {
-            boost::mutex::scoped_lock(this->mtx);        
+            boost::mutex::scoped_lock(this->mtx);
             this->get_bat_info_ack_vector.push_back(get_bat_info_ack);
         }while(0);
 
@@ -1793,7 +1778,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
 
             do
             {
-                boost::mutex::scoped_lock(this->mtx);        
+                boost::mutex::scoped_lock(this->mtx);
                 this->get_sys_status_ack_vector.push_back(get_sys_status_ack);
             }while(0);
 
@@ -1833,7 +1818,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
 
         do
         {
-            boost::mutex::scoped_lock(this->mtx);        
+            boost::mutex::scoped_lock(this->mtx);
             this->set_ir_duty_ack_vector.push_back(set_ir_duty_ack);
         }while(0);
 
@@ -1885,7 +1870,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
 
         do
         {
-            boost::mutex::scoped_lock(this->mtx);        
+            boost::mutex::scoped_lock(this->mtx);
             this->get_version_ack_vector.push_back(get_version_ack);
         }while(0);
     }
@@ -1900,13 +1885,13 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
         {
             do
             {
-                boost::mutex::scoped_lock(this->mtx);        
+                boost::mutex::scoped_lock(this->mtx);
                 this->get_adc_ack_vector.push_back(get_adc_ack);
             }while(0);
         }
         if(id.CanID_Struct.ACK == 0)
         {
-            ROS_INFO("adc : mcu upload"); 
+            ROS_INFO("adc : mcu upload");
         }
 
     }
@@ -1927,13 +1912,13 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
         {
             do
             {
-                boost::mutex::scoped_lock(this->mtx);        
+                boost::mutex::scoped_lock(this->mtx);
                 this->set_leds_effect_ack_vector.push_back(set_led_effect_ack);
             }while(0);
         }
         if(id.CanID_Struct.ACK == 0)
         {
-            ROS_INFO("set led effect : mcu upload"); 
+            ROS_INFO("set led effect : mcu upload");
         }
 
     }
@@ -1942,7 +1927,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
 
         if(id.CanID_Struct.ACK == 0)
         {
-            ROS_INFO("shutdown signal : mcu upload"); 
+            ROS_INFO("shutdown signal : mcu upload");
             std_msgs::UInt8MultiArray shutdown_signal;
             uint8_t time_second = msg->Data[0];
             shutdown_signal.data.push_back(time_second);
@@ -1962,7 +1947,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
 
         do
         {
-            boost::mutex::scoped_lock(this->mtx);        
+            boost::mutex::scoped_lock(this->mtx);
             this->remote_power_ctrl_ack_vector.push_back(remote_power_ctrl_ack);
         }while(0);
 
@@ -1993,7 +1978,7 @@ void NoahPowerboard::update_sys_status(void)
                 set_led_effect.mode = LIGHTS_MODE_CHARGING_POWER_LOW;
                 do
                 {
-                    boost::mutex::scoped_lock(this->mtx);        
+                    boost::mutex::scoped_lock(this->mtx);
                     this->set_leds_effect_vector.push_back(set_led_effect);
                 }while(0);
             }
@@ -2007,7 +1992,7 @@ void NoahPowerboard::update_sys_status(void)
                 set_led_effect.mode = LIGHTS_MODE_CHARGING_POWER_MEDIUM;
                 do
                 {
-                    boost::mutex::scoped_lock(this->mtx);        
+                    boost::mutex::scoped_lock(this->mtx);
                     this->set_leds_effect_vector.push_back(set_led_effect);
                 }while(0);
             }
@@ -2021,7 +2006,7 @@ void NoahPowerboard::update_sys_status(void)
                 set_led_effect.mode = LIGHTS_MODE_CHARGING_FULL;
                 do
                 {
-                    boost::mutex::scoped_lock(this->mtx);        
+                    boost::mutex::scoped_lock(this->mtx);
                     this->set_leds_effect_vector.push_back(set_led_effect);
                 }while(0);
             }
@@ -2038,7 +2023,7 @@ void NoahPowerboard::update_sys_status(void)
             set_led_effect.mode = LIGHTS_MODE_EMERGENCY_STOP;
             do
             {
-                boost::mutex::scoped_lock(this->mtx);        
+                boost::mutex::scoped_lock(this->mtx);
                 this->set_leds_effect_vector.push_back(set_led_effect);
             }while(0);
         }
@@ -2055,7 +2040,7 @@ void NoahPowerboard::update_sys_status(void)
                 set_led_effect.mode = LIGHTS_MODE_TURN_LEFT;
                 do
                 {
-                    boost::mutex::scoped_lock(this->mtx);        
+                    boost::mutex::scoped_lock(this->mtx);
                     this->set_leds_effect_vector.push_back(set_led_effect);
                 }while(0);
             }
@@ -2069,7 +2054,7 @@ void NoahPowerboard::update_sys_status(void)
                 set_led_effect.mode = LIGHTS_MODE_TURN_RIGHT;
                 do
                 {
-                    boost::mutex::scoped_lock(this->mtx);        
+                    boost::mutex::scoped_lock(this->mtx);
                     this->set_leds_effect_vector.push_back(set_led_effect);
                 }while(0);
             }
@@ -2086,12 +2071,12 @@ void NoahPowerboard::update_sys_status(void)
                 set_led_effect.mode = LIGHTS_MODE_LOW_POWER;
                 do
                 {
-                    boost::mutex::scoped_lock(this->mtx);        
+                    boost::mutex::scoped_lock(this->mtx);
                     this->set_leds_effect_vector.push_back(set_led_effect);
                 }while(0);
             }
         }
-        else 
+        else
         {
             if(prv_led_effect != LIGHTS_MODE_NOMAL)
             {
@@ -2100,7 +2085,7 @@ void NoahPowerboard::update_sys_status(void)
                 set_led_effect.mode = LIGHTS_MODE_NOMAL;
                 do
                 {
-                    boost::mutex::scoped_lock(this->mtx);        
+                    boost::mutex::scoped_lock(this->mtx);
                     this->set_leds_effect_vector.push_back(set_led_effect);
                 }while(0);
             }
@@ -2128,8 +2113,8 @@ void NoahPowerboard::get_ir_duty_param(void)
         if(current_duty != param_duty)
         {
             set_ir_duty_t duty_tmp;
-            duty_tmp.reserve = 0; 
-            duty_tmp.duty = param_duty; 
+            duty_tmp.reserve = 0;
+            duty_tmp.duty = param_duty;
             this->set_ir_duty_vector.push_back(duty_tmp);
             current_duty = duty_tmp.duty;
             ROS_WARN("set ir duty to %d",duty_tmp.duty);

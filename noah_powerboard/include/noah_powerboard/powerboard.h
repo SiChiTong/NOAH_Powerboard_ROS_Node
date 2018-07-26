@@ -3,7 +3,7 @@
 #include "json.hpp"
 #include <mrobot_driver_msgs/vci_can.h>
 #include <roscan/can_long_frame.h>
-#include <boost/thread/mutex.hpp>  
+#include <boost/thread/mutex.hpp>
 #include <noah_powerboard/remote_power_ctrl_srv.h>
 using json = nlohmann::json;
 #ifndef LED_H
@@ -26,7 +26,7 @@ using json = nlohmann::json;
 #define FRAME_TYPE_GET_CURRENT          0x0a
 #define FRAME_TYPE_GET_VERSION          0x0e
 
-#define COM_ERR_REPEAT_TIME             3 
+#define COM_ERR_REPEAT_TIME             3
 
 
 
@@ -56,7 +56,7 @@ using json = nlohmann::json;
 
 #define HW_VERSION_SIZE             3
 #define SW_VERSION_SIZE             16
-#define PROTOCOL_VERSION_SIZE       14 
+#define PROTOCOL_VERSION_SIZE       14
 
 
 
@@ -66,14 +66,14 @@ typedef enum
     POWER_5V_RECHARGE         = 0x00000002,
     POWER_5V_SENSOR_BOARD     = 0x00000004,
     //POWER_5V_SWITCH           = 0x00000008,
-    POWER_5V_ROUTER           = 0x00000010,  
+    POWER_5V_ROUTER           = 0x00000010,
     POWER_5V_EN               = 0x00000020,
 
     POWER_12V_PAD             = 0x00000040,
     POWER_12V_2_1_PA          = 0x00000080,
     POWER_12V_EXTEND          = 0x00000100,
     POWER_12V_X86             = 0x00000200,
-    POWER_12V_NV              = 0x00000400, 
+    POWER_12V_NV              = 0x00000400,
     POWER_12V_EN              = 0x00000800,
 
     POWER_24V_EN              = 0x00001000,
@@ -106,7 +106,7 @@ typedef enum
 } module_ctrl_e;
 
 #pragma pack(1)
-typedef struct _VoltageData_t 
+typedef struct _VoltageData_t
 {
     uint16_t              _5V_reserve1_currents;
     //uint16_t              _24V_nv_currents;
@@ -160,8 +160,8 @@ typedef struct _VoltageData_t
 
 typedef struct
 {
-#define MODULE_CTRL_ON      1  
-#define MODULE_CTRL_OFF     0 
+#define MODULE_CTRL_ON      1
+#define MODULE_CTRL_OFF     0
     uint8_t     on_off;
     uint8_t     group_num;
 #define HW_NO_SUPPORT         0xFFFFFFFF
@@ -170,8 +170,8 @@ typedef struct
 
 typedef struct
 {
-#define MODULE_CTRL_ON      1  
-#define MODULE_CTRL_OFF     0 
+#define MODULE_CTRL_ON      1
+#define MODULE_CTRL_OFF     0
     uint8_t     on_off;
     uint8_t     group_num;
 #define HW_NO_SUPPORT         0xFFFFFFFF
@@ -194,12 +194,12 @@ typedef struct
 }get_bat_info_ack_t;
 
 
-typedef struct 
+typedef struct
 {
     uint8_t reserve;
 }get_sys_status_t;
 
-typedef struct 
+typedef struct
 {
     uint8_t reserve;
     uint16_t sys_status;
@@ -222,7 +222,7 @@ typedef struct
     uint8_t get_version_type;
 }get_version_t;
 
-typedef struct 
+typedef struct
 {
     uint8_t frq;
 }get_adc_t;
@@ -270,7 +270,7 @@ typedef struct
 #pragma pack()
 //
 #pragma pack(1)
-typedef struct 
+typedef struct
 {
     //  uint8_t               ctype;
     uint8_t               cur_light_mode;
@@ -278,7 +278,7 @@ typedef struct
     uint8_t               period;
 } rcv_serial_leds_frame_t;
 
-typedef struct 
+typedef struct
 {
     uint8_t               ctype;
     uint8_t               cur_light_mode;
@@ -290,15 +290,15 @@ typedef struct
 
 #pragma pack(1)
 
-typedef struct 
+typedef struct
 {
     //    uint8_t               ctype;
     //    uint8_t               cmdType;
-    voltage_data_t         voltage_data;  
+    voltage_data_t         voltage_data;
     uint8_t               fault_bit[4];
     uint8_t               send_rate;
     uint8_t               reserve[7];
-} voltage_info_t;  
+} voltage_info_t;
 #pragma pack()
 
 
@@ -329,7 +329,7 @@ typedef struct _recModuleControlFrame_t
     uint8_t               control;
 } rcv_module_control_frame_t;
 
-typedef struct 
+typedef struct
 {
     uint8_t      mode;
     color_t      color;
@@ -344,7 +344,7 @@ typedef struct
     uint16_t bat_percent;
 }bat_info_t;
 
-typedef struct _recTestCurrentCmdFrame_t 
+typedef struct _recTestCurrentCmdFrame_t
 {
     uint8_t               cmd;
     uint8_t               sendRate;
@@ -357,7 +357,7 @@ typedef struct _recTestCurrentCmdFrame_t
 #define                         SEND_RATE_100HZ         ((uint8_t)0x06)
 #define                         SEND_RATE_0_5HZ         ((uint8_t)0x07)
 #define                         SEND_RATE_0_2HZ         ((uint8_t)0x08)
-#define                         SEND_RATE_0_1HZ         ((uint8_t)0x09) 
+#define                         SEND_RATE_0_1HZ         ((uint8_t)0x09)
 } current_cmd_frame_t;
 
 typedef struct
@@ -378,14 +378,14 @@ typedef struct
 typedef struct
 {
 #define DEV_STRING_LEN              50
-    char                        dev[DEV_STRING_LEN]; 
+    char                        dev[DEV_STRING_LEN];
     int                         device;
     led_t                       led;
     set_leds_effect_t           led_set;
     rcv_serial_leds_frame_t     rcv_serial_leds_frame;
     bat_info_t                  bat_info;
 
-    current_cmd_frame_t         current_cmd_frame;  
+    current_cmd_frame_t         current_cmd_frame;
     voltage_info_t               voltage_info;
 
 #define VERSION_TYPE_FW             0
@@ -420,7 +420,7 @@ typedef struct
     uint8_t                     send_data_buf[SEND_DATA_BUF_LEN];
 }powerboard_t;
 
-typedef enum 
+typedef enum
 {
     LIGHTS_MODE_NONE                    = 0,
     LIGHTS_MODE_NOMAL                   = 1,
@@ -439,7 +439,6 @@ typedef enum
 }light_mode_t;
 
 extern powerboard_t    *sys_powerboard;
-//extern bool service_remote_power_ctrl(noah_powerboard::remote_power_ctrl_srv::Request  &ctrl,  noah_powerboard::remote_power_ctrl_srv::Response &status);
 
 class NoahPowerboard
 {
@@ -451,12 +450,11 @@ class NoahPowerboard
             pub_charge_status_to_move_base = n.advertise<std_msgs::UInt8MultiArray>("charge_status_to_move_base",1000);
             resp_navigation_camera_leds = n.advertise<std_msgs::String>("resp_lane_follower_node/camera_using_n",1000);
             power_pub_to_app = n.advertise<std_msgs::UInt8MultiArray>("app_sub_power",1);
-            //power_sub_from_app = n.subscribe("app_pub_power",1000,&NoahPowerboard::power_from_app_rcv_callback,this);
             noah_powerboard_sub = n.subscribe("rx_noah_powerboard_node",1000,&NoahPowerboard::from_app_rcv_callback,this);
             sub_navigation_camera_leds = n.subscribe("lane_follower_node/camera_using_n",1000,&NoahPowerboard::from_navigation_rcv_callback,this);
-            
+
             pub_to_can_node = n.advertise<mrobot_driver_msgs::vci_can>("noah_powerboard_to_can", 1000);
-            
+
             device_shutdown_signal_pub = n.advertise<std_msgs::UInt8MultiArray>("device_shutdown_signal", 1000);
             sub_from_can_node = n.subscribe("can_to_noah_powerboard", 1000, &NoahPowerboard::rcv_from_can_node_callback, this);
             sub_from_basestate = n.subscribe("basestate", 10, &NoahPowerboard::basestate_callback, this);
@@ -494,7 +492,7 @@ class NoahPowerboard
         void remote_power_ctrl_callback(std_msgs::UInt8MultiArray data);
 
         void get_ir_duty_param(void);
-        
+
 
         json j;
         void pub_json_msg_to_app(const nlohmann::json j_msg);
@@ -521,7 +519,7 @@ class NoahPowerboard
 
         vector<get_adc_t>               get_adc_vector;
         vector<get_adc_ack_t>           get_adc_ack_vector;
-        
+
         vector<set_leds_effect_t>       set_leds_effect_vector;
         vector<set_leds_effect_t>       set_leds_effect_ack_vector;
 
@@ -535,7 +533,6 @@ class NoahPowerboard
         uint8_t CalCheckSum(uint8_t *data, uint8_t len);
         int handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf);
         bool service_remote_power_ctrl(noah_powerboard::remote_power_ctrl_srv::Request  &ctrl, noah_powerboard::remote_power_ctrl_srv::Response &status);
-        //bool service_remote_power_ctrl(remote_power_ctrl_srv::Request  &ctrl, remote_power_ctrl_srv::Response &status);
 
         ros::NodeHandle n;
         ros::Publisher noah_powerboard_pub;
@@ -553,7 +550,7 @@ class NoahPowerboard
 
         ros::ServiceServer remote_power_ctrl_service;
 
-        powerboard_t    sys_powerboard_ram; 
+        powerboard_t    sys_powerboard_ram;
         uint8_t emg_stop;
         uint8_t turnning_direction;
 
