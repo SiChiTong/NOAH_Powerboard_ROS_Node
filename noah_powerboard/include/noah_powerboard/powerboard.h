@@ -377,9 +377,6 @@ typedef struct
 #define VBAT_POWER_CHARGING_FULL            100
 typedef struct
 {
-#define DEV_STRING_LEN              50
-    char                        dev[DEV_STRING_LEN];
-    int                         device;
     led_t                       led;
     set_leds_effect_t           led_set;
     rcv_serial_leds_frame_t     rcv_serial_leds_frame;
@@ -464,6 +461,9 @@ class NoahPowerboard
 
             sys_powerboard = &sys_powerboard_ram;
             sys_powerboard->sys_status = 0;
+            sys_powerboard->bat_info.bat_percent = 0;
+            sys_powerboard->bat_info.bat_vol = 0;
+
             emg_stop = false;
             turnning_direction = 0;
         }

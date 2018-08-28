@@ -14,11 +14,11 @@ find_package(catkin REQUIRED COMPONENTS
 ## Build ##
 ###########
 set (CMAKE_CXX_FLAGS "-std=c++11")
+
 include_directories(
   ${catkin_INCLUDE_DIRS}
   include/noah_powerboard
 )
-
 
 ## Generate services in the 'srv' folder
 add_service_files(
@@ -33,11 +33,11 @@ generate_messages(
 
 add_executable( noah_powerboard_node
     src/main.cpp
-	src/powerboard.cpp
+    src/powerboard.cpp
 )
 
 catkin_package(
-  CATKIN_DEPENDS roscpp std_msgs message_runtime
+    CATKIN_DEPENDS roscpp std_msgs message_runtime
 )
 
 add_dependencies(noah_powerboard_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -68,7 +68,6 @@ install(DIRECTORY include/${PROJECT_NAME}/
         PATTERN ".svn" EXCLUDE)
 
 install(DIRECTORY launch
-
     DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
     USE_SOURCE_PERMISSIONS
     )

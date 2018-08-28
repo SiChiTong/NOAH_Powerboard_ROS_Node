@@ -1570,6 +1570,7 @@ void NoahPowerboard::basestate_callback(std_msgs::UInt8MultiArray data)
         }
     }
 }
+
 void NoahPowerboard::serials_leds_turning_effect_callback(std_msgs::UInt8MultiArray effects)
 {
     ROS_INFO("%s",__func__);
@@ -1581,6 +1582,8 @@ void NoahPowerboard::serials_leds_turning_effect_callback(std_msgs::UInt8MultiAr
         }
     }
 }
+
+
 void NoahPowerboard:: from_navigation_rcv_callback(const std_msgs::String::ConstPtr &msg)
 {
     int value = atoi(msg->data.c_str());
