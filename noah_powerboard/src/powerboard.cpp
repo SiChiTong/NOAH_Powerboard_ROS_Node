@@ -79,14 +79,15 @@ void test_fun(void * arg)
 }
 
 class NoahPowerboard;
-#define MODULE_SET_TIME_OUT         1000//ms
-#define GET_BAT_INFO_TIME_OUT       1000//ms
-#define GET_SYS_STSTUS_TIME_OUT     1000//ms
-#define SET_IR_DUTY_TIME_OUT        1000//ms
-#define GET_VERSION_TIME_OUT        1000//ms
-#define GET_ADC_TIME_OUT            1000//ms
-#define SET_LED_EFFECT_TIME_OUT     1000//ms
-#define SET_REMOTE_POWER_CTRL_TIME_OUT     1000//ms
+#define MODULE_SET_TIME_OUT                     1000//ms
+#define GET_BAT_INFO_TIME_OUT                   1000//ms
+#define GET_SYS_STSTUS_TIME_OUT                 1000//ms
+#define SET_IR_DUTY_TIME_OUT                    1000//ms
+#define GET_VERSION_TIME_OUT                    1000//ms
+#define GET_ADC_TIME_OUT                        1000//ms
+#define SET_LED_EFFECT_TIME_OUT                 1000//ms
+#define SET_REMOTE_POWER_CTRL_TIME_OUT          1000//ms
+#define GET_SERIALS_LEDS_VERSION_TIME_OUT       1000//ms
 void *CanProtocolProcess(void* arg)
 {
     module_ctrl_t module_set;
@@ -97,6 +98,7 @@ void *CanProtocolProcess(void* arg)
     get_adc_t   get_adc;
     set_leds_effect_t set_led_effect;
     remote_power_ctrl_t remote_power_ctrl;
+    get_serials_leds_version_t get_serials_leds_version;
 
     NoahPowerboard *pNoahPowerboard =  (NoahPowerboard*)arg;
 
@@ -108,6 +110,7 @@ void *CanProtocolProcess(void* arg)
     bool get_adc_flag = 0;
     bool set_led_effect_flag = 0;
     bool remote_power_ctrl_flag = 0;
+    bool get_serials_leds_version_flag = 0;
     while(ros::ok())
     {
         /* --------  module ctrl protocol  -------- */
@@ -1200,7 +1203,124 @@ set_remote_power_ctrl_restart:
             }
 
         }
-        /* -------- serial led protocol end -------- */
+        /* -------- remote device power ctrl  protocol end -------- */
+
+
+
+        /* --------  get serials leds version  protocol begin -------- */
+        do
+        {
+            boost::mutex::scoped_lock(mtx);
+            if(!pNoahPowerboard->get_serials_leds_version_vector.empty())
+            {
+                auto a = pNoahPowerboard->get_serials_leds_version_vector.begin();
+                get_serials_leds_version = *a;
+                {
+                    get_serials_leds_version_flag = 1;
+                }
+
+                pNoahPowerboard->get_serials_leds_version_vector.erase(a);
+
+            }
+
+        }while(0);
+
+        if(get_serials_leds_version_flag == 1)
+        {
+            uint8_t flag = 0;
+            uint32_t time_out_cnt = 0;
+            static uint8_t err_cnt = 0;
+
+            get_serials_leds_version_flag = 0;
+
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("get_serials_leds_version.reserve = %d",get_serials_leds_version.reserve);
+                ROS_INFO("get get serials leds version cmd");
+            }
+            do
+            {
+                boost::mutex::scoped_lock(mtx);
+                pNoahPowerboard->get_serials_leds_version_ack_vector.clear();
+            }while(0);
+
+get_serials_leds_version_restart:
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("get serials leds version :send cmd to mcu");
+            }
+            //pNoahPowerboard->sys_powerboard->remote_power_ctrl_set = remote_power_ctrl;
+
+            pNoahPowerboard->get_serials_leds_version(pNoahPowerboard->sys_powerboard);
+            bool get_serails_leds_version_ack_flag = 0;
+
+            get_serials_leds_version_t get_serials_leds_version_ack;
+
+            while(time_out_cnt < GET_SERIALS_LEDS_VERSION_TIME_OUT/10)
+            {
+                time_out_cnt++;
+                do
+                {
+                    boost::mutex::scoped_lock(mtx);
+                    if(!pNoahPowerboard->get_serials_leds_version_ack_vector.empty())
+                    {
+                        if(pNoahPowerboard->is_log_on == true)
+                        {
+                            ROS_INFO("get_serials_leds_version_ack_vector is not empty");
+                        }
+                        auto b = pNoahPowerboard->get_serials_leds_version_ack_vector.begin();
+
+                        get_serials_leds_version_ack = *b;
+
+                        pNoahPowerboard->get_serials_leds_version_ack_vector.erase(b);
+
+                        //if(get_serials_leds_version_ack.reserve == 0)
+                        {
+                            get_serails_leds_version_ack_flag = 1;
+                            if(pNoahPowerboard->is_log_on == true)
+                            {
+                                ROS_INFO("get right get serials leds version ack");
+                            }
+                        }
+                    }
+                }while(0);
+
+                if(get_serails_leds_version_ack_flag == 1)
+                {
+                    get_serails_leds_version_ack_flag = 0;
+                    if(pNoahPowerboard->is_log_on == true)
+                    {
+                        //ROS_INFO("get right set led effect ack");
+                    }
+                    break;
+                }
+                else
+                {
+                    usleep(10*1000);
+                }
+            }
+            if(time_out_cnt < GET_SERIALS_LEDS_VERSION_TIME_OUT/10)
+            {
+                //ROS_INFO("set led effect flow OK");
+                err_cnt = 0;
+                time_out_cnt = 0;
+            }
+            else
+            {
+                ROS_ERROR("get serials leds version time out");
+                time_out_cnt = 0;
+                if(err_cnt++ < 4)
+                {
+                    ROS_ERROR("get serials leds version start to resend msg....");
+                    goto get_serials_leds_version_restart;
+                }
+                ROS_ERROR("CAN NOT COMMUNICATE with powerboard mcu, get serials leds version failed !");
+                err_cnt = 0;
+            }
+
+        }
+        /* -------- get serials leds version end -------- */
+
 
         usleep(10 * 1000);
     }
@@ -1406,6 +1526,30 @@ int NoahPowerboard::RemotePowerCtrl(powerboard_t *sys)     // done
     can_msg.Data[0] = 0x00;
     can_msg.Data[1] = sys->remote_power_ctrl_set.remote_power_ctrl;
     ROS_WARN("start to set remote power ctrl to %d",sys->remote_power_ctrl_set.remote_power_ctrl);
+    this->pub_to_can_node.publish(can_msg);
+    return error;
+}
+
+int NoahPowerboard::get_serials_leds_version(powerboard_t *sys)     // done
+{
+    ROS_INFO("start to get serials leds version . . . ");
+    int error = 0;
+    mrobot_driver_msgs::vci_can can_msg;
+    CAN_ID_UNION id;
+    memset(&id, 0x0, sizeof(CAN_ID_UNION));
+    id.CanID_Struct.SourceID = CAN_SOURCE_ID_GET_SERIALS_LEDS_VERSION;
+    id.CanID_Struct.SrcMACID = 0;//CAN_SUB_PB_SRC_ID;
+    id.CanID_Struct.DestMACID = NOAH_POWERBOARD_CAN_SRCMAC_ID;
+    id.CanID_Struct.FUNC_ID = 0x02;
+    id.CanID_Struct.ACK = 0;
+    id.CanID_Struct.res = 0;
+
+    can_msg.ID = id.CANx_ID;
+    can_msg.DataLen = 2;
+    can_msg.Data.resize(2);
+    can_msg.Data[0] = 0x00;
+    can_msg.Data[1] = 0;
+    ROS_WARN("start to get serials leds version ...");
     this->pub_to_can_node.publish(can_msg);
     return error;
 }
@@ -1955,6 +2099,30 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_ca
         }while(0);
 
         this->sys_powerboard->remote_power_ctrl_set.remote_power_ctrl = remote_power_ctrl_ack.remote_power_ctrl;
+    }
+
+
+    if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_GET_SERIALS_LEDS_VERSION)
+    {
+        ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_SERIALS_LEDS_VERSION");
+
+        get_serials_leds_version_t get_serials_leds_version_ack;
+        get_serials_leds_version_ack.reserve = 0;
+        for(uint8_t i = 0; i < msg->DataLen; i++)
+        {
+            get_serials_leds_version_ack.version.push_back(msg->Data[i]);
+        }
+
+        do
+        {
+            boost::mutex::scoped_lock(this->mtx);
+            this->get_serials_leds_version_ack_vector.push_back(get_serials_leds_version_ack);
+        }while(0);
+
+        sys_powerboard->serials_leds_mcu_version = get_serials_leds_version_ack.version;
+        ROS_INFO("set param of serials leds verion ");
+        ROS_INFO("serials leds verison is : %s",sys_powerboard->serials_leds_mcu_version.c_str());
+        n.setParam(serials_leds_mcu_version_param, sys_powerboard->serials_leds_mcu_version.c_str());
     }
 }
 

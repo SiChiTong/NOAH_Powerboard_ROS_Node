@@ -42,17 +42,18 @@ using json = nlohmann::json;
 //////  source id define  //////
 #define CAN_SOURCE_ID_READ_VERSION      0x01
 
-#define CAN_SOURCE_ID_SET_MODULE_STATE      0x81
-#define CAN_SOURCE_ID_GET_MODULE_STATE      0x82
-#define CAN_SOURCE_ID_GET_SYS_STATE         0x83
-#define CAN_SOURCE_ID_GET_ERR_STATE         0x84
-#define CAN_SOURCE_ID_GET_BAT_STATE         0x85
-#define CAN_SOURCE_ID_GET_ADC_DATA          0x86
-#define CAN_SOURCE_ID_SET_IR_LED_LIGHTNESS  0x87
-#define CAN_SOURCE_ID_GET_IR_LED_LIGHTNESS  0x88
-#define CAN_SOURCE_ID_SET_LED_EFFECT        0x89
-#define CAN_SOURCE_ID_POWER_OFF_SIGNAL      0x8a
-#define CAN_SOURCE_ID_REMOTE_POWRER_CTRL    0x8b
+#define CAN_SOURCE_ID_SET_MODULE_STATE              0x81
+#define CAN_SOURCE_ID_GET_MODULE_STATE              0x82
+#define CAN_SOURCE_ID_GET_SYS_STATE                 0x83
+#define CAN_SOURCE_ID_GET_ERR_STATE                 0x84
+#define CAN_SOURCE_ID_GET_BAT_STATE                 0x85
+#define CAN_SOURCE_ID_GET_ADC_DATA                  0x86
+#define CAN_SOURCE_ID_SET_IR_LED_LIGHTNESS          0x87
+#define CAN_SOURCE_ID_GET_IR_LED_LIGHTNESS          0x88
+#define CAN_SOURCE_ID_SET_LED_EFFECT                0x89
+#define CAN_SOURCE_ID_POWER_OFF_SIGNAL              0x8a
+#define CAN_SOURCE_ID_REMOTE_POWRER_CTRL            0x8b
+#define CAN_SOURCE_ID_GET_SERIALS_LEDS_VERSION      0x8c
 
 #define HW_VERSION_SIZE             3
 #define SW_VERSION_SIZE             16
@@ -267,6 +268,12 @@ typedef struct
     uint8_t status;
 }remote_power_ctrl_t;
 
+typedef struct
+{
+    uint8_t reserve;
+    std::string version;
+}get_serials_leds_version_t;
+
 #pragma pack()
 //
 #pragma pack(1)
@@ -392,6 +399,7 @@ typedef struct
     std::string                 hw_version;
     std::string                 sw_version;
     std::string                 protocol_version;
+    std::string                 serials_leds_mcu_version;
 
 #define SYS_STATUS_OFF              0
 #define SYS_STATUS_TURNING_ON       1
@@ -477,6 +485,7 @@ class NoahPowerboard
         int SetModulePowerOnOff(powerboard_t *sys);
         int GetModulePowerOnOff(powerboard_t *sys);
         int RemotePowerCtrl(powerboard_t *sys);
+        int get_serials_leds_version(powerboard_t *sys);
 
         int send_serial_data(powerboard_t *sys);
         int handle_receive_data(powerboard_t *sys);
@@ -526,6 +535,9 @@ class NoahPowerboard
         vector<remote_power_ctrl_t>     remote_power_ctrl_vector;
         vector<remote_power_ctrl_t>     remote_power_ctrl_ack_vector;
 
+        vector<get_serials_leds_version_t> get_serials_leds_version_vector;
+        vector<get_serials_leds_version_t> get_serials_leds_version_ack_vector;
+
         boost::mutex mtx;
         bool is_log_on;
 
@@ -557,6 +569,7 @@ class NoahPowerboard
         std::string software_version_param = "mcu_noah_powerboard_version";
         std::string hardware_version_param = "noah_powerboard_hardware_version";
         std::string protocol_version_param = "noah_powerboard_protocol_version";
+        std::string serials_leds_mcu_version_param = "mcu_serials_leds_version";
 
 };
 int handle_receive_data(powerboard_t *sys);

@@ -57,6 +57,7 @@ int main(int argc, char **argv)
     set_leds_effect_t set_led_effect;
     get_sys_status_t get_sys_status;
     get_version_t get_version;
+    get_serials_leds_version_t get_serials_leds_version;
 
     get_version.get_version_type = 1;
 
@@ -66,6 +67,7 @@ int main(int argc, char **argv)
     set_led_effect.reserve = 0;
 
     get_sys_status.reserve = 0;
+    get_serials_leds_version.reserve = 0;
 
     while(ros::ok())
     {
@@ -85,6 +87,9 @@ int main(int argc, char **argv)
 
                     get_version.get_version_type = 3;
                     powerboard->get_version_vector.push_back(get_version);
+
+                    powerboard->get_serials_leds_version_vector.push_back(get_serials_leds_version);
+
                 }while(0);
 
 #if 0
