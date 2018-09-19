@@ -4,7 +4,7 @@ project(noah_powerboard)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
-  mrobot_driver_msgs 
+  mrobot_msgs
   roscan
   message_generation
 )

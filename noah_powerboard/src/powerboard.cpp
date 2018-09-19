@@ -22,7 +22,7 @@
 #include <powerboard.h>
 #include <boost/thread/thread.hpp>
 #include <boost/thread/mutex.hpp>
-#include <mrobot_driver_msgs/vci_can.h>
+#include <mrobot_msgs/vci_can.h>
 #include <roscan/can_long_frame.h>
 
 #define PowerboardInfo     ROS_INFO
@@ -1338,7 +1338,7 @@ int NoahPowerboard::PowerboardParamInit(void)
 int NoahPowerboard::SetLedEffect(powerboard_t *powerboard)     // done
 {
     int error = 0;
-    mrobot_driver_msgs::vci_can can_msg;
+    mrobot_msgs::vci_can can_msg;
     CAN_ID_UNION id;
     memset(&id, 0x0, sizeof(CAN_ID_UNION));
     id.CanID_Struct.SourceID = CAN_SOURCE_ID_SET_LED_EFFECT;
@@ -1362,7 +1362,7 @@ int NoahPowerboard::SetLedEffect(powerboard_t *powerboard)     // done
 int NoahPowerboard::GetBatteryInfo(powerboard_t *sys)      // done
 {
     int error = 0;
-    mrobot_driver_msgs::vci_can can_msg;
+    mrobot_msgs::vci_can can_msg;
     CAN_ID_UNION id;
     memset(&id, 0x0, sizeof(CAN_ID_UNION));
     id.CanID_Struct.SourceID = CAN_SOURCE_ID_GET_BAT_STATE;
@@ -1384,7 +1384,7 @@ int NoahPowerboard::SetModulePowerOnOff(powerboard_t *sys)
 {
     int error = 0;
 
-    mrobot_driver_msgs::vci_can can_msg;
+    mrobot_msgs::vci_can can_msg;
     CAN_ID_UNION id;
     memset(&id, 0x0, sizeof(CAN_ID_UNION));
     id.CanID_Struct.SourceID = CAN_SOURCE_ID_SET_MODULE_STATE;
@@ -1419,7 +1419,7 @@ int NoahPowerboard::GetModulePowerOnOff(powerboard_t *sys)
 int NoahPowerboard::GetAdcData(powerboard_t *sys)      // done
 {
     int error = 0;
-    mrobot_driver_msgs::vci_can can_msg;
+    mrobot_msgs::vci_can can_msg;
     CAN_ID_UNION id;
     memset(&id, 0x0, sizeof(CAN_ID_UNION));
     id.CanID_Struct.SourceID = CAN_SOURCE_ID_GET_ADC_DATA;
@@ -1441,7 +1441,7 @@ int NoahPowerboard::GetAdcData(powerboard_t *sys)      // done
 int NoahPowerboard::GetVersion(powerboard_t *sys)      // done
 {
     int error = 0;
-    mrobot_driver_msgs::vci_can can_msg;
+    mrobot_msgs::vci_can can_msg;
     CAN_ID_UNION id;
     memset(&id, 0x0, sizeof(CAN_ID_UNION));
     id.CanID_Struct.SourceID = CAN_SOURCE_ID_READ_VERSION;
@@ -1463,7 +1463,7 @@ int NoahPowerboard::GetVersion(powerboard_t *sys)      // done
 int NoahPowerboard::GetSysStatus(powerboard_t *sys)     // done
 {
     int error = 0;
-    mrobot_driver_msgs::vci_can can_msg;
+    mrobot_msgs::vci_can can_msg;
     CAN_ID_UNION id;
     memset(&id, 0x0, sizeof(CAN_ID_UNION));
     id.CanID_Struct.SourceID = CAN_SOURCE_ID_GET_SYS_STATE;
@@ -1485,7 +1485,7 @@ int NoahPowerboard::GetSysStatus(powerboard_t *sys)     // done
 int NoahPowerboard::InfraredLedCtrl(powerboard_t *sys)     // done
 {
     int error = 0;
-    mrobot_driver_msgs::vci_can can_msg;
+    mrobot_msgs::vci_can can_msg;
     CAN_ID_UNION id;
     memset(&id, 0x0, sizeof(CAN_ID_UNION));
     id.CanID_Struct.SourceID = CAN_SOURCE_ID_SET_IR_LED_LIGHTNESS;
@@ -1510,7 +1510,7 @@ int NoahPowerboard::InfraredLedCtrl(powerboard_t *sys)     // done
 int NoahPowerboard::RemotePowerCtrl(powerboard_t *sys)     // done
 {
     int error = 0;
-    mrobot_driver_msgs::vci_can can_msg;
+    mrobot_msgs::vci_can can_msg;
     CAN_ID_UNION id;
     memset(&id, 0x0, sizeof(CAN_ID_UNION));
     id.CanID_Struct.SourceID = CAN_SOURCE_ID_REMOTE_POWRER_CTRL;
@@ -1534,7 +1534,7 @@ int NoahPowerboard::get_serials_leds_version(powerboard_t *sys)     // done
 {
     ROS_INFO("start to get serials leds version . . . ");
     int error = 0;
-    mrobot_driver_msgs::vci_can can_msg;
+    mrobot_msgs::vci_can can_msg;
     CAN_ID_UNION id;
     memset(&id, 0x0, sizeof(CAN_ID_UNION));
     id.CanID_Struct.SourceID = CAN_SOURCE_ID_GET_SERIALS_LEDS_VERSION;
@@ -1703,6 +1703,7 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
 void NoahPowerboard::basestate_callback(std_msgs::UInt8MultiArray data)
 {
     //if(data.data.size() == 7)
+    ROS_ERROR("%s", __func__);
     {
         if((data.data[2] & (1<<4)) || (data.data[3]))
         {
@@ -1838,14 +1839,14 @@ void NoahPowerboard::PubChargeStatus(uint8_t status)
     }
 
 }
-void NoahPowerboard::rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::ConstPtr &c_msg)
+void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::ConstPtr &c_msg)
 {
-    mrobot_driver_msgs::vci_can can_msg;
-    mrobot_driver_msgs::vci_can long_msg;
+    mrobot_msgs::vci_can can_msg;
+    mrobot_msgs::vci_can long_msg;
     CAN_ID_UNION id;
 
     long_msg = this->long_frame.frame_construct(c_msg);
-    mrobot_driver_msgs::vci_can* msg = &long_msg;
+    mrobot_msgs::vci_can* msg = &long_msg;
     if( msg->ID == 0 )
     {
         return;
@@ -2168,7 +2169,7 @@ void NoahPowerboard::update_sys_status(void)
                 }while(0);
             }
         }
-        else if(power_percent == VBAT_POWER_CHARGING_FULL)
+        else if(power_percent >= VBAT_POWER_CHARGING_FULL)
         {
             if(prv_led_effect != LIGHTS_MODE_CHARGING_FULL)
             {

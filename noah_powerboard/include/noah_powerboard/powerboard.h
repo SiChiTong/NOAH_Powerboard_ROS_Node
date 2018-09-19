@@ -1,7 +1,7 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include "json.hpp"
-#include <mrobot_driver_msgs/vci_can.h>
+#include <mrobot_msgs/vci_can.h>
 #include <roscan/can_long_frame.h>
 #include <boost/thread/mutex.hpp>
 #include <noah_powerboard/remote_power_ctrl_srv.h>
@@ -458,7 +458,7 @@ class NoahPowerboard
             noah_powerboard_sub = n.subscribe("rx_noah_powerboard_node",1000,&NoahPowerboard::from_app_rcv_callback,this);
             sub_navigation_camera_leds = n.subscribe("lane_follower_node/camera_using_n",1000,&NoahPowerboard::from_navigation_rcv_callback,this);
 
-            pub_to_can_node = n.advertise<mrobot_driver_msgs::vci_can>("noah_powerboard_to_can", 1000);
+            pub_to_can_node = n.advertise<mrobot_msgs::vci_can>("noah_powerboard_to_can", 1000);
 
             device_shutdown_signal_pub = n.advertise<std_msgs::UInt8MultiArray>("device_shutdown_signal", 1000);
             sub_from_can_node = n.subscribe("can_to_noah_powerboard", 1000, &NoahPowerboard::rcv_from_can_node_callback, this);
@@ -495,7 +495,7 @@ class NoahPowerboard
         void PubPower(powerboard_t *sys);
         void PubChargeStatus(uint8_t status);
 
-        void rcv_from_can_node_callback(const mrobot_driver_msgs::vci_can::ConstPtr &c_msg);
+        void rcv_from_can_node_callback(const mrobot_msgs::vci_can::ConstPtr &c_msg);
         void basestate_callback(std_msgs::UInt8MultiArray data);
         void serials_leds_turning_effect_callback(std_msgs::UInt8MultiArray data);
         void remote_power_ctrl_callback(std_msgs::UInt8MultiArray data);
