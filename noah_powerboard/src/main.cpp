@@ -51,7 +51,7 @@ int main(int argc, char **argv)
     uint32_t cnt = 0;
     bool flag = 0;
     pthread_t can_protocol_proc_handle;
-    pthread_create(&can_protocol_proc_handle, NULL, CanProtocolProcess,(void*)powerboard);  
+    pthread_create(&can_protocol_proc_handle, NULL, CanProtocolProcess,(void*)powerboard);
 
     get_bat_info_t get_bat_info;
     set_leds_effect_t set_led_effect;
@@ -78,7 +78,7 @@ int main(int argc, char **argv)
                 flag = 1;
                 do
                 {
-                    boost::mutex::scoped_lock(powerboard->mtx);        
+                    boost::mutex::scoped_lock(powerboard->mtx);
                     powerboard->set_leds_effect_vector.push_back(set_led_effect);
                     powerboard->get_version_vector.push_back(get_version);
 
@@ -98,7 +98,7 @@ int main(int argc, char **argv)
                 set_ir_duty_tmp.duty = 55;
                 do
                 {
-                    boost::mutex::scoped_lock(powerboard->mtx);        
+                    boost::mutex::scoped_lock(powerboard->mtx);
                     powerboard->set_ir_duty_vector.push_back(set_ir_duty_tmp);
                 }while(0);
 #endif
@@ -108,24 +108,24 @@ int main(int argc, char **argv)
         //if(cnt % (uint32_t)(rate * 5) == (uint32_t)rate*3)
         if(cnt % (uint32_t)(rate / 1) == 0)
         {
-            //test_fun((void*)powerboard); 
+            //test_fun((void*)powerboard);
             do
             {
-                boost::mutex::scoped_lock(powerboard->mtx);        
+                boost::mutex::scoped_lock(powerboard->mtx);
                 powerboard->get_sys_status_vector.push_back(get_sys_status);
             }while(0);
         }
         //if(cnt % (uint32_t)(rate * 10) == (uint32_t)rate*2)
         if(cnt % (uint32_t)(rate / 1) == rate/2)
         {
-            //test_fun((void*)powerboard); 
+            //test_fun((void*)powerboard);
             do
             {
-                boost::mutex::scoped_lock(powerboard->mtx);        
+                boost::mutex::scoped_lock(powerboard->mtx);
                 powerboard->get_bat_info_vector.push_back(get_bat_info);
             }while(0);
         }
-        
+
         if(cnt % (uint32_t)(rate * 1) == (uint32_t)rate/2)
         {
             powerboard->update_sys_status();

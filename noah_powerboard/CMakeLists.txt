@@ -23,7 +23,7 @@ include_directories(
 ## Generate services in the 'srv' folder
 add_service_files(
     FILES
-    remote_power_ctrl_srv.srv 
+    remote_power_ctrl_srv.srv
 )
 
 generate_messages(
@@ -43,7 +43,7 @@ catkin_package(
 add_dependencies(noah_powerboard_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(noah_powerboard_node
-  ${catkin_LIBRARIES} 
+  ${catkin_LIBRARIES}
 )
 
 #############
