@@ -78,16 +78,24 @@ void test_fun(void * arg)
     cnt++;
 }
 
-class NoahPowerboard;
-#define MODULE_SET_TIME_OUT                     1000//ms
-#define GET_BAT_INFO_TIME_OUT                   1000//ms
-#define GET_SYS_STSTUS_TIME_OUT                 1000//ms
-#define SET_IR_DUTY_TIME_OUT                    1000//ms
-#define GET_VERSION_TIME_OUT                    1000//ms
-#define GET_ADC_TIME_OUT                        1000//ms
-#define SET_LED_EFFECT_TIME_OUT                 1000//ms
-#define SET_REMOTE_POWER_CTRL_TIME_OUT          1000//ms
-#define GET_SERIALS_LEDS_VERSION_TIME_OUT       1000//ms
+//class NoahPowerboard;
+#define MODULE_SET_TIME_OUT                     500//ms
+#define GET_BAT_INFO_TIME_OUT                   500//ms
+#define GET_SYS_STSTUS_TIME_OUT                 500//ms
+#define SET_IR_DUTY_TIME_OUT                    500//ms
+#define GET_VERSION_TIME_OUT                    500//ms
+#define GET_ADC_TIME_OUT                        500//ms
+#define SET_LED_EFFECT_TIME_OUT                 500//ms
+#define SET_REMOTE_POWER_CTRL_TIME_OUT          500//ms
+#define GET_SERIALS_LEDS_VERSION_TIME_OUT       500//ms
+
+#define MODULE_SET_RETRY_CNT                    6
+#define SET_IR_DUTY_RETRY_CNT                   6
+#define GET_VERSION_RETRY_CNT                   5
+#define GET_ADC_RETRY_CNT                       3
+#define SET_LED_EFFECT_RETRY_CNT                6
+#define SET_REMOTE_POWER_CTRL_RETRY_CNT         6
+#define GET_SERIALS_LEDS_VERSION_RETRY_CNT      5
 void *CanProtocolProcess(void* arg)
 {
     module_ctrl_t module_set;
@@ -283,9 +291,6 @@ module_set_restart:
                         }
 
 
-
-
-
                         break;
                     }
                     else
@@ -308,7 +313,7 @@ module_set_restart:
             {
                 ROS_ERROR("module ctrl time out");
                 time_out_cnt = 0;
-                if(err_cnt++ < 4)
+                if(err_cnt++ < MODULE_SET_RETRY_CNT)
                 {
                     ROS_ERROR("module ctrl start to resend msg....");
                     goto module_set_restart;
@@ -384,6 +389,8 @@ get_bat_info_restart:
                 ROS_INFO("get bat info:send cmd to mcu");
             }
             pNoahPowerboard->GetBatteryInfo(pNoahPowerboard->sys_powerboard);
+ 
+#if 0
             bool get_bat_info_ack_flag = 0;
             get_bat_info_ack_t get_bat_info_ack;
             while(time_out_cnt < GET_BAT_INFO_TIME_OUT/10)
@@ -454,7 +461,7 @@ get_bat_info_restart:
                 ROS_ERROR("CAN NOT COMMUNICATE with powerboard mcu, get bat info failed !");
                 err_cnt = 0;
             }
-
+#endif
         }
         /* -------- get bat info protocol end -------- */
 
@@ -561,7 +568,7 @@ set_ir_duty_restart:
             {
                 ROS_ERROR("set ir duty time out");
                 time_out_cnt = 0;
-                if(err_cnt++ < 3)
+                if(err_cnt++ < SET_IR_DUTY_RETRY_CNT)
                 {
                     ROS_ERROR("set ir duty start to resend msg....");
                     goto set_ir_duty_restart;
@@ -618,7 +625,7 @@ get_sys_status_restart:
                 ROS_INFO("get sys status:send cmd to mcu");
             }
             pNoahPowerboard->GetSysStatus(pNoahPowerboard->sys_powerboard);
-
+#if 0
             bool get_sys_status_ack_flag = 0;
             get_sys_status_ack_t get_sys_status_ack;
             while(time_out_cnt < GET_SYS_STSTUS_TIME_OUT/10)
@@ -686,7 +693,7 @@ get_sys_status_restart:
                 ROS_ERROR("CAN NOT COMMUNICATE with powerboard mcu, get_sys_status failed !");
                 err_cnt = 0;
             }
-
+#endif
         }
         /* -------- get sys status protocol end -------- */
 
@@ -806,7 +813,7 @@ get_version_restart:
             {
                 ROS_ERROR("get version time out");
                 time_out_cnt = 0;
-                if(err_cnt++ < 3)
+                if(err_cnt++ < GET_VERSION_RETRY_CNT)
                 {
                     ROS_ERROR("get version start to resend msg....");
                     goto get_version_restart;
@@ -937,7 +944,7 @@ get_adc_restart:
             {
                 ROS_ERROR("get adc time out");
                 time_out_cnt = 0;
-                if(err_cnt++ < 3)
+                if(err_cnt++ < GET_ADC_RETRY_CNT)
                 {
                     ROS_ERROR("get adc start to resend msg....");
                     goto get_adc_restart;
@@ -1064,7 +1071,7 @@ set_leds_effect_restart:
             {
                 ROS_ERROR("set led effect time out");
                 time_out_cnt = 0;
-                if(err_cnt++ < 4)
+                if(err_cnt++ < SET_LED_EFFECT_RETRY_CNT)
                 {
                     ROS_ERROR("set led effect start to resend msg....");
                     goto set_leds_effect_restart;
@@ -1193,7 +1200,7 @@ set_remote_power_ctrl_restart:
             {
                 ROS_ERROR("set remote power ctrl time out");
                 time_out_cnt = 0;
-                if(err_cnt++ < 4)
+                if(err_cnt++ < SET_REMOTE_POWER_CTRL_RETRY_CNT)
                 {
                     ROS_ERROR("set remote power ctrl start to resend msg....");
                     goto set_remote_power_ctrl_restart;
@@ -1309,7 +1316,7 @@ get_serials_leds_version_restart:
             {
                 ROS_ERROR("get serials leds version time out");
                 time_out_cnt = 0;
-                if(err_cnt++ < 4)
+                if(err_cnt++ < GET_SERIALS_LEDS_VERSION_RETRY_CNT)
                 {
                     ROS_ERROR("get serials leds version start to resend msg....");
                     goto get_serials_leds_version_restart;
