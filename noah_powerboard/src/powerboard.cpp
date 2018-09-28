@@ -389,7 +389,7 @@ get_bat_info_restart:
                 ROS_INFO("get bat info:send cmd to mcu");
             }
             pNoahPowerboard->GetBatteryInfo(pNoahPowerboard->sys_powerboard);
- 
+
 #if 0
             bool get_bat_info_ack_flag = 0;
             get_bat_info_ack_t get_bat_info_ack;
