@@ -55,6 +55,8 @@ using json = nlohmann::json;
 #define CAN_SOURCE_ID_REMOTE_POWRER_CTRL            0x8b
 #define CAN_SOURCE_ID_GET_SERIALS_LEDS_VERSION      0x8c
 
+#define CAN_SOURCE_ID_SET_CONVEYOR_BELT_WORK_MODE   0xa0
+
 #define HW_VERSION_SIZE             3
 #define SW_VERSION_SIZE             16
 #define PROTOCOL_VERSION_SIZE       14
@@ -376,6 +378,20 @@ typedef struct
     //uint8_t lightness_percent;
 }ir_cmd_t;
 
+typedef struct
+{
+#define CONVEYOR_BELT_STATUS_STOP       0
+#define CONVEYOR_BELT_STATUS_LOAD       1
+#define CONVEYOR_BELT_STATUS_UNLOAD     2
+    uint8_t set_work_mode;
+    uint8_t set_result;
+    uint8_t ack_work_mode;
+#define CONVEYOR_BELT_LOAD_ERROR        0xF0
+#define CONVEYOR_BELT_UNLOAD_ERROR      0xF1
+#define CONVEYOR_BELT_STATUS_ERROR      0xFF
+    uint8_t err_status;
+}conveyor_belt_t;
+
 #define VBAT_POWER_OFF_PERCENTAGE           10  // %
 #define VBAT_POWER_LOW_WARNING_PERCENTAGE   20  // %
 
@@ -420,6 +436,7 @@ typedef struct
     module_ctrl_t               module_status_set;
     module_ctrl_t               module_status;
     remote_power_ctrl_t         remote_power_ctrl_set;
+    conveyor_belt_t             conveyor_belt;
 
 #define SEND_DATA_BUF_LEN           255
     uint8_t                     send_data_buf[SEND_DATA_BUF_LEN];
@@ -474,6 +491,16 @@ class NoahPowerboard
 
             emg_stop = false;
             turnning_direction = 0;
+
+            remote_power_ctrl_vector.clear();
+            module_set_vector.clear();
+            get_bat_info_vector.clear();
+            get_sys_status_vector.clear();
+            set_ir_duty_vector.clear();
+            get_version_vector.clear();
+            get_adc_vector.clear();
+            set_leds_effect_vector.clear();
+            get_serials_leds_version_vector.clear();
         }
         int PowerboardParamInit(void);
         int SetLedEffect(powerboard_t *powerboard);
@@ -486,6 +513,7 @@ class NoahPowerboard
         int GetModulePowerOnOff(powerboard_t *sys);
         int RemotePowerCtrl(powerboard_t *sys);
         int get_serials_leds_version(powerboard_t *sys);
+        int set_conveyor_belt_work_mode(powerboard_t *sys);
 
         int send_serial_data(powerboard_t *sys);
         int handle_receive_data(powerboard_t *sys);
@@ -537,6 +565,9 @@ class NoahPowerboard
 
         vector<get_serials_leds_version_t> get_serials_leds_version_vector;
         vector<get_serials_leds_version_t> get_serials_leds_version_ack_vector;
+
+        vector<conveyor_belt_t>         set_conveyor_belt_work_mode_vector;
+        vector<conveyor_belt_t>         set_conveyor_belt_work_mode_ack_vector;
 
         boost::mutex mtx;
         bool is_log_on;

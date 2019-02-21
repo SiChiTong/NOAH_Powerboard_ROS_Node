@@ -88,6 +88,7 @@ void test_fun(void * arg)
 #define SET_LED_EFFECT_TIME_OUT                 500//ms
 #define SET_REMOTE_POWER_CTRL_TIME_OUT          500//ms
 #define GET_SERIALS_LEDS_VERSION_TIME_OUT       500//ms
+#define SET_CONVEYOR_BELT_WORK_MODE_TIME_OUT    500//ms
 
 #define MODULE_SET_RETRY_CNT                    6
 #define SET_IR_DUTY_RETRY_CNT                   6
@@ -96,6 +97,7 @@ void test_fun(void * arg)
 #define SET_LED_EFFECT_RETRY_CNT                6
 #define SET_REMOTE_POWER_CTRL_RETRY_CNT         6
 #define GET_SERIALS_LEDS_VERSION_RETRY_CNT      5
+#define SET_CONVEYOR_BELT_WORK_MODE_RETRY_CNT   5
 void *CanProtocolProcess(void* arg)
 {
     module_ctrl_t module_set;
@@ -107,6 +109,7 @@ void *CanProtocolProcess(void* arg)
     set_leds_effect_t set_led_effect;
     remote_power_ctrl_t remote_power_ctrl;
     get_serials_leds_version_t get_serials_leds_version;
+    conveyor_belt_t set_conveyor_belt_mode;
 
     NoahPowerboard *pNoahPowerboard =  (NoahPowerboard*)arg;
 
@@ -119,6 +122,7 @@ void *CanProtocolProcess(void* arg)
     bool set_led_effect_flag = 0;
     bool remote_power_ctrl_flag = 0;
     bool get_serials_leds_version_flag = 0;
+    bool set_conveyor_belt_flag = 0;
     while(ros::ok())
     {
         /* --------  module ctrl protocol  -------- */
@@ -1157,6 +1161,10 @@ set_remote_power_ctrl_restart:
                                 ROS_INFO("get right set remote power ctrl ack");
                             }
                         }
+                        else
+                        {
+                            ROS_ERROR("error: get ack remote power ctrl is %d", remote_power_ctrl_ack.remote_power_ctrl);
+                        }
                     }
                 }while(0);
                 if(remote_power_ctrl_ack_flag == 1)
@@ -1182,6 +1190,10 @@ set_remote_power_ctrl_restart:
                     else if(remote_power_ctrl_ack.status == 2)
                     {
                         ROS_WARN("remote power ctrl error: device is not power on yet !");
+                    }
+                    else
+                    {
+                        ROS_INFO("mcu upload parameter parse error");
                     }
                     break;
                 }
@@ -1327,6 +1339,146 @@ get_serials_leds_version_restart:
 
         }
         /* -------- get serials leds version end -------- */
+
+
+        /* --------  ser conveyor belt work mode protocol begin -------- */
+        do
+        {
+            boost::mutex::scoped_lock(mtx);
+            if(!pNoahPowerboard->set_conveyor_belt_work_mode_vector.empty())
+            {
+                auto a = pNoahPowerboard->set_conveyor_belt_work_mode_vector.begin();
+                set_conveyor_belt_mode = *a;
+                {
+                    set_conveyor_belt_flag = 1;
+                }
+
+                pNoahPowerboard->set_conveyor_belt_work_mode_vector.erase(a);
+
+            }
+
+        }while(0);
+
+        if(set_conveyor_belt_flag == 1)
+        {
+            uint8_t flag = 0;
+            uint32_t time_out_cnt = 0;
+            static uint8_t err_cnt = 0;
+
+            set_conveyor_belt_flag = 0;
+
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("set_conveyor_belt_mode.set_work_mode = %d",set_conveyor_belt_mode.set_work_mode);
+                ROS_INFO("get set set_conveyor_belt_mode cmd");
+            }
+            do
+            {
+                boost::mutex::scoped_lock(mtx);
+                pNoahPowerboard->set_conveyor_belt_work_mode_vector.clear();
+            }while(0);
+
+set_conveyor_belt_work_mode_restart:
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("set conveyor belt work mode :send cmd to mcu");
+            }
+            pNoahPowerboard->sys_powerboard->conveyor_belt = set_conveyor_belt_mode;
+
+            pNoahPowerboard->set_conveyor_belt_work_mode(pNoahPowerboard->sys_powerboard);
+            bool set_conveyor_belt_work_mode_ack_flag = 0;
+            conveyor_belt_t set_conveyor_belt_work_mode_ack;
+            while(time_out_cnt < SET_CONVEYOR_BELT_WORK_MODE_TIME_OUT / 10)
+            {
+                time_out_cnt++;
+                do
+                {
+                    boost::mutex::scoped_lock(mtx);
+                    if(!pNoahPowerboard->set_conveyor_belt_work_mode_ack_vector.empty())
+                    {
+                        if(pNoahPowerboard->is_log_on == true)
+                        {
+                            ROS_INFO("set_conveyor_belt_work_mode_ack_vector is not empty");
+                        }
+                        auto b = pNoahPowerboard->set_conveyor_belt_work_mode_ack_vector.begin();
+
+                        set_conveyor_belt_work_mode_ack = *b;
+
+                        pNoahPowerboard->set_conveyor_belt_work_mode_ack_vector.erase(b);
+
+                        if(set_conveyor_belt_work_mode_ack.set_work_mode == set_conveyor_belt_mode.set_work_mode)
+                        {
+                            set_conveyor_belt_work_mode_ack_flag = 1;
+                            if(pNoahPowerboard->is_log_on == true)
+                            {
+                                ROS_INFO("get right set conveyor belt work mode ack");
+                            }
+                        }
+                        else
+                        {
+                            ROS_ERROR("error: get ack set conveyor belt work mode is %d", set_conveyor_belt_work_mode_ack.set_work_mode);
+                        }
+                    }
+                }while(0);
+                if(set_conveyor_belt_work_mode_ack_flag == 1)
+                {
+                    set_conveyor_belt_work_mode_ack_flag = 0;
+                    if(pNoahPowerboard->is_log_on == true)
+                    {
+                        //ROS_INFO("get right set led effect ack");
+                    }
+                    pNoahPowerboard->sys_powerboard->conveyor_belt = set_conveyor_belt_work_mode_ack;
+                    if(pNoahPowerboard->is_log_on == true)
+                    {
+                        ROS_INFO("get set conveyor belt work mode:%d",set_conveyor_belt_work_mode_ack.set_work_mode);
+                    }
+                    if(set_conveyor_belt_work_mode_ack.err_status == 0)
+                    {
+                        ROS_INFO("conveyor belt status ok");
+                    }
+                    else if(set_conveyor_belt_work_mode_ack.err_status == CONVEYOR_BELT_LOAD_ERROR)
+                    {
+                        ROS_ERROR("conveyor belt load error !");
+                    }
+                    else if(set_conveyor_belt_work_mode_ack.err_status == CONVEYOR_BELT_UNLOAD_ERROR)
+                    {
+                        ROS_ERROR("conveyor belt unload error !");
+                    }
+                    else if(set_conveyor_belt_work_mode_ack.err_status == CONVEYOR_BELT_STATUS_ERROR)
+                    {
+                        ROS_ERROR("conveyor belt status error !");
+                    }
+                    else
+                    {
+                        ROS_ERROR("conveyor belt unknow error !");
+                    }
+                    break;
+                }
+                else
+                {
+                    usleep(10*1000);
+                }
+            }
+            if(time_out_cnt < SET_CONVEYOR_BELT_WORK_MODE_TIME_OUT / 10)
+            {
+                err_cnt = 0;
+                time_out_cnt = 0;
+            }
+            else
+            {
+                ROS_ERROR("set conveyor belt work mode time out");
+                time_out_cnt = 0;
+                if(err_cnt++ < SET_CONVEYOR_BELT_WORK_MODE_RETRY_CNT)
+                {
+                    ROS_ERROR("set remote power ctrl start to resend msg....");
+                    goto set_conveyor_belt_work_mode_restart;
+                }
+                ROS_ERROR("CAN NOT COMMUNICATE with powerboard mcu, set conveyor belt work mode failed !");
+                err_cnt = 0;
+            }
+
+        }
+        /* -------- set conveyor belt work mode protocol end -------- */
 
 
         usleep(10 * 1000);
@@ -1545,7 +1697,7 @@ int NoahPowerboard::get_serials_leds_version(powerboard_t *sys)     // done
     CAN_ID_UNION id;
     memset(&id, 0x0, sizeof(CAN_ID_UNION));
     id.CanID_Struct.SourceID = CAN_SOURCE_ID_GET_SERIALS_LEDS_VERSION;
-    id.CanID_Struct.SrcMACID = 0;//CAN_SUB_PB_SRC_ID;
+    id.CanID_Struct.SrcMACID = 0;
     id.CanID_Struct.DestMACID = NOAH_POWERBOARD_CAN_SRCMAC_ID;
     id.CanID_Struct.FUNC_ID = 0x02;
     id.CanID_Struct.ACK = 0;
@@ -1557,6 +1709,38 @@ int NoahPowerboard::get_serials_leds_version(powerboard_t *sys)     // done
     can_msg.Data[0] = 0x00;
     can_msg.Data[1] = 0;
     ROS_WARN("start to get serials leds version ...");
+    this->pub_to_can_node.publish(can_msg);
+    return error;
+}
+
+int NoahPowerboard::set_conveyor_belt_work_mode(powerboard_t *sys)
+{
+    ROS_INFO("start to set conveyor belt work mode . . . ");
+    int error = 0;
+    mrobot_msgs::vci_can can_msg;
+    CAN_ID_UNION id;
+    memset(&id, 0x0, sizeof(CAN_ID_UNION));
+    id.CanID_Struct.SourceID = CAN_SOURCE_ID_SET_CONVEYOR_BELT_WORK_MODE;
+    id.CanID_Struct.SrcMACID = 0;
+    id.CanID_Struct.DestMACID = NOAH_POWERBOARD_CAN_SRCMAC_ID;
+    id.CanID_Struct.FUNC_ID = 0x02;
+    id.CanID_Struct.ACK = 0;
+    id.CanID_Struct.res = 0;
+
+    can_msg.ID = id.CANx_ID;
+    can_msg.DataLen = 2;
+    can_msg.Data.resize(2);
+    can_msg.Data[0] = 0x00;
+    if((sys->conveyor_belt.set_work_mode >= 0) && (sys->conveyor_belt.set_work_mode <= 2))
+    {
+        can_msg.Data[1] = sys->conveyor_belt.set_work_mode;
+    }
+    else
+    {
+        ROS_ERROR("set conveyor belt work mode: parameter error !  set work mode %d", sys->conveyor_belt.set_work_mode);
+        return -1;
+    }
+
     this->pub_to_can_node.publish(can_msg);
     return error;
 }
@@ -1586,7 +1770,7 @@ bool NoahPowerboard::service_remote_power_ctrl(noah_powerboard::remote_power_ctr
 
     ROS_ERROR("%s: parameter error!  Request.power_ctrl: %d",__func__, ctrl.power_ctrl);
     status.result = -1;
-    return false;
+    return true;
 }
 
 void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg)
@@ -1638,7 +1822,7 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                             ROS_INFO("set door ctrl  on");
                             module_ctrl_t param;
                             param.group_num = 1;
-                            param.module = POWER_DOOR_CTRL | POWER_VSYS_24V_NV;
+                            param.module = POWER_DOOR_CTRL | POWER_VSYS_24V_NV | POWER_3V3_CARD_EN_1;
                             param.on_off = MODULE_CTRL_ON;
                             this->module_set_vector.push_back(param);
                         }
@@ -1647,7 +1831,7 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                             ROS_INFO("set door ctrl off");
                             module_ctrl_t param;
                             param.group_num = 1;
-                            param.module = POWER_DOOR_CTRL | POWER_VSYS_24V_NV;
+                            param.module = POWER_DOOR_CTRL | POWER_VSYS_24V_NV | POWER_3V3_CARD_EN_1;
                             param.on_off = MODULE_CTRL_OFF;
                             this->module_set_vector.push_back(param);
                         }
@@ -2062,7 +2246,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::Cons
             ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_SET_LED_EFFECT");
             ROS_INFO("led mode %d",set_led_effect_ack.mode);
         }
-        if(id.CanID_Struct.ACK == 1)
+        //if(id.CanID_Struct.ACK == 1)
         {
             do
             {
@@ -2130,6 +2314,39 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::Cons
         ROS_INFO("set param of serials leds verion ");
         ROS_INFO("serials leds verison is : %s",sys_powerboard->serials_leds_mcu_version.c_str());
         n.setParam(serials_leds_mcu_version_param, sys_powerboard->serials_leds_mcu_version.c_str());
+    }
+
+    if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_SET_CONVEYOR_BELT_WORK_MODE)
+    {
+        ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_SET_CONVEYOR_BELT_WORK_MODE");
+        conveyor_belt_t conveyor_belt_ack;
+        if(id.CanID_Struct.ACK == 0)
+        {
+            if(msg->DataLen == 1)
+            {
+                ROS_INFO("MCU upload: CAN_SOURCE_ID_SET_CONVEYOR_BELT_WORK_MODE");
+                conveyor_belt_ack.set_result = msg->Data[0];
+                ROS_INFO("conveyor belt result :%d", conveyor_belt_ack.set_result);
+            }
+            else
+            {
+                ROS_ERROR("can data len error ! data len: %d", msg->DataLen);
+            }
+        }
+        else
+        {
+            conveyor_belt_ack.set_result = msg->Data[0];
+            conveyor_belt_ack.set_work_mode = msg->Data[1];
+            conveyor_belt_ack.err_status = msg->Data[2];
+            do
+            {
+                boost::mutex::scoped_lock(this->mtx);
+                this->set_conveyor_belt_work_mode_ack_vector.push_back(conveyor_belt_ack);
+            } while (0);
+
+            this->sys_powerboard->conveyor_belt.ack_work_mode = conveyor_belt_ack.ack_work_mode;
+            this->sys_powerboard->conveyor_belt.err_status = conveyor_belt_ack.err_status;
+        }
     }
 }
 
