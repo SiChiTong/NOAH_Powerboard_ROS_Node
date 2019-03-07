@@ -1225,7 +1225,7 @@ set_remote_power_ctrl_restart:
         /* -------- remote device power ctrl  protocol end -------- */
 
 
-
+#if 0
         /* --------  get serials leds version  protocol begin -------- */
         do
         {
@@ -1339,7 +1339,7 @@ get_serials_leds_version_restart:
 
         }
         /* -------- get serials leds version end -------- */
-
+#endif
 
         /* --------  ser conveyor belt work mode protocol begin -------- */
         do
