@@ -58,7 +58,7 @@ int main(int argc, char **argv)
     get_sys_status_t get_sys_status;
     get_version_t get_version;
     //get_serials_leds_version_t get_serials_leds_version;
-    conveyor_belt_t set_conveyor_belt_work_mode;
+    //conveyor_belt_t set_conveyor_belt_work_mode;
 
     get_version.get_version_type = 1;
 
@@ -70,7 +70,7 @@ int main(int argc, char **argv)
     get_sys_status.reserve = 0;
     //get_serials_leds_version.reserve = 0;
 
-    set_conveyor_belt_work_mode.set_work_mode = CONVEYOR_BELT_STATUS_LOAD;
+    //set_conveyor_belt_work_mode.set_work_mode = CONVEYOR_BELT_STATUS_LOAD;
 
     while (ros::ok())
     {
@@ -92,7 +92,7 @@ int main(int argc, char **argv)
                     powerboard->get_version_vector.push_back(get_version);
 
                     //powerboard->get_serials_leds_version_vector.push_back(get_serials_leds_version);
-                    powerboard->set_conveyor_belt_work_mode_vector.push_back(set_conveyor_belt_work_mode);
+                    //powerboard->set_conveyor_belt_work_mode_vector.push_back(set_conveyor_belt_work_mode);
 
 
                 }while(0);
@@ -110,20 +110,17 @@ int main(int argc, char **argv)
 
             }
         }
-        //if(cnt % (uint32_t)(rate * 5) == (uint32_t)rate*3)
+
         if(cnt % (uint32_t)(rate / 1) == 0)
         {
-            //test_fun((void*)powerboard);
             do
             {
                 boost::mutex::scoped_lock(powerboard->mtx);
                 powerboard->get_sys_status_vector.push_back(get_sys_status);
             }while(0);
         }
-        //if(cnt % (uint32_t)(rate * 10) == (uint32_t)rate*2)
         if(cnt % (uint32_t)(rate / 1) == rate/2)
         {
-            //test_fun((void*)powerboard);
             do
             {
                 boost::mutex::scoped_lock(powerboard->mtx);

@@ -1713,6 +1713,29 @@ int NoahPowerboard::get_serials_leds_version(powerboard_t *sys)     // done
     return error;
 }
 
+
+int NoahPowerboard::ack_mcu_upload(CAN_ID_UNION id, uint8_t serial_num)
+{
+    ROS_INFO("start to ack mcu upload info. . . ");
+    int error = 0;
+    mrobot_msgs::vci_can can_msg;
+
+    id.CanID_Struct.SrcMACID = 0;
+    id.CanID_Struct.DestMACID = NOAH_POWERBOARD_CAN_SRCMAC_ID;
+    id.CanID_Struct.FUNC_ID = 0x02;
+    id.CanID_Struct.ACK = 1;
+    id.CanID_Struct.res = 0;
+
+    can_msg.ID = id.CANx_ID;
+    can_msg.DataLen = 2;
+    can_msg.Data.resize(2);
+    can_msg.Data[0] = 0x00;
+    can_msg.Data[1] = serial_num;
+    this->pub_to_can_node.publish(can_msg);
+    return error;
+}
+
+
 int NoahPowerboard::set_conveyor_belt_work_mode(powerboard_t *sys)
 {
     ROS_INFO("start to set conveyor belt work mode . . . ");
@@ -2124,6 +2147,15 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::Cons
         }
         if(id.CanID_Struct.ACK == 0)
         {
+            can_upload_ack_t can_upload_ack = {0};
+            if(msg->DataLen >= 1)
+            {
+                can_upload_ack.serial_num = msg->Data[msg->DataLen - 1];
+                can_upload_ack.id.CanID_Struct.ACK = 1;
+                can_upload_ack.id.CanID_Struct.SourceID = CAN_SOURCE_ID_GET_SYS_STATE;
+                this->ack_mcu_upload(can_upload_ack.id, can_upload_ack.serial_num);
+                ROS_INFO("serial num: %d", can_upload_ack.serial_num);
+            }
             //ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_SYS_STATE");
             ROS_INFO("sys_status :mcu upload");
             *(uint16_t *)&msg->Data[1];
@@ -2348,6 +2380,33 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::Cons
             this->sys_powerboard->conveyor_belt.err_status = conveyor_belt_ack.err_status;
         }
     }
+
+    if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_EVENT_BUTTON)
+    {
+        ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_EVENT_BUTTON");
+        uint8_t event_button_state = 0;
+        uint8_t serial_num = 0;
+        if(id.CanID_Struct.ACK == 0)
+        {
+            if(msg->DataLen == 2)
+            {
+                CAN_ID_UNION ack_id = {0};
+                ROS_INFO("MCU upload: CAN_SOURCE_ID_EVENT_BUTTON");
+                event_button_state = msg->Data[0];
+                serial_num = msg->Data[1];
+                ROS_INFO("get button state :%d", event_button_state);
+                ROS_INFO("get serial num :%d", serial_num);
+
+                ack_id.CanID_Struct.SourceID = CAN_SOURCE_ID_EVENT_BUTTON;
+                this->ack_mcu_upload(ack_id, serial_num);
+            }
+            else
+            {
+                ROS_ERROR("can data len error ! data len: %d", msg->DataLen);
+            }
+        }
+    }
+
 }
 
 

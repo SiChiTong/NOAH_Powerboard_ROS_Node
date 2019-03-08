@@ -54,6 +54,7 @@ using json = nlohmann::json;
 #define CAN_SOURCE_ID_POWER_OFF_SIGNAL              0x8a
 #define CAN_SOURCE_ID_REMOTE_POWRER_CTRL            0x8b
 #define CAN_SOURCE_ID_GET_SERIALS_LEDS_VERSION      0x8c
+#define CAN_SOURCE_ID_EVENT_BUTTON                  0x8d
 
 #define CAN_SOURCE_ID_SET_CONVEYOR_BELT_WORK_MODE   0xa0
 
@@ -107,6 +108,13 @@ typedef enum
 
     POWER_ALL                 = 0xFFFFFFFF,
 } module_ctrl_e;
+
+
+typedef struct
+{
+    uint8_t serial_num;
+    CAN_ID_UNION id;
+}can_upload_ack_t;
 
 #pragma pack(1)
 typedef struct _VoltageData_t
@@ -514,6 +522,7 @@ class NoahPowerboard
         int RemotePowerCtrl(powerboard_t *sys);
         int get_serials_leds_version(powerboard_t *sys);
         int set_conveyor_belt_work_mode(powerboard_t *sys);
+        int ack_mcu_upload(CAN_ID_UNION id, uint8_t serial_num);
 
         int send_serial_data(powerboard_t *sys);
         int handle_receive_data(powerboard_t *sys);
@@ -568,6 +577,7 @@ class NoahPowerboard
 
         vector<conveyor_belt_t>         set_conveyor_belt_work_mode_vector;
         vector<conveyor_belt_t>         set_conveyor_belt_work_mode_ack_vector;
+
 
         boost::mutex mtx;
         bool is_log_on;
