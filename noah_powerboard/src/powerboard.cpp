@@ -2006,6 +2006,24 @@ void NoahPowerboard::PubPower(powerboard_t *sys)
     power_pub_to_app.publish(bytes_msg);
 }
 
+void NoahPowerboard::pub_event_key_value(uint8_t value)
+{
+    std_msgs::String pub_json_msg;
+    std::stringstream ss;
+
+    this->j_event_key.clear();
+    this->j_event_key =
+        {
+            {"event_key_num", 1},
+            {"key_value", value},
+        };
+
+    ss.clear();
+    ss << j_event_key;
+    pub_json_msg.data = ss.str();
+    this->pub_event_key.publish(pub_json_msg);
+}
+
 #if 0
 void NoahPowerboard::power_from_app_rcv_callback(std_msgs::UInt8MultiArray data)
 {
@@ -2399,6 +2417,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::Cons
 
                 ack_id.CanID_Struct.SourceID = CAN_SOURCE_ID_EVENT_BUTTON;
                 this->ack_mcu_upload(ack_id, serial_num);
+                this->pub_event_key_value(event_button_state);
             }
             else
             {

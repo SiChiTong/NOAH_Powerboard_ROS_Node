@@ -484,6 +484,8 @@ class NoahPowerboard
             sub_navigation_camera_leds = n.subscribe("lane_follower_node/camera_using_n",1000,&NoahPowerboard::from_navigation_rcv_callback,this);
 
             pub_to_can_node = n.advertise<mrobot_msgs::vci_can>("noah_powerboard_to_can", 1000);
+            pub_event_key = n.advertise<std_msgs::String>("post_event_key", 10);
+
 
             device_shutdown_signal_pub = n.advertise<std_msgs::UInt8MultiArray>("device_shutdown_signal", 1000);
             sub_from_can_node = n.subscribe("can_to_noah_powerboard", 1000, &NoahPowerboard::rcv_from_can_node_callback, this);
@@ -531,6 +533,7 @@ class NoahPowerboard
         void power_from_app_rcv_callback(std_msgs::UInt8MultiArray data);
         void PubPower(powerboard_t *sys);
         void PubChargeStatus(uint8_t status);
+        void pub_event_key_value(uint8_t value);
 
         void rcv_from_can_node_callback(const mrobot_msgs::vci_can::ConstPtr &c_msg);
         void basestate_callback(std_msgs::UInt8MultiArray data);
@@ -541,6 +544,7 @@ class NoahPowerboard
 
 
         json j;
+        json j_event_key;
         void pub_json_msg_to_app(const nlohmann::json j_msg);
         powerboard_t    *sys_powerboard;
         can_long_frame  long_frame;
@@ -600,6 +604,8 @@ class NoahPowerboard
         ros::Subscriber sub_from_serials_leds_turnning_ctrl;
         ros::Publisher device_shutdown_signal_pub;
         ros::Subscriber sub_from_remote_power_ctrl;
+
+        ros::Publisher pub_event_key;
 
         ros::ServiceServer remote_power_ctrl_service;
 
