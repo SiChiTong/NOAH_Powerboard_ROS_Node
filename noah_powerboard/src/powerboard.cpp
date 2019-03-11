@@ -1225,7 +1225,7 @@ set_remote_power_ctrl_restart:
         /* -------- remote device power ctrl  protocol end -------- */
 
 
-#if 0
+#if 1
         /* --------  get serials leds version  protocol begin -------- */
         do
         {
@@ -1341,6 +1341,8 @@ get_serials_leds_version_restart:
         /* -------- get serials leds version end -------- */
 #endif
 
+
+#if 0
         /* --------  ser conveyor belt work mode protocol begin -------- */
         do
         {
@@ -1479,6 +1481,7 @@ set_conveyor_belt_work_mode_restart:
 
         }
         /* -------- set conveyor belt work mode protocol end -------- */
+#endif
 
 
         usleep(10 * 1000);
@@ -1845,7 +1848,7 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                             ROS_INFO("set door ctrl  on");
                             module_ctrl_t param;
                             param.group_num = 1;
-                            param.module = POWER_DOOR_CTRL | POWER_VSYS_24V_NV | POWER_3V3_CARD_EN_1;
+                            param.module = POWER_DOOR_CTRL | POWER_VSYS_24V_NV;
                             param.on_off = MODULE_CTRL_ON;
                             this->module_set_vector.push_back(param);
                         }
@@ -1854,7 +1857,7 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                             ROS_INFO("set door ctrl off");
                             module_ctrl_t param;
                             param.group_num = 1;
-                            param.module = POWER_DOOR_CTRL | POWER_VSYS_24V_NV | POWER_3V3_CARD_EN_1;
+                            param.module = POWER_DOOR_CTRL | POWER_VSYS_24V_NV;
                             param.on_off = MODULE_CTRL_OFF;
                             this->module_set_vector.push_back(param);
                         }
