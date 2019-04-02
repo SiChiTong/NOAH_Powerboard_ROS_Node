@@ -1,3 +1,0 @@
-<launch>
-    <node name="test_node" pkg="test" type="test_node" respawn="true" output="screen"/>
-</launch>

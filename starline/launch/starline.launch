@@ -1,4 +1,0 @@
-<launch>
-    <node name="starline" pkg="starline" type="starline" respawn="true" output="screen"/>
-    <rosparam file="$(find starline)/config/starline.yaml" command="load"/>
-</launch>
