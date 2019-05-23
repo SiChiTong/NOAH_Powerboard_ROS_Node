@@ -493,6 +493,7 @@ class NoahPowerboard
             sub_from_serials_leds_turnning_ctrl = n.subscribe("serials_leds_turnning_ctrl", 10, &NoahPowerboard::serials_leds_turning_effect_callback, this);
             sub_from_remote_power_ctrl = n.subscribe("remote_power_ctrl", 100, &NoahPowerboard::remote_power_ctrl_callback, this);
             remote_power_ctrl_service = n.advertiseService("remote_power_ctrl",&NoahPowerboard::service_remote_power_ctrl,this);
+            led_ctrl_sub = n.subscribe("leds_ctrl", 10, &NoahPowerboard::leds_ctrl_callback,this);
 
             sys_powerboard = &sys_powerboard_ram;
             sys_powerboard->sys_status = 0;
@@ -539,6 +540,7 @@ class NoahPowerboard
         void basestate_callback(std_msgs::UInt8MultiArray data);
         void serials_leds_turning_effect_callback(std_msgs::UInt8MultiArray data);
         void remote_power_ctrl_callback(std_msgs::UInt8MultiArray data);
+        void leds_ctrl_callback(const std_msgs::String::ConstPtr &msg);
 
         void get_ir_duty_param(void);
 
@@ -604,6 +606,8 @@ class NoahPowerboard
         ros::Subscriber sub_from_serials_leds_turnning_ctrl;
         ros::Publisher device_shutdown_signal_pub;
         ros::Subscriber sub_from_remote_power_ctrl;
+        ros::Subscriber led_ctrl_sub;
+
 
         ros::Publisher pub_event_key;
 

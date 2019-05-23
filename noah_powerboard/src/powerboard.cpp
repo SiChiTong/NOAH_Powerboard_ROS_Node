@@ -1996,6 +1996,121 @@ void NoahPowerboard:: from_navigation_rcv_callback(const std_msgs::String::Const
     }
 }
 
+void NoahPowerboard::leds_ctrl_callback(const std_msgs::String::ConstPtr &msg)
+{
+    auto j = json::parse(msg->data.c_str());
+    std::string j_str = j.dump();
+    ROS_WARN("topic: leds_ctrl, json data: %s",j_str.data());
+
+    if(j.find("pub_name") != j.end())
+    {
+        if(j["pub_name"] == "status_led_ctrl")
+        {
+            if(j["data"].find("wifi") != j["data"].end())
+            {
+                std::string wifi_status = j["data"]["wifi"];
+                ROS_INFO("get wifi status: %s", wifi_status.c_str());
+                if(j["data"]["wifi"] == "ok")
+                {
+                    ROS_INFO("set wifi status: ok");
+                }
+                else if(j["data"]["wifi"] == "err")
+                {
+                    ROS_INFO("set wifi status: err");
+                }
+                else if(j["data"]["wifi"] == "off")
+                {
+                    ROS_INFO("set wifi status: off");
+                }
+                else
+                {
+                    ROS_ERROR("wifi status parameter error: %s", wifi_status.c_str());
+                }
+            }
+
+            if(j["data"].find("trans") != j["data"].end())
+            {
+                std::string trans_status = j["data"]["trans"];
+                if(j["data"]["trans"] == "ok")
+                {
+                    ROS_INFO("set trans status: ok");
+                }
+                else if(j["data"]["trans"] == "err")
+                {
+                    ROS_INFO("set trans status: err");
+                }
+                else if(j["data"]["trans"] == "off")
+                {
+                    ROS_INFO("set trans status: off");
+                }
+                else
+                {
+                    /*
+                    TODO: parameter error
+                    */
+                    ROS_ERROR("trans status parameter error: %s", trans_status.c_str());
+                }
+            }
+        }
+
+        if(j["pub_name"] == "serial_leds_ctrl")
+        {
+            int period = 0;
+            color_t color = {0};
+            if(j["data"].find("period") != j["data"].end())
+            {
+                period = j["data"]["period"];
+                ROS_INFO("get period: %d", period);
+            }
+
+            if(j["data"].find("color") != j["data"].end())
+            {
+                if(j["data"]["color"].find("r") != j["data"]["color"].end())
+                {
+                    color.r = j["data"]["color"]["r"];
+                    ROS_INFO("get r: %d", color.r);
+                }
+                else
+                {
+                    /*
+                    TODO: parameter error
+                    */
+                }
+                if(j["data"]["color"].find("g") != j["data"]["color"].end())
+                {
+                    color.g = j["data"]["color"]["g"];
+                    ROS_INFO("get g: %d", color.g);
+                }
+                else
+                {
+                    /*
+                    TODO: parameter error
+                    */
+                }
+                if(j["data"]["color"].find("b") != j["data"]["color"].end())
+                {
+                    color.b = j["data"]["color"]["b"];
+                    ROS_INFO("get b: %d", color.b);
+                }
+                else
+                {
+                    /*
+                    TODO: parameter error
+                    */
+                }
+
+                //set_leds_effect_vector
+                set_leds_effect_t set_led_effect;
+                set_led_effect.reserve = 0;
+                set_led_effect.mode = LIGHTS_MODE_SETTING;
+                set_led_effect.period = period;
+                set_led_effect.color = color;
+                this->set_leds_effect_vector.push_back(set_led_effect);
+            }
+        }
+    }
+}
+
 void NoahPowerboard::PubPower(powerboard_t *sys)
 {
     unsigned char power = 0;

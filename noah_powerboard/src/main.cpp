@@ -111,7 +111,8 @@ int main(int argc, char **argv)
             }
         }
 
-        if(cnt % (uint32_t)(rate / 1) == 0)
+        if(cnt % (uint32_t)(rate / 2) == 0)
+        //if(cnt % (uint32_t)(rate / 30) == 0)
         {
             do
             {
@@ -119,7 +120,9 @@ int main(int argc, char **argv)
                 powerboard->get_sys_status_vector.push_back(get_sys_status);
             }while(0);
         }
-        if(cnt % (uint32_t)(rate / 1) == rate/2)
+
+        if(cnt % (uint32_t)(rate * 3) == rate / 2)
+        //if(cnt % (uint32_t)(rate / 30) == (uint32_t)(rate / 60))
         {
             do
             {
@@ -128,11 +131,11 @@ int main(int argc, char **argv)
             }while(0);
         }
 
-        if(cnt % (uint32_t)(rate * 1) == (uint32_t)rate/2)
+        if(cnt % (uint32_t)(rate / 3) == (uint32_t)rate / 6)
         {
             powerboard->update_sys_status();
         }
-        if(cnt % (uint32_t)(rate * 3) == 0)
+        if(cnt % (uint32_t)(rate * 5) == 0)
         {
             powerboard->get_ir_duty_param();
         }
