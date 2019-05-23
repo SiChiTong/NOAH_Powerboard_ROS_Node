@@ -89,6 +89,7 @@ void test_fun(void * arg)
 #define SET_REMOTE_POWER_CTRL_TIME_OUT          500//ms
 #define GET_SERIALS_LEDS_VERSION_TIME_OUT       500//ms
 #define SET_CONVEYOR_BELT_WORK_MODE_TIME_OUT    500//ms
+#define SET_STATUS_LED_TIME_OUT                 500//ms
 
 #define MODULE_SET_RETRY_CNT                    6
 #define SET_IR_DUTY_RETRY_CNT                   6
@@ -98,6 +99,7 @@ void test_fun(void * arg)
 #define SET_REMOTE_POWER_CTRL_RETRY_CNT         6
 #define GET_SERIALS_LEDS_VERSION_RETRY_CNT      5
 #define SET_CONVEYOR_BELT_WORK_MODE_RETRY_CNT   5
+#define SET_LED_STATUS_RETRY_CNT                6
 void *CanProtocolProcess(void* arg)
 {
     module_ctrl_t module_set;
@@ -110,6 +112,7 @@ void *CanProtocolProcess(void* arg)
     remote_power_ctrl_t remote_power_ctrl;
     get_serials_leds_version_t get_serials_leds_version;
     conveyor_belt_t set_conveyor_belt_mode;
+    status_led_t status_led;
 
     NoahPowerboard *pNoahPowerboard =  (NoahPowerboard*)arg;
 
@@ -123,6 +126,7 @@ void *CanProtocolProcess(void* arg)
     bool remote_power_ctrl_flag = 0;
     bool get_serials_leds_version_flag = 0;
     bool set_conveyor_belt_flag = 0;
+    bool set_led_status_flag = 0;
     while(ros::ok())
     {
         /* --------  module ctrl protocol  -------- */
@@ -1268,7 +1272,6 @@ get_serials_leds_version_restart:
             {
                 ROS_INFO("get serials leds version :send cmd to mcu");
             }
-            //pNoahPowerboard->sys_powerboard->remote_power_ctrl_set = remote_power_ctrl;
 
             pNoahPowerboard->get_serials_leds_version(pNoahPowerboard->sys_powerboard);
             bool get_serails_leds_version_ack_flag = 0;
@@ -1340,6 +1343,127 @@ get_serials_leds_version_restart:
         }
         /* -------- get serials leds version end -------- */
 #endif
+
+
+
+        /* --------  status leds control start  -------- */
+
+        do
+        {
+            boost::mutex::scoped_lock(mtx);
+            if(!pNoahPowerboard->set_led_status_vector.empty())
+            {
+                auto a = pNoahPowerboard->set_led_status_vector.begin();
+                status_led = *a;
+                {
+                    set_led_status_flag = 1;
+                }
+
+                pNoahPowerboard->set_led_status_vector.erase(a);
+
+            }
+
+        }while(0);
+
+        if(set_led_status_flag == 1)
+        {
+            uint8_t flag = 0;
+            uint32_t time_out_cnt = 0;
+            static uint8_t err_cnt = 0;
+
+            set_led_status_flag = 0;
+
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("set status led: led: %d, status: %d",status_led.led, status_led.status);
+            }
+            do
+            {
+                boost::mutex::scoped_lock(mtx);
+                pNoahPowerboard->set_led_status_ack_vector.clear();
+            }while(0);
+
+set_led_status_restart:
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("set led status :send cmd to mcu");
+            }
+            pNoahPowerboard->sys_powerboard->status_led_set = status_led;
+
+            pNoahPowerboard->set_status_led(pNoahPowerboard->sys_powerboard);
+            bool set_led_status_ack_flag = 0;
+            status_led_t status_led_ack;
+            while(time_out_cnt < SET_STATUS_LED_TIME_OUT / 10)
+            {
+                time_out_cnt++;
+                do
+                {
+                    boost::mutex::scoped_lock(mtx);
+                    if(!pNoahPowerboard->set_led_status_ack_vector.empty())
+                    {
+                        if(pNoahPowerboard->is_log_on == true)
+                        {
+                            ROS_INFO("set_led_status_ack_vector is not empty");
+                        }
+                        auto b = pNoahPowerboard->set_led_status_ack_vector.begin();
+
+                        status_led_ack = *b;
+
+                        pNoahPowerboard->set_led_status_ack_vector.erase(b);
+
+                        if((status_led_ack.led == status_led.led) &&  (status_led_ack.status == status_led.status))
+                        {
+                            set_led_status_ack_flag = 1;
+                            if(pNoahPowerboard->is_log_on == true)
+                            {
+                                ROS_INFO("get right set led status ack");
+                            }
+                        }
+                        else
+                        {
+                            ROS_ERROR("error: get ack of set status led is: led:%d, status:%d", status_led_ack.led, status_led_ack.status);
+                        }
+                    }
+                }while(0);
+                if(set_led_status_ack_flag == 1)
+                {
+                    set_led_status_ack_flag = 0;
+                    if(pNoahPowerboard->is_log_on == true)
+                    {
+                        ROS_INFO("get right set led status ack");
+                    }
+                    if(pNoahPowerboard->is_log_on == true)
+                    {
+                            ROS_INFO("get ack of set status led is: led:%d, status:%d", status_led_ack.led, status_led_ack.status);
+                    }
+                    break;
+                }
+                else
+                {
+                    usleep(10*1000);
+                }
+            }
+            if(time_out_cnt < SET_STATUS_LED_TIME_OUT / 10)
+            {
+                //ROS_INFO("set led effect flow OK");
+                err_cnt = 0;
+                time_out_cnt = 0;
+            }
+            else
+            {
+                ROS_ERROR("set led status time out");
+                time_out_cnt = 0;
+                if(err_cnt++ < SET_LED_STATUS_RETRY_CNT)
+                {
+                    ROS_ERROR("set remote power ctrl start to resend msg....");
+                    goto set_led_status_restart;
+                }
+                ROS_ERROR("CAN NOT COMMUNICATE with powerboard mcu, set led status failed !");
+                err_cnt = 0;
+            }
+
+        }
+        /* --------  status leds control end  -------- */
 
 
 #if 0
@@ -1771,6 +1895,32 @@ int NoahPowerboard::set_conveyor_belt_work_mode(powerboard_t *sys)
     return error;
 }
 
+
+
+int NoahPowerboard::set_status_led(powerboard_t *sys)     // done
+{
+    int error = 0;
+    mrobot_msgs::vci_can can_msg;
+    CAN_ID_UNION id;
+    memset(&id, 0x0, sizeof(CAN_ID_UNION));
+    id.CanID_Struct.SourceID = CAN_SOURCE_ID_SET_LED_STATUS;
+    id.CanID_Struct.SrcMACID = 0;//CAN_SUB_PB_SRC_ID;
+    id.CanID_Struct.DestMACID = NOAH_POWERBOARD_CAN_SRCMAC_ID;
+    id.CanID_Struct.FUNC_ID = 0x02;
+    id.CanID_Struct.ACK = 0;
+    id.CanID_Struct.res = 0;
+
+    can_msg.ID = id.CANx_ID;
+    can_msg.DataLen = 3;
+    can_msg.Data.resize(3);
+    can_msg.Data[0] = 0x00;
+    can_msg.Data[1] = sys->status_led_set.led;
+    can_msg.Data[2] = sys->status_led_set.status;
+    ROS_WARN("start to set led status: led %d, status:%d",sys->status_led_set.led, sys->status_led_set.status);
+    this->pub_to_can_node.publish(can_msg);
+    return error;
+}
+
 void NoahPowerboard::pub_json_msg_to_app( const nlohmann::json j_msg)
 {
     std_msgs::String pub_json_msg;
@@ -2006,6 +2156,7 @@ void NoahPowerboard::leds_ctrl_callback(const std_msgs::String::ConstPtr &msg)
     {
         if(j["pub_name"] == "status_led_ctrl")
         {
+            status_led_t set_led_status = {0};
             if(j["data"].find("wifi") != j["data"].end())
             {
                 std::string wifi_status = j["data"]["wifi"];
@@ -2013,14 +2164,35 @@ void NoahPowerboard::leds_ctrl_callback(const std_msgs::String::ConstPtr &msg)
                 if(j["data"]["wifi"] == "ok")
                 {
                     ROS_INFO("set wifi status: ok");
+                    set_led_status.led = LED_WIFI;
+                    set_led_status.status = LED_STATUS_OK;
+                    do
+                    {
+                        boost::mutex::scoped_lock(this->mtx);
+                        this->set_led_status_vector.push_back(set_led_status);
+                    }while(0);
                 }
                 else if(j["data"]["wifi"] == "err")
                 {
                     ROS_INFO("set wifi status: err");
+                    set_led_status.led = LED_WIFI;
+                    set_led_status.status = LED_STATUS_ERR;
+                    do
+                    {
+                        boost::mutex::scoped_lock(this->mtx);
+                        this->set_led_status_vector.push_back(set_led_status);
+                    }while(0);
                 }
                 else if(j["data"]["wifi"] == "off")
                 {
                     ROS_INFO("set wifi status: off");
+                    set_led_status.led = LED_WIFI;
+                    set_led_status.status = LED_STATUS_OFF;
+                    do
+                    {
+                        boost::mutex::scoped_lock(this->mtx);
+                        this->set_led_status_vector.push_back(set_led_status);
+                    }while(0);
                 }
                 else
                 {
@@ -2034,14 +2206,35 @@ void NoahPowerboard::leds_ctrl_callback(const std_msgs::String::ConstPtr &msg)
                 if(j["data"]["trans"] == "ok")
                 {
                     ROS_INFO("set trans status: ok");
+                    set_led_status.led = LED_TRANS;
+                    set_led_status.status = LED_STATUS_OK;
+                    do
+                    {
+                        boost::mutex::scoped_lock(this->mtx);
+                        this->set_led_status_vector.push_back(set_led_status);
+                    }while(0);
                 }
                 else if(j["data"]["trans"] == "err")
                 {
                     ROS_INFO("set trans status: err");
+                    set_led_status.led = LED_TRANS;
+                    set_led_status.status = LED_STATUS_ERR;
+                    do
+                    {
+                        boost::mutex::scoped_lock(this->mtx);
+                        this->set_led_status_vector.push_back(set_led_status);
+                    }while(0);
                 }
                 else if(j["data"]["trans"] == "off")
                 {
                     ROS_INFO("set trans status: off");
+                    set_led_status.led = LED_TRANS;
+                    set_led_status.status = LED_STATUS_OFF;
+                    do
+                    {
+                        boost::mutex::scoped_lock(this->mtx);
+                        this->set_led_status_vector.push_back(set_led_status);
+                    }while(0);
                 }
                 else
                 {
@@ -2049,6 +2242,52 @@ void NoahPowerboard::leds_ctrl_callback(const std_msgs::String::ConstPtr &msg)
                     TODO: parameter error
                     */
                     ROS_ERROR("trans status parameter error: %s", trans_status.c_str());
+                }
+            }
+
+
+            if(j["data"].find("battery") != j["data"].end())
+            {
+                std::string battery_status = j["data"]["battery"];
+                if(j["data"]["battery"] == "ok")
+                {
+                    ROS_INFO("set battery status: ok");
+                    set_led_status.led = LED_BATTERY;
+                    set_led_status.status = LED_STATUS_OK;
+                    do
+                    {
+                        boost::mutex::scoped_lock(this->mtx);
+                        this->set_led_status_vector.push_back(set_led_status);
+                    }while(0);
+                }
+                else if(j["data"]["battery"] == "err")
+                {
+                    ROS_INFO("set battery status: err");
+                    set_led_status.led = LED_BATTERY;
+                    set_led_status.status = LED_STATUS_ERR;
+                    do
+                    {
+                        boost::mutex::scoped_lock(this->mtx);
+                        this->set_led_status_vector.push_back(set_led_status);
+                    }while(0);
+                }
+                else if(j["data"]["battery"] == "off")
+                {
+                    ROS_INFO("set battery status: off");
+                    set_led_status.led = LED_BATTERY;
+                    set_led_status.status = LED_STATUS_OFF;
+                    do
+                    {
+                        boost::mutex::scoped_lock(this->mtx);
+                        this->set_led_status_vector.push_back(set_led_status);
+                    }while(0);
+                }
+                else
+                {
+                    /*
+                    TODO: parameter error
+                    */
+                    ROS_ERROR("battery status parameter error: %s", battery_status.c_str());
                 }
             }
         }
@@ -2542,6 +2781,21 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::Cons
                 ROS_ERROR("can data len error ! data len: %d", msg->DataLen);
             }
         }
+    }
+
+
+    if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_SET_LED_STATUS)
+    {
+        ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_SET_LED_STATUS");
+        status_led_t status_led_ack;
+        status_led_ack.led = msg->Data[0];
+        status_led_ack.status = msg->Data[1];
+
+        do
+        {
+            boost::mutex::scoped_lock(this->mtx);
+            this->set_led_status_ack_vector.push_back(status_led_ack);
+        }while(0);
     }
 
 }

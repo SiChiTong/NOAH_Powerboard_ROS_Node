@@ -55,6 +55,7 @@ using json = nlohmann::json;
 #define CAN_SOURCE_ID_REMOTE_POWRER_CTRL            0x8b
 #define CAN_SOURCE_ID_GET_SERIALS_LEDS_VERSION      0x8c
 #define CAN_SOURCE_ID_EVENT_BUTTON                  0x8d
+#define CAN_SOURCE_ID_SET_LED_STATUS                0x8e
 
 #define CAN_SOURCE_ID_SET_CONVEYOR_BELT_WORK_MODE   0xa0
 
@@ -400,6 +401,33 @@ typedef struct
     uint8_t err_status;
 }conveyor_belt_t;
 
+
+
+typedef enum
+{
+    LED_MIN = 0,
+    LED_WIFI = 1,
+    LED_TRANS,
+    LED_BATTERY,
+    LED_MAX,
+}status_led_e;
+
+typedef enum
+{
+    LED_STATUS_MIN = 0,
+    LED_STATUS_OFF = 1,
+    LED_STATUS_OK ,
+    LED_STATUS_ERR,
+    LED_STATUS_MAX,
+}led_ctrl_status_e;
+
+typedef struct
+{
+    uint8_t led;
+    uint8_t status;
+}status_led_t;
+
+
 #define VBAT_POWER_OFF_PERCENTAGE           10  // %
 #define VBAT_POWER_LOW_WARNING_PERCENTAGE   20  // %
 
@@ -445,6 +473,7 @@ typedef struct
     module_ctrl_t               module_status;
     remote_power_ctrl_t         remote_power_ctrl_set;
     conveyor_belt_t             conveyor_belt;
+    status_led_t                status_led_set;
 
 #define SEND_DATA_BUF_LEN           255
     uint8_t                     send_data_buf[SEND_DATA_BUF_LEN];
@@ -525,6 +554,7 @@ class NoahPowerboard
         int RemotePowerCtrl(powerboard_t *sys);
         int get_serials_leds_version(powerboard_t *sys);
         int set_conveyor_belt_work_mode(powerboard_t *sys);
+        int set_status_led(powerboard_t *sys);
         int ack_mcu_upload(CAN_ID_UNION id, uint8_t serial_num);
 
         int send_serial_data(powerboard_t *sys);
@@ -583,6 +613,9 @@ class NoahPowerboard
 
         vector<conveyor_belt_t>         set_conveyor_belt_work_mode_vector;
         vector<conveyor_belt_t>         set_conveyor_belt_work_mode_ack_vector;
+
+        vector<status_led_t>            set_led_status_vector;
+        vector<status_led_t>            set_led_status_ack_vector;
 
 
         boost::mutex mtx;
