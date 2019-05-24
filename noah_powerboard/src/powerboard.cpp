@@ -90,6 +90,7 @@ void test_fun(void * arg)
 #define GET_SERIALS_LEDS_VERSION_TIME_OUT       500//ms
 #define SET_CONVEYOR_BELT_WORK_MODE_TIME_OUT    500//ms
 #define SET_STATUS_LED_TIME_OUT                 500//ms
+#define GET_DEV_ID_TIME_OUT                     500//ms
 
 #define MODULE_SET_RETRY_CNT                    6
 #define SET_IR_DUTY_RETRY_CNT                   6
@@ -100,6 +101,7 @@ void test_fun(void * arg)
 #define GET_SERIALS_LEDS_VERSION_RETRY_CNT      5
 #define SET_CONVEYOR_BELT_WORK_MODE_RETRY_CNT   5
 #define SET_LED_STATUS_RETRY_CNT                6
+#define GET_DEV_ID_RETRY_CNT                    8
 void *CanProtocolProcess(void* arg)
 {
     module_ctrl_t module_set;
@@ -113,6 +115,7 @@ void *CanProtocolProcess(void* arg)
     get_serials_leds_version_t get_serials_leds_version;
     conveyor_belt_t set_conveyor_belt_mode;
     status_led_t status_led;
+    dev_id_t get_dev_id_tmp;
 
     NoahPowerboard *pNoahPowerboard =  (NoahPowerboard*)arg;
 
@@ -127,6 +130,7 @@ void *CanProtocolProcess(void* arg)
     bool get_serials_leds_version_flag = 0;
     bool set_conveyor_belt_flag = 0;
     bool set_led_status_flag = 0;
+    bool get_dev_id_flag = 0;
     while(ros::ok())
     {
         /* --------  module ctrl protocol  -------- */
@@ -1466,6 +1470,108 @@ set_led_status_restart:
         /* --------  status leds control end  -------- */
 
 
+
+        /* --------  get device id  protocol begin -------- */
+        do
+        {
+            boost::mutex::scoped_lock(mtx);
+            if(!pNoahPowerboard->get_dev_id_vector.empty())
+            {
+                auto a = pNoahPowerboard->get_dev_id_vector.begin();
+                get_dev_id_tmp = *a;
+                {
+                    get_dev_id_flag = 1;
+                }
+
+                pNoahPowerboard->get_dev_id_vector.erase(a);
+
+            }
+
+        }while(0);
+
+        if(get_dev_id_flag == 1)
+        {
+            uint8_t flag = 0;
+            uint32_t time_out_cnt = 0;
+            static uint8_t err_cnt = 0;
+
+            get_dev_id_flag = 0;
+
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("get dev id");
+            }
+            do
+            {
+                boost::mutex::scoped_lock(mtx);
+                pNoahPowerboard->get_dev_id_ack_vector.clear();
+            }while(0);
+
+get_dev_id_restart:
+            if(pNoahPowerboard->is_log_on == true)
+            {
+                ROS_INFO("get dev id :send cmd to mcu");
+            }
+            pNoahPowerboard->sys_powerboard->dev_id = get_dev_id_tmp;
+
+            pNoahPowerboard->get_dev_id(pNoahPowerboard->sys_powerboard);
+            bool get_dev_id_ack_flag = 0;
+            dev_id_t get_dev_id_ack;
+            while(time_out_cnt < GET_DEV_ID_TIME_OUT / 10)
+            {
+                time_out_cnt++;
+                do
+                {
+                    boost::mutex::scoped_lock(mtx);
+                    if(!pNoahPowerboard->get_dev_id_ack_vector.empty())
+                    {
+                        if(pNoahPowerboard->is_log_on == true)
+                        {
+                            ROS_INFO("get_dev_id_ack_vector is not empty");
+                        }
+                        auto b = pNoahPowerboard->get_dev_id_ack_vector.begin();
+
+                        get_dev_id_ack = *b;
+
+                        pNoahPowerboard->get_dev_id_ack_vector.erase(b);
+
+                        get_dev_id_ack_flag = 1;
+                    }
+                }while(0);
+
+                if(get_dev_id_ack_flag == 1)
+                {
+                    get_dev_id_ack_flag = 0;
+                    break;
+                }
+                else
+                {
+                    usleep(10*1000);
+                }
+            }
+            if(time_out_cnt < GET_DEV_ID_TIME_OUT / 10)
+            {
+                err_cnt = 0;
+                time_out_cnt = 0;
+            }
+            else
+            {
+                ROS_ERROR("get dev id time out");
+                time_out_cnt = 0;
+                if(err_cnt++ < GET_DEV_ID_RETRY_CNT)
+                {
+                    ROS_ERROR("get dev id start to resend msg....");
+                    goto get_dev_id_restart;
+                }
+                ROS_ERROR("CAN NOT COMMUNICATE with powerboard mcu, get dev id failed !");
+                err_cnt = 0;
+            }
+
+        }
+        /* -------- get device id protocol end -------- */
+
+
+
 #if 0
         /* --------  ser conveyor belt work mode protocol begin -------- */
         do
@@ -1917,6 +2023,31 @@ int NoahPowerboard::set_status_led(powerboard_t *sys)     // done
     can_msg.Data[1] = sys->status_led_set.led;
     can_msg.Data[2] = sys->status_led_set.status;
     ROS_WARN("start to set led status: led %d, status:%d",sys->status_led_set.led, sys->status_led_set.status);
+    this->pub_to_can_node.publish(can_msg);
+    return error;
+}
+
+
+
+int NoahPowerboard::get_dev_id(powerboard_t *sys)     // done
+{
+    int error = 0;
+    mrobot_msgs::vci_can can_msg;
+    CAN_ID_UNION id;
+    memset(&id, 0x0, sizeof(CAN_ID_UNION));
+    id.CanID_Struct.SourceID = CAN_SOURCE_ID_GET_DEV_ID;
+    id.CanID_Struct.SrcMACID = 0;//CAN_SUB_PB_SRC_ID;
+    id.CanID_Struct.DestMACID = NOAH_POWERBOARD_CAN_SRCMAC_ID;
+    id.CanID_Struct.FUNC_ID = 0x02;
+    id.CanID_Struct.ACK = 0;
+    id.CanID_Struct.res = 0;
+
+    can_msg.ID = id.CANx_ID;
+    can_msg.DataLen = 2;
+    can_msg.Data.resize(2);
+    can_msg.Data[0] = 0x00;
+    can_msg.Data[1] = 0;
+    ROS_WARN("start to get dev id . . .");
     this->pub_to_can_node.publish(can_msg);
     return error;
 }
@@ -2795,6 +2926,20 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::Cons
         {
             boost::mutex::scoped_lock(this->mtx);
             this->set_led_status_ack_vector.push_back(status_led_ack);
+        }while(0);
+    }
+
+
+    if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_GET_DEV_ID)
+    {
+        ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_DEV_ID");
+        dev_id_t dev_id = {0};
+        dev_id.dev_id = msg->Data[0] | (msg->Data[1]) << 8;
+        ROS_WARN("get dev id: 0x%x", dev_id.dev_id);
+        do
+        {
+            boost::mutex::scoped_lock(this->mtx);
+            this->get_dev_id_ack_vector.push_back(dev_id);
         }while(0);
     }
 

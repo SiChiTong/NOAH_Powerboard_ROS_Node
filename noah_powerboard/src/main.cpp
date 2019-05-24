@@ -58,6 +58,7 @@ int main(int argc, char **argv)
     get_sys_status_t get_sys_status;
     get_version_t get_version;
     get_serials_leds_version_t get_serials_leds_version;
+    dev_id_t get_dev_id = {0};
     //conveyor_belt_t set_conveyor_belt_work_mode;
 
     get_version.get_version_type = 1;
@@ -93,6 +94,8 @@ int main(int argc, char **argv)
 
                     powerboard->get_serials_leds_version_vector.push_back(get_serials_leds_version);
                     //powerboard->set_conveyor_belt_work_mode_vector.push_back(set_conveyor_belt_work_mode);
+
+                    powerboard->get_dev_id_vector.push_back(get_dev_id);
 
 
                 }while(0);
