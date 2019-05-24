@@ -204,6 +204,11 @@ typedef struct
     uint8_t reserve;
     uint8_t bat_percent;
     uint16_t bat_vol;
+    uint16_t pack_current;
+    uint32_t pack_current_soc;
+    uint32_t pack_totoal_soc;
+    uint16_t pack_recharge_cycle;
+    uint8_t com_status;
 }get_bat_info_ack_t;
 
 
@@ -533,6 +538,8 @@ class NoahPowerboard
             remote_power_ctrl_service = n.advertiseService("remote_power_ctrl",&NoahPowerboard::service_remote_power_ctrl,this);
             led_ctrl_sub = n.subscribe("leds_ctrl", 10, &NoahPowerboard::leds_ctrl_callback,this);
 
+            battery_test_pub = n.advertise<std_msgs::String>("test_battery_info", 10);
+
             sys_powerboard = &sys_powerboard_ram;
             sys_powerboard->sys_status = 0;
             sys_powerboard->bat_info.bat_percent = 0;
@@ -637,6 +644,7 @@ class NoahPowerboard
         uint8_t CalCheckSum(uint8_t *data, uint8_t len);
         int handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf);
         bool service_remote_power_ctrl(noah_powerboard::remote_power_ctrl_srv::Request  &ctrl, noah_powerboard::remote_power_ctrl_srv::Response &status);
+        void pub_battery_info(get_bat_info_ack_t *bat_info);
 
         ros::NodeHandle n;
         ros::Publisher noah_powerboard_pub;
@@ -652,6 +660,7 @@ class NoahPowerboard
         ros::Publisher device_shutdown_signal_pub;
         ros::Subscriber sub_from_remote_power_ctrl;
         ros::Subscriber led_ctrl_sub;
+        ros::Publisher battery_test_pub;
 
 
         ros::Publisher pub_event_key;

@@ -77,7 +77,7 @@ int main(int argc, char **argv)
     {
         if(flag == 0)
         {
-            if(cnt % (uint32_t)(rate * 2) == (uint32_t)rate/2)
+            if(cnt % (uint32_t)(rate * 2) == (uint32_t)rate / 2)
             {
                 flag = 1;
                 do
@@ -124,7 +124,7 @@ int main(int argc, char **argv)
             }while(0);
         }
 
-        if(cnt % (uint32_t)(rate * 3) == rate / 2)
+        if(cnt % (uint32_t)(rate / 5) == rate / 20)
         //if(cnt % (uint32_t)(rate / 30) == (uint32_t)(rate / 60))
         {
             do

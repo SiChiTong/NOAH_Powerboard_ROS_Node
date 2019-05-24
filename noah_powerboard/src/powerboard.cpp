@@ -2558,6 +2558,39 @@ void NoahPowerboard::PubChargeStatus(uint8_t status)
     }
 
 }
+
+
+
+void NoahPowerboard::pub_battery_info(get_bat_info_ack_t *bat_info)
+{
+    json j;
+    j.clear();
+    j =
+    {
+        {"pub_name","test_battery_info"},
+        {
+            "data",
+            {
+                {"percent", bat_info->bat_percent},
+                {"voltage", bat_info->bat_vol},
+                {"current", bat_info->pack_current},
+                {"current_soc", bat_info->pack_current_soc},
+                {"totoal_soc", bat_info->pack_totoal_soc},
+                {"recharge_cycle", bat_info->pack_recharge_cycle},
+                {"com_status", bat_info->com_status},
+            }
+        },
+    };
+    std_msgs::String pub_json_msg;
+    std::stringstream ss;
+    ss.clear();
+    ss << j;
+    pub_json_msg.data.clear();
+    pub_json_msg.data = ss.str();
+    battery_test_pub.publish(pub_json_msg);
+}
+
+
 void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::ConstPtr &c_msg)
 {
     mrobot_msgs::vci_can can_msg;
@@ -2614,7 +2647,20 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::Cons
         get_bat_info_ack_t get_bat_info_ack;
         get_bat_info_ack.bat_vol = *(uint16_t *)&msg->Data[1];
         get_bat_info_ack.bat_percent = msg->Data[3];
-        //ROS_INFO("msg->Data[3]: %d",msg->Data[3]);
+        if(msg->DataLen > 3)
+        {
+            get_bat_info_ack.pack_current = *(uint16_t *)&msg->Data[4];
+            get_bat_info_ack.pack_current_soc = *(uint16_t *)&msg->Data[6];
+            get_bat_info_ack.pack_totoal_soc = *(uint16_t *)&msg->Data[8];
+            get_bat_info_ack.pack_recharge_cycle = *(uint16_t *)&msg->Data[10];
+            get_bat_info_ack.com_status = msg->Data[12];
+            ROS_INFO("battery voltage: %d,  percentage: %d", get_bat_info_ack.bat_vol, get_bat_info_ack.bat_percent);
+            ROS_INFO("battery current: %d", get_bat_info_ack.pack_current);
+            ROS_INFO("battery recharge cycle: %d", get_bat_info_ack.pack_recharge_cycle);
+            ROS_INFO("battery current soc: %d, totoal soc: %d", get_bat_info_ack.pack_current_soc, get_bat_info_ack.pack_totoal_soc);
+            ROS_INFO("battery com status: %d", get_bat_info_ack.com_status);
+            pub_battery_info(&get_bat_info_ack);
+        }
 
         do
         {
