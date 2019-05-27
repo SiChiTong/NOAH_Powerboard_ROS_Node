@@ -1415,7 +1415,7 @@ set_led_status_restart:
 
                         pNoahPowerboard->set_led_status_ack_vector.erase(b);
 
-                        if((status_led_ack.led == status_led.led) &&  (status_led_ack.status == status_led.status))
+                        if((status_led_ack.led == status_led.led) && (status_led_ack.status == status_led.status))
                         {
                             set_led_status_ack_flag = 1;
                             if(pNoahPowerboard->is_log_on == true)
@@ -1440,6 +1440,7 @@ set_led_status_restart:
                     {
                             ROS_INFO("get ack of set status led is: led:%d, status:%d", status_led_ack.led, status_led_ack.status);
                     }
+                    pNoahPowerboard->ack_status_led_ctrl(status_led_ack, LED_STATUS_ACK_OK);
                     break;
                 }
                 else
@@ -1463,6 +1464,7 @@ set_led_status_restart:
                     goto set_led_status_restart;
                 }
                 ROS_ERROR("CAN NOT COMMUNICATE with powerboard mcu, set led status failed !");
+                pNoahPowerboard->ack_status_led_ctrl(status_led_ack, LED_STATUS_ACK_TIMEOUT);
                 err_cnt = 0;
             }
 
@@ -1792,7 +1794,7 @@ int NoahPowerboard::SetModulePowerOnOff(powerboard_t *sys)
     can_msg.Data.resize(8);
     can_msg.Data[0] = 0x00;
     can_msg.Data[1] = 0;//reserve
-    can_msg.Data[2] = 1;///group_num;
+    can_msg.Data[2] = sys->module_status_set.group_num;///group_num;
     uint32_t state = sys->module_status_set.module;
     *(uint32_t *)&can_msg.Data[3] = state;
     can_msg.Data[7] = sys->module_status_set.on_off;
@@ -2271,6 +2273,25 @@ void NoahPowerboard:: from_navigation_rcv_callback(const std_msgs::String::Const
             param.on_off = MODULE_CTRL_ON;
             this->module_set_vector.push_back(param);
             break;
+
+        case 100:
+            ROS_INFO("camera led ctrl:get 100");
+            param.module = POWER_HEAD_CAMERA_LED;
+            param.on_off = MODULE_CTRL_OFF;
+            param.group_num = 2;
+            this->module_set_vector.push_back(param);
+
+            //param.module = POWER_CAMERA_BACK_LED;
+            //param.on_off = MODULE_CTRL_OFF;
+            //this->module_set_vector.push_back(param);
+            break;
+        case 101:
+            ROS_INFO("camera led ctrl:get 101");
+            param.module = POWER_HEAD_CAMERA_LED;
+            param.on_off = MODULE_CTRL_ON;
+            param.group_num = 2;
+            this->module_set_vector.push_back(param);
+            break;
         default :
             break;
 
@@ -2288,11 +2309,11 @@ void NoahPowerboard::leds_ctrl_callback(const std_msgs::String::ConstPtr &msg)
         if(j["pub_name"] == "status_led_ctrl")
         {
             status_led_t set_led_status = {0};
-            if(j["data"].find("wifi") != j["data"].end())
+            if(j["data"].find(STR_LED_WIFI) != j["data"].end())
             {
-                std::string wifi_status = j["data"]["wifi"];
+                std::string wifi_status = j["data"][STR_LED_WIFI];
                 ROS_INFO("get wifi status: %s", wifi_status.c_str());
-                if(j["data"]["wifi"] == "ok")
+                if(j["data"][STR_LED_WIFI] == STR_LED_STATUS_OK)
                 {
                     ROS_INFO("set wifi status: ok");
                     set_led_status.led = LED_WIFI;
@@ -2303,7 +2324,7 @@ void NoahPowerboard::leds_ctrl_callback(const std_msgs::String::ConstPtr &msg)
                         this->set_led_status_vector.push_back(set_led_status);
                     }while(0);
                 }
-                else if(j["data"]["wifi"] == "err")
+                else if(j["data"][STR_LED_WIFI] == STR_LED_STATUS_ERR)
                 {
                     ROS_INFO("set wifi status: err");
                     set_led_status.led = LED_WIFI;
@@ -2314,11 +2335,22 @@ void NoahPowerboard::leds_ctrl_callback(const std_msgs::String::ConstPtr &msg)
                         this->set_led_status_vector.push_back(set_led_status);
                     }while(0);
                 }
-                else if(j["data"]["wifi"] == "off")
+                else if(j["data"][STR_LED_WIFI] == STR_LED_STATUS_OFF)
                 {
                     ROS_INFO("set wifi status: off");
                     set_led_status.led = LED_WIFI;
                     set_led_status.status = LED_STATUS_OFF;
+                    do
+                    {
+                        boost::mutex::scoped_lock(this->mtx);
+                        this->set_led_status_vector.push_back(set_led_status);
+                    }while(0);
+                }
+                else if(j["data"][STR_LED_WIFI] == STR_LED_STATUS_WARN)
+                {
+                    ROS_INFO("set wifi status: warn");
+                    set_led_status.led = LED_WIFI;
+                    set_led_status.status = LED_STATUS_WARN;
                     do
                     {
                         boost::mutex::scoped_lock(this->mtx);
@@ -2331,10 +2363,10 @@ void NoahPowerboard::leds_ctrl_callback(const std_msgs::String::ConstPtr &msg)
                 }
             }
 
-            if(j["data"].find("trans") != j["data"].end())
+            if(j["data"].find(STR_LED_TRANS) != j["data"].end())
             {
-                std::string trans_status = j["data"]["trans"];
-                if(j["data"]["trans"] == "ok")
+                std::string trans_status = j["data"][STR_LED_TRANS];
+                if(j["data"][STR_LED_TRANS] == STR_LED_STATUS_OK)
                 {
                     ROS_INFO("set trans status: ok");
                     set_led_status.led = LED_TRANS;
@@ -2345,7 +2377,7 @@ void NoahPowerboard::leds_ctrl_callback(const std_msgs::String::ConstPtr &msg)
                         this->set_led_status_vector.push_back(set_led_status);
                     }while(0);
                 }
-                else if(j["data"]["trans"] == "err")
+                else if(j["data"][STR_LED_TRANS] == STR_LED_STATUS_ERR)
                 {
                     ROS_INFO("set trans status: err");
                     set_led_status.led = LED_TRANS;
@@ -2356,11 +2388,22 @@ void NoahPowerboard::leds_ctrl_callback(const std_msgs::String::ConstPtr &msg)
                         this->set_led_status_vector.push_back(set_led_status);
                     }while(0);
                 }
-                else if(j["data"]["trans"] == "off")
+                else if(j["data"][STR_LED_TRANS] == STR_LED_STATUS_OFF)
                 {
                     ROS_INFO("set trans status: off");
                     set_led_status.led = LED_TRANS;
                     set_led_status.status = LED_STATUS_OFF;
+                    do
+                    {
+                        boost::mutex::scoped_lock(this->mtx);
+                        this->set_led_status_vector.push_back(set_led_status);
+                    }while(0);
+                }
+                else if(j["data"][STR_LED_TRANS] == STR_LED_STATUS_WARN)
+                {
+                    ROS_INFO("set trans status: warn");
+                    set_led_status.led = LED_TRANS;
+                    set_led_status.status = LED_STATUS_WARN;
                     do
                     {
                         boost::mutex::scoped_lock(this->mtx);
@@ -2377,10 +2420,10 @@ void NoahPowerboard::leds_ctrl_callback(const std_msgs::String::ConstPtr &msg)
             }
 
 
-            if(j["data"].find("battery") != j["data"].end())
+            if(j["data"].find(STR_LED_BATTERY) != j["data"].end())
             {
-                std::string battery_status = j["data"]["battery"];
-                if(j["data"]["battery"] == "ok")
+                std::string battery_status = j["data"][STR_LED_BATTERY];
+                if(j["data"][STR_LED_BATTERY] == STR_LED_STATUS_OK)
                 {
                     ROS_INFO("set battery status: ok");
                     set_led_status.led = LED_BATTERY;
@@ -2391,7 +2434,7 @@ void NoahPowerboard::leds_ctrl_callback(const std_msgs::String::ConstPtr &msg)
                         this->set_led_status_vector.push_back(set_led_status);
                     }while(0);
                 }
-                else if(j["data"]["battery"] == "err")
+                else if(j["data"][STR_LED_BATTERY] == STR_LED_STATUS_ERR)
                 {
                     ROS_INFO("set battery status: err");
                     set_led_status.led = LED_BATTERY;
@@ -2402,11 +2445,22 @@ void NoahPowerboard::leds_ctrl_callback(const std_msgs::String::ConstPtr &msg)
                         this->set_led_status_vector.push_back(set_led_status);
                     }while(0);
                 }
-                else if(j["data"]["battery"] == "off")
+                else if(j["data"][STR_LED_BATTERY] == STR_LED_STATUS_OFF)
                 {
                     ROS_INFO("set battery status: off");
                     set_led_status.led = LED_BATTERY;
                     set_led_status.status = LED_STATUS_OFF;
+                    do
+                    {
+                        boost::mutex::scoped_lock(this->mtx);
+                        this->set_led_status_vector.push_back(set_led_status);
+                    }while(0);
+                }
+                else if(j["data"][STR_LED_BATTERY] == STR_LED_STATUS_WARN)
+                {
+                    ROS_INFO("set battery status: warn");
+                    set_led_status.led = LED_BATTERY;
+                    set_led_status.status = LED_STATUS_WARN;
                     do
                     {
                         boost::mutex::scoped_lock(this->mtx);
@@ -2511,6 +2565,81 @@ void NoahPowerboard::pub_event_key_value(uint8_t value)
     pub_json_msg.data = ss.str();
     this->pub_event_key.publish(pub_json_msg);
 }
+
+
+void NoahPowerboard::ack_status_led_ctrl(status_led_t status_led, uint8_t err_code)
+{
+    json j;
+    std_msgs::String pub_json_msg;
+    std::stringstream ss;
+    std::string led;
+    std::string status;
+    std::string str_err_code;
+
+    switch(status_led.led)
+    {
+        case LED_WIFI:
+            led = STR_LED_WIFI;
+            break;
+        case LED_TRANS:
+            led = STR_LED_TRANS;
+            break;
+        case LED_BATTERY:
+            led = STR_LED_BATTERY;
+            break;
+        default: break;
+    }
+
+    switch(status_led.status)
+    {
+        case LED_STATUS_OFF:
+            status = STR_LED_STATUS_OFF;
+            break;
+        case LED_STATUS_WARN:
+            status = STR_LED_STATUS_WARN;
+            break;
+        case LED_STATUS_ERR:
+            status = STR_LED_STATUS_ERR;
+            break;
+        case LED_STATUS_OK:
+            status = STR_LED_STATUS_OK;
+            break;
+        default: break;
+    }
+
+    switch(err_code)
+    {
+        case LED_STATUS_ACK_OK:
+            str_err_code = STR_LED_STATUS_ACK_OK;
+            break;
+        case LED_STATUS_ACK_TIMEOUT:
+            str_err_code = STR_LED_STATUS_ACK_TIMEOUT;
+            break;
+        case LED_STATUS_ACK_PARAM_ERR:
+            str_err_code = STR_LED_STATUS_ACK_PARAM_ERR;
+            break;
+        default: break;
+    }
+
+    j.clear();
+    j =
+        {
+            {"pub_name", "status_led_ctrl"},
+            {
+                "data",
+                {
+                    {led.c_str(), status.c_str()},
+                    {"result",str_err_code.c_str()},
+                }
+            }
+        };
+
+    ss.clear();
+    ss << j;
+    pub_json_msg.data = ss.str();
+    this->status_led_ctrl_ack_pub.publish(pub_json_msg);
+}
+
 
 #if 0
 void NoahPowerboard::power_from_app_rcv_callback(std_msgs::UInt8MultiArray data)

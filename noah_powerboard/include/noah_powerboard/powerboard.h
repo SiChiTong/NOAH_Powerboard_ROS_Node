@@ -112,6 +112,22 @@ typedef enum
 } module_ctrl_e;
 
 
+
+/*********** power control group 2 *************/
+#define POWER_LED_1                 0x00000001
+#define POWER_LED_2                 0x00000002
+#define POWER_LED_3                 0x00000004
+#define POWER_LED_4                 0x00000008
+#define POWER_LED_5                 0x00000010
+#define POWER_LED_6                 0x00000020
+#define POWER_LED_7                 0x00000040
+#define POWER_LED_8                 0x00000080
+
+#define POWER_MOTOR_MCU             0x00000100
+#define POWER_HEAD_CAMERA_LED       0x00000200
+
+
+
 typedef struct
 {
     uint8_t serial_num;
@@ -409,6 +425,12 @@ typedef struct
 
 
 
+
+
+#define STR_LED_WIFI        "wifi"
+#define STR_LED_TRANS       "trans"
+#define STR_LED_BATTERY     "battery"
+
 typedef enum
 {
     LED_MIN = 0,
@@ -418,14 +440,33 @@ typedef enum
     LED_MAX,
 }status_led_e;
 
+
+#define STR_LED_STATUS_OFF      "off"
+#define STR_LED_STATUS_OK       "ok"
+#define STR_LED_STATUS_ERR      "err"
+#define STR_LED_STATUS_WARN     "warn"
+
 typedef enum
 {
     LED_STATUS_MIN = 0,
     LED_STATUS_OFF = 1,
     LED_STATUS_OK ,
     LED_STATUS_ERR,
+    LED_STATUS_WARN,
     LED_STATUS_MAX,
 }led_ctrl_status_e;
+
+
+#define STR_LED_STATUS_ACK_OK           "ok"
+#define STR_LED_STATUS_ACK_TIMEOUT      "timeout"
+#define STR_LED_STATUS_ACK_PARAM_ERR    "param_err"
+
+typedef enum
+{
+    LED_STATUS_ACK_OK = 1,
+    LED_STATUS_ACK_TIMEOUT,
+    LED_STATUS_ACK_PARAM_ERR,
+}led_status_ack_e;
 
 typedef struct
 {
@@ -536,8 +577,9 @@ class NoahPowerboard
             sub_from_serials_leds_turnning_ctrl = n.subscribe("serials_leds_turnning_ctrl", 10, &NoahPowerboard::serials_leds_turning_effect_callback, this);
             sub_from_remote_power_ctrl = n.subscribe("remote_power_ctrl", 100, &NoahPowerboard::remote_power_ctrl_callback, this);
             remote_power_ctrl_service = n.advertiseService("remote_power_ctrl",&NoahPowerboard::service_remote_power_ctrl,this);
-            led_ctrl_sub = n.subscribe("leds_ctrl", 10, &NoahPowerboard::leds_ctrl_callback,this);
+            led_ctrl_sub = n.subscribe("led_ctrl", 10, &NoahPowerboard::leds_ctrl_callback,this);
 
+            status_led_ctrl_ack_pub = n.advertise<std_msgs::String>("led_ctrl_ack", 10);
             battery_test_pub = n.advertise<std_msgs::String>("test_battery_info", 10);
 
             sys_powerboard = &sys_powerboard_ram;
@@ -588,6 +630,7 @@ class NoahPowerboard
         void serials_leds_turning_effect_callback(std_msgs::UInt8MultiArray data);
         void remote_power_ctrl_callback(std_msgs::UInt8MultiArray data);
         void leds_ctrl_callback(const std_msgs::String::ConstPtr &msg);
+        void ack_status_led_ctrl(status_led_t led, uint8_t err_code);
 
         void get_ir_duty_param(void);
 
@@ -660,6 +703,7 @@ class NoahPowerboard
         ros::Publisher device_shutdown_signal_pub;
         ros::Subscriber sub_from_remote_power_ctrl;
         ros::Subscriber led_ctrl_sub;
+        ros::Publisher status_led_ctrl_ack_pub;
         ros::Publisher battery_test_pub;
 
 
