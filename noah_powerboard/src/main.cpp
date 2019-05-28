@@ -114,7 +114,7 @@ int main(int argc, char **argv)
             }
         }
 
-        if(cnt % (uint32_t)(rate / 20) == 0)
+        if(cnt % (uint32_t)(rate / 2) == 0)
         //if(cnt % (uint32_t)(rate / 30) == 0)
         {
             do
@@ -124,7 +124,7 @@ int main(int argc, char **argv)
             }while(0);
         }
 
-        if(cnt % (uint32_t)(rate / 10) == rate / 20)
+        if(cnt % (uint32_t)(rate * 5) == rate / 4)
         //if(cnt % (uint32_t)(rate / 30) == (uint32_t)(rate / 60))
         {
             do

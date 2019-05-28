@@ -1047,6 +1047,11 @@ set_leds_effect_restart:
                             {
                                 ROS_INFO("get right set led effect ack");
                             }
+
+                            if(set_led_effect.mode == LIGHTS_MODE_SETTING)
+                            {
+                                pNoahPowerboard->ack_serial_led_ctrl(set_led_effect, LED_STATUS_ACK_OK);
+                            }
                         }
                     }
                 }while(0);
@@ -1089,6 +1094,10 @@ set_leds_effect_restart:
                     goto set_leds_effect_restart;
                 }
                 ROS_ERROR("CAN NOT COMMUNICATE with powerboard mcu, set led effect failed !");
+                if(set_led_effect.mode == LIGHTS_MODE_SETTING)
+                {
+                    pNoahPowerboard->ack_serial_led_ctrl(set_led_effect, LED_STATUS_ACK_TIMEOUT);
+                }
                 err_cnt = 0;
             }
 
@@ -2302,7 +2311,7 @@ void NoahPowerboard::leds_ctrl_callback(const std_msgs::String::ConstPtr &msg)
 {
     auto j = json::parse(msg->data.c_str());
     std::string j_str = j.dump();
-    ROS_WARN("topic: leds_ctrl, json data: %s",j_str.data());
+    ROS_WARN("topic: led_ctrl, json data: %s",j_str.data());
 
     if(j.find("pub_name") != j.end())
     {
@@ -2624,7 +2633,7 @@ void NoahPowerboard::ack_status_led_ctrl(status_led_t status_led, uint8_t err_co
     j.clear();
     j =
         {
-            {"pub_name", "status_led_ctrl"},
+            {"pub_name", "status_led_ctrl_ack"},
             {
                 "data",
                 {
@@ -2640,6 +2649,55 @@ void NoahPowerboard::ack_status_led_ctrl(status_led_t status_led, uint8_t err_co
     this->status_led_ctrl_ack_pub.publish(pub_json_msg);
 }
 
+
+void NoahPowerboard::ack_serial_led_ctrl(set_leds_effect_t effect, uint8_t err_code)
+{
+    json j;
+    std_msgs::String pub_json_msg;
+    std::stringstream ss;
+    std::string led;
+    std::string status;
+    std::string str_err_code;
+
+    switch(err_code)
+    {
+        case LED_STATUS_ACK_OK:
+            str_err_code = STR_LED_STATUS_ACK_OK;
+            break;
+        case LED_STATUS_ACK_TIMEOUT:
+            str_err_code = STR_LED_STATUS_ACK_TIMEOUT;
+            break;
+        case LED_STATUS_ACK_PARAM_ERR:
+            str_err_code = STR_LED_STATUS_ACK_PARAM_ERR;
+            break;
+        default: break;
+    }
+
+    j.clear();
+    j =
+        {
+            {"pub_name", "serial_leds_ctrl_ack"},
+            {
+                "data",
+                {
+                    {"period", effect.period},
+                    {"color",
+                        {
+                            {"r", effect.color.r},
+                            {"g", effect.color.g},
+                            {"b", effect.color.b},
+                        }
+                    },
+                }
+            }
+        };
+
+    ss.clear();
+    ss << j;
+    pub_json_msg.data = ss.str();
+    this->status_led_ctrl_ack_pub.publish(pub_json_msg);
+
+}
 
 #if 0
 void NoahPowerboard::power_from_app_rcv_callback(std_msgs::UInt8MultiArray data)
@@ -2720,6 +2778,30 @@ void NoahPowerboard::pub_battery_info(get_bat_info_ack_t *bat_info)
 }
 
 
+std::string NoahPowerboard::get_machine_type_by_dev_id(uint16_t dev_id)
+{
+    if(dev_id & 0x0001)
+    {
+        ROS_INFO("dev type: MACHINE_TYPE_CONVEYOR");
+        return MACHINE_TYPE_CONVEYOR;
+    }
+    if(dev_id & 0x0002)
+    {
+        ROS_INFO("dev type: MACHINE_TYPE_INTEGRATED_SHELF");
+        return MACHINE_TYPE_INTEGRATED_SHELF;
+    }
+    if(dev_id & 0x0004)
+    {
+        ROS_INFO("dev type: MACHINE_TYPE_AUTO_LOAD");
+        return MACHINE_TYPE_AUTO_LOAD;
+    }
+    if(dev_id & 0x0008)
+    {
+        ROS_INFO("dev type: MACHINE_TYPE_CABINET");
+        return MACHINE_TYPE_CABINET;
+    }
+}
+
 void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::ConstPtr &c_msg)
 {
     mrobot_msgs::vci_can can_msg;
@@ -2783,11 +2865,14 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::Cons
             get_bat_info_ack.pack_totoal_soc = *(uint16_t *)&msg->Data[8];
             get_bat_info_ack.pack_recharge_cycle = *(uint16_t *)&msg->Data[10];
             get_bat_info_ack.com_status = msg->Data[12];
-            ROS_INFO("battery voltage: %d,  percentage: %d", get_bat_info_ack.bat_vol, get_bat_info_ack.bat_percent);
-            ROS_INFO("battery current: %d", get_bat_info_ack.pack_current);
-            ROS_INFO("battery recharge cycle: %d", get_bat_info_ack.pack_recharge_cycle);
-            ROS_INFO("battery current soc: %d, totoal soc: %d", get_bat_info_ack.pack_current_soc, get_bat_info_ack.pack_totoal_soc);
-            ROS_INFO("battery com status: %d", get_bat_info_ack.com_status);
+            if(this->is_log_on == true)
+            {
+                ROS_INFO("battery voltage: %d,  percentage: %d", get_bat_info_ack.bat_vol, get_bat_info_ack.bat_percent);
+                ROS_INFO("battery current: %d", get_bat_info_ack.pack_current);
+                ROS_INFO("battery recharge cycle: %d", get_bat_info_ack.pack_recharge_cycle);
+                ROS_INFO("battery current soc: %d, totoal soc: %d", get_bat_info_ack.pack_current_soc, get_bat_info_ack.pack_totoal_soc);
+                ROS_INFO("battery com status: %d", get_bat_info_ack.com_status);
+            }
             pub_battery_info(&get_bat_info_ack);
         }
 
@@ -3111,6 +3196,8 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::Cons
         dev_id_t dev_id = {0};
         dev_id.dev_id = msg->Data[0] | (msg->Data[1]) << 8;
         ROS_WARN("get dev id: 0x%x", dev_id.dev_id);
+        n.setParam(hardware_dev_id, dev_id.dev_id);
+        n.setParam(hardware_dev_type, get_machine_type_by_dev_id(dev_id.dev_id));
         do
         {
             boost::mutex::scoped_lock(this->mtx);

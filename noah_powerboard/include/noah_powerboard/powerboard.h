@@ -475,6 +475,12 @@ typedef struct
 }status_led_t;
 
 
+
+#define MACHINE_TYPE_CONVEYOR               "machine_type_conveyor"
+#define MACHINE_TYPE_AUTO_LOAD              "machine_type_auto_load"
+#define MACHINE_TYPE_INTEGRATED_SHELF       "machine_type_integrated_shelf"
+#define MACHINE_TYPE_CABINET                "machine_type_cabinet"
+
 typedef struct
 {
     uint8_t reserve;
@@ -631,6 +637,7 @@ class NoahPowerboard
         void remote_power_ctrl_callback(std_msgs::UInt8MultiArray data);
         void leds_ctrl_callback(const std_msgs::String::ConstPtr &msg);
         void ack_status_led_ctrl(status_led_t led, uint8_t err_code);
+        void ack_serial_led_ctrl(set_leds_effect_t effect, uint8_t err_code);
 
         void get_ir_duty_param(void);
 
@@ -688,6 +695,7 @@ class NoahPowerboard
         int handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf);
         bool service_remote_power_ctrl(noah_powerboard::remote_power_ctrl_srv::Request  &ctrl, noah_powerboard::remote_power_ctrl_srv::Response &status);
         void pub_battery_info(get_bat_info_ack_t *bat_info);
+        std::string get_machine_type_by_dev_id(uint16_t dev_id);
 
         ros::NodeHandle n;
         ros::Publisher noah_powerboard_pub;
@@ -719,6 +727,8 @@ class NoahPowerboard
         std::string hardware_version_param = "noah_powerboard_hardware_version";
         std::string protocol_version_param = "noah_powerboard_protocol_version";
         std::string serials_leds_mcu_version_param = "mcu_serials_leds_version";
+        std::string hardware_dev_id = "hardware_dev_id";
+        std::string hardware_dev_type = "hardware_dev_type";
 
 };
 int handle_receive_data(powerboard_t *sys);
