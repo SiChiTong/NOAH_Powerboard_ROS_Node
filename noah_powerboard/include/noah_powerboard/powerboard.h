@@ -1,10 +1,12 @@
 #include "ros/ros.h"
+#include <ros/console.h>
 #include "std_msgs/String.h"
 #include "json.hpp"
 #include <mrobot_msgs/vci_can.h>
 #include <roscan/can_long_frame.h>
 #include <boost/thread/mutex.hpp>
 #include <noah_powerboard/remote_power_ctrl_srv.h>
+#include <mrobot_srvs/JString.h>
 using json = nlohmann::json;
 #ifndef LED_H
 #define LED_H
@@ -583,6 +585,7 @@ class NoahPowerboard
             sub_from_serials_leds_turnning_ctrl = n.subscribe("serials_leds_turnning_ctrl", 10, &NoahPowerboard::serials_leds_turning_effect_callback, this);
             sub_from_remote_power_ctrl = n.subscribe("remote_power_ctrl", 100, &NoahPowerboard::remote_power_ctrl_callback, this);
             remote_power_ctrl_service = n.advertiseService("remote_power_ctrl",&NoahPowerboard::service_remote_power_ctrl,this);
+            led_ctrl_service = n.advertiseService("led_ctrl", &NoahPowerboard::service_led_ctrl, this);
             led_ctrl_sub = n.subscribe("led_ctrl", 10, &NoahPowerboard::leds_ctrl_callback,this);
 
             status_led_ctrl_ack_pub = n.advertise<std_msgs::String>("led_ctrl_ack", 10);
@@ -605,6 +608,8 @@ class NoahPowerboard
             get_adc_vector.clear();
             set_leds_effect_vector.clear();
             get_serials_leds_version_vector.clear();
+            led_ctrl_set_flag = 0;
+            led_ctrl_ack_flag = 0;
         }
         int PowerboardParamInit(void);
         int SetLedEffect(powerboard_t *powerboard);
@@ -647,6 +652,14 @@ class NoahPowerboard
         void pub_json_msg_to_app(const nlohmann::json j_msg);
         powerboard_t    *sys_powerboard;
         can_long_frame  long_frame;
+
+
+#define LED_CTRL_FLAG_WIFI_BIT          1
+#define LED_CTRL_FLAG_BAT_BIT           2
+#define LED_CTRL_FLAG_TRANS_BIT         3
+#define LED_CTRL_FLAG_SERIAL_BIT        4
+        uint32_t led_ctrl_ack_flag;
+        uint32_t led_ctrl_set_flag;
 
         void update_sys_status(void);
 
@@ -694,6 +707,7 @@ class NoahPowerboard
         uint8_t CalCheckSum(uint8_t *data, uint8_t len);
         int handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf);
         bool service_remote_power_ctrl(noah_powerboard::remote_power_ctrl_srv::Request  &ctrl, noah_powerboard::remote_power_ctrl_srv::Response &status);
+        bool service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrobot_srvs::JString::Response &status);
         void pub_battery_info(get_bat_info_ack_t *bat_info);
         std::string get_machine_type_by_dev_id(uint16_t dev_id);
 
@@ -718,6 +732,7 @@ class NoahPowerboard
         ros::Publisher pub_event_key;
 
         ros::ServiceServer remote_power_ctrl_service;
+        ros::ServiceServer led_ctrl_service;
 
         powerboard_t    sys_powerboard_ram;
         uint8_t emg_stop;

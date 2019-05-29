@@ -27,6 +27,10 @@ void sigintHandler(int sig)
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "noah_powerboard_node");
+    //if(ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug))
+    //{
+        //ros::console::notifyLoggerLevelsChanged();
+    //}
     bool is_log_on = 0;
     ROS_INFO("creating noah powerboard node...");
     if(ros::param::has("noah_pb_can_data_log_on"))
@@ -83,7 +87,7 @@ int main(int argc, char **argv)
                 do
                 {
                     boost::mutex::scoped_lock(powerboard->mtx);
-                    powerboard->set_leds_effect_vector.push_back(set_led_effect);
+                    //powerboard->set_leds_effect_vector.push_back(set_led_effect);
                     powerboard->get_version_vector.push_back(get_version);
 
                     get_version.get_version_type = 2;

@@ -25,7 +25,7 @@
 #include <mrobot_msgs/vci_can.h>
 #include <roscan/can_long_frame.h>
 
-#define PowerboardInfo     ROS_INFO
+//#define PowerboardInfo     ROS_INFO
 
 static int led_over_time_flag = 0;
 static int last_unread_bytes = 0;
@@ -1449,6 +1449,22 @@ set_led_status_restart:
                     {
                             ROS_INFO("get ack of set status led is: led:%d, status:%d", status_led_ack.led, status_led_ack.status);
                     }
+                    do
+                    {
+                        boost::mutex::scoped_lock(mtx);
+                        if(status_led_ack.led == LED_WIFI)
+                        {
+                            pNoahPowerboard->led_ctrl_ack_flag |= 1 << LED_CTRL_FLAG_WIFI_BIT;
+                        }
+                        else if(status_led_ack.led == LED_TRANS)
+                        {
+                            pNoahPowerboard->led_ctrl_ack_flag |= 1 << LED_CTRL_FLAG_TRANS_BIT;
+                        }
+                        else if(status_led_ack.led == LED_BATTERY)
+                        {
+                            pNoahPowerboard->led_ctrl_ack_flag |= 1 << LED_CTRL_FLAG_BAT_BIT;
+                        }
+                    }while(0);
                     pNoahPowerboard->ack_status_led_ctrl(status_led_ack, LED_STATUS_ACK_OK);
                     break;
                 }
@@ -2091,6 +2107,13 @@ bool NoahPowerboard::service_remote_power_ctrl(noah_powerboard::remote_power_ctr
     return true;
 }
 
+
+
+
+
+
+
+
 void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg)
 {
     //ROS_INFO("Rcv test data");
@@ -2543,6 +2566,227 @@ void NoahPowerboard::leds_ctrl_callback(const std_msgs::String::ConstPtr &msg)
         }
     }
 }
+
+
+
+
+bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrobot_srvs::JString::Response &status)
+{
+    auto j = json::parse(ctrl.request.c_str());
+    std::string j_str = j.dump();
+    ROS_WARN("service: led_ctrl, json data: %s",j_str.data());
+    ROS_INFO("%s: srv call",__func__);
+    if(j.find("pub_name") != j.end())
+    {
+        if(j["pub_name"] == "status_led_ctrl")
+        {
+            status_led_t set_led_status = {0};
+            if(j["data"].find(STR_LED_WIFI) != j["data"].end())
+            {
+                std::string wifi_status = j["data"][STR_LED_WIFI];
+                set_led_status.led = LED_WIFI;
+                ROS_INFO("get wifi status: %s", wifi_status.c_str());
+                if(j["data"][STR_LED_WIFI] == STR_LED_STATUS_OK)
+                {
+                    ROS_INFO("set wifi status: ok");
+                    set_led_status.status = LED_STATUS_OK;
+                }
+                else if(j["data"][STR_LED_WIFI] == STR_LED_STATUS_ERR)
+                {
+                    ROS_INFO("set wifi status: err");
+                    set_led_status.status = LED_STATUS_ERR;
+                }
+                else if(j["data"][STR_LED_WIFI] == STR_LED_STATUS_OFF)
+                {
+                    ROS_INFO("set wifi status: off");
+                    set_led_status.status = LED_STATUS_OFF;
+                }
+                else if(j["data"][STR_LED_WIFI] == STR_LED_STATUS_WARN)
+                {
+                    ROS_INFO("set wifi status: warn");
+                    set_led_status.status = LED_STATUS_WARN;
+                }
+                else
+                {
+                    ROS_ERROR("wifi status parameter error: %s", wifi_status.c_str());
+                    status.response = "parameter err";
+                    ROS_ERROR("led ctrl response parameter err");
+                    return true;
+                }
+                do
+                {
+                    boost::mutex::scoped_lock(this->mtx);
+                    this->set_led_status_vector.push_back(set_led_status);
+                    led_ctrl_ack_flag = 0;
+                    led_ctrl_set_flag |= 1 << LED_CTRL_FLAG_WIFI_BIT;
+                }while(0);
+            }
+
+            if(j["data"].find(STR_LED_TRANS) != j["data"].end())
+            {
+                std::string trans_status = j["data"][STR_LED_TRANS];
+                set_led_status.led = LED_TRANS;
+                if(j["data"][STR_LED_TRANS] == STR_LED_STATUS_OK)
+                {
+                    ROS_INFO("set trans status: ok");
+                    set_led_status.status = LED_STATUS_OK;
+                }
+                else if(j["data"][STR_LED_TRANS] == STR_LED_STATUS_ERR)
+                {
+                    ROS_INFO("set trans status: err");
+                    set_led_status.status = LED_STATUS_ERR;
+                }
+                else if(j["data"][STR_LED_TRANS] == STR_LED_STATUS_OFF)
+                {
+                    ROS_INFO("set trans status: off");
+                    set_led_status.status = LED_STATUS_OFF;
+                }
+                else if(j["data"][STR_LED_TRANS] == STR_LED_STATUS_WARN)
+                {
+                    ROS_INFO("set trans status: warn");
+                    set_led_status.status = LED_STATUS_WARN;
+                }
+                else
+                {
+                    ROS_ERROR("trans status parameter error: %s", trans_status.c_str());
+                    status.response = "parameter err";
+                    ROS_ERROR("led ctrl response parameter err");
+                    return true;
+                }
+                do
+                {
+                    boost::mutex::scoped_lock(this->mtx);
+                    this->set_led_status_vector.push_back(set_led_status);
+                    led_ctrl_ack_flag = 0;
+                    led_ctrl_set_flag |= 1 << LED_CTRL_FLAG_TRANS_BIT;
+                }while(0);
+            }
+
+
+            if(j["data"].find(STR_LED_BATTERY) != j["data"].end())
+            {
+                std::string battery_status = j["data"][STR_LED_BATTERY];
+                set_led_status.led = LED_BATTERY;
+                if(j["data"][STR_LED_BATTERY] == STR_LED_STATUS_OK)
+                {
+                    ROS_INFO("set battery status: ok");
+                    set_led_status.status = LED_STATUS_OK;
+                }
+                else if(j["data"][STR_LED_BATTERY] == STR_LED_STATUS_ERR)
+                {
+                    ROS_INFO("set battery status: err");
+                    set_led_status.status = LED_STATUS_ERR;
+                }
+                else if(j["data"][STR_LED_BATTERY] == STR_LED_STATUS_OFF)
+                {
+                    ROS_INFO("set battery status: off");
+                    set_led_status.status = LED_STATUS_OFF;
+                }
+                else if(j["data"][STR_LED_BATTERY] == STR_LED_STATUS_WARN)
+                {
+                    ROS_INFO("set battery status: warn");
+                    set_led_status.status = LED_STATUS_WARN;
+                }
+                else
+                {
+                    ROS_ERROR("battery status parameter error: %s", battery_status.c_str());
+                    ROS_ERROR("led ctrl response parameter err");
+                    status.response = "parameter err";
+                    return true;
+                }
+                do
+                {
+                    boost::mutex::scoped_lock(this->mtx);
+                    this->set_led_status_vector.push_back(set_led_status);
+                    led_ctrl_ack_flag = 0;
+                    led_ctrl_set_flag |= 1 << LED_CTRL_FLAG_BAT_BIT;
+                }while(0);
+            }
+        }
+
+        if(j["pub_name"] == "serial_leds_ctrl")
+        {
+            int period = 0;
+            color_t color = {0};
+            if(j["data"].find("period") != j["data"].end())
+            {
+                period = j["data"]["period"];
+                ROS_INFO("get period: %d", period);
+            }
+
+            if(j["data"].find("color") != j["data"].end())
+            {
+                if(j["data"]["color"].find("r") != j["data"]["color"].end())
+                {
+                    color.r = j["data"]["color"]["r"];
+                    ROS_INFO("get r: %d", color.r);
+                }
+                else
+                {
+                    ROS_ERROR("led ctrl response parameter err");
+                    status.response = "parameter err";
+                    return true;
+                }
+                if(j["data"]["color"].find("g") != j["data"]["color"].end())
+                {
+                    color.g = j["data"]["color"]["g"];
+                    ROS_INFO("get g: %d", color.g);
+                }
+                else
+                {
+                    ROS_ERROR("led ctrl response parameter err");
+                    status.response = "parameter err";
+                    return true;
+                }
+                if(j["data"]["color"].find("b") != j["data"]["color"].end())
+                {
+                    color.b = j["data"]["color"]["b"];
+                    ROS_INFO("get b: %d", color.b);
+                }
+                else
+                {
+                    ROS_ERROR("led ctrl response parameter err");
+                    status.response = "parameter err";
+                    return true;
+                }
+
+                do
+                {
+                    boost::mutex::scoped_lock(this->mtx);
+                    set_leds_effect_t set_led_effect;
+                    set_led_effect.reserve = 0;
+                    set_led_effect.mode = LIGHTS_MODE_SETTING;
+                    set_led_effect.period = period;
+                    set_led_effect.color = color;
+                    this->set_leds_effect_vector.push_back(set_led_effect);
+                    led_ctrl_ack_flag = 0;
+                    led_ctrl_set_flag |= 1 << LED_CTRL_FLAG_SERIAL_BIT;
+                }while(0);
+            }
+        }
+    }
+
+    uint32_t cnt = 0;
+    while((led_ctrl_ack_flag != led_ctrl_set_flag) && (cnt < 200))
+    {
+        cnt++;
+        usleep(10*1000);
+        ros::spinOnce();
+    }
+    if(cnt < 200)
+    {
+        ROS_INFO("led ctrl response ok");
+        status.response = "ok";
+        return true;
+    }
+    else
+    {
+        ROS_ERROR("led ctrl response timeout");
+        status.response = "timeout";
+        return true;
+    }
+}
+
 
 void NoahPowerboard::PubPower(powerboard_t *sys)
 {
