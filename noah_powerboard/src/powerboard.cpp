@@ -3022,28 +3022,34 @@ void NoahPowerboard::pub_battery_info(get_bat_info_ack_t *bat_info)
 }
 
 
-std::string NoahPowerboard::get_machine_type_by_dev_id(uint16_t dev_id)
+void NoahPowerboard::set_machine_type_by_dev_id(uint16_t dev_id)
 {
     if(dev_id & 0x0001)
     {
         ROS_INFO("dev type: MACHINE_TYPE_CONVEYOR");
-        return MACHINE_TYPE_CONVEYOR;
+        n.setParam(hardware_dev_type, MACHINE_TYPE_CONVEYOR);
+        return;
     }
     if(dev_id & 0x0002)
     {
         ROS_INFO("dev type: MACHINE_TYPE_INTEGRATED_SHELF");
-        return MACHINE_TYPE_INTEGRATED_SHELF;
+        n.setParam(hardware_dev_type, MACHINE_TYPE_INTEGRATED_SHELF);
+        return;
     }
     if(dev_id & 0x0004)
     {
         ROS_INFO("dev type: MACHINE_TYPE_AUTO_LOAD");
-        return MACHINE_TYPE_AUTO_LOAD;
+        n.setParam(hardware_dev_type, MACHINE_TYPE_AUTO_LOAD);
+        return;
     }
     if(dev_id & 0x0008)
     {
         ROS_INFO("dev type: MACHINE_TYPE_CABINET");
-        return MACHINE_TYPE_CABINET;
+        n.setParam(hardware_dev_type, MACHINE_TYPE_CABINET);
+        return;
     }
+    ROS_INFO("dev type: using default value (MACHINE_TYPE_INTEGRATED_SHELF)");
+    n.setParam(hardware_dev_type, MACHINE_TYPE_INTEGRATED_SHELF);
 }
 
 void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::ConstPtr &c_msg)
@@ -3441,7 +3447,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::Cons
         dev_id.dev_id = msg->Data[0] | (msg->Data[1]) << 8;
         ROS_WARN("get dev id: 0x%x", dev_id.dev_id);
         n.setParam(hardware_dev_id, dev_id.dev_id);
-        n.setParam(hardware_dev_type, get_machine_type_by_dev_id(dev_id.dev_id));
+        set_machine_type_by_dev_id(dev_id.dev_id);
         do
         {
             boost::mutex::scoped_lock(this->mtx);

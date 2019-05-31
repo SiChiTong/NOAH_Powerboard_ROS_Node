@@ -709,7 +709,7 @@ class NoahPowerboard
         bool service_remote_power_ctrl(noah_powerboard::remote_power_ctrl_srv::Request  &ctrl, noah_powerboard::remote_power_ctrl_srv::Response &status);
         bool service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrobot_srvs::JString::Response &status);
         void pub_battery_info(get_bat_info_ack_t *bat_info);
-        std::string get_machine_type_by_dev_id(uint16_t dev_id);
+        void set_machine_type_by_dev_id(uint16_t dev_id);
 
         ros::NodeHandle n;
         ros::Publisher noah_powerboard_pub;
