@@ -1062,6 +1062,7 @@ set_leds_effect_restart:
                     {
                         ROS_INFO("get right set led effect ack");
                     }
+                    pNoahPowerboard->led_ctrl_ack_flag |= 1 << LED_CTRL_FLAG_SERIAL_BIT;
                     pNoahPowerboard->sys_powerboard->led.mode = set_led_effect_ack.mode;
                     pNoahPowerboard->sys_powerboard->led.color = set_led_effect_ack.color;
                     pNoahPowerboard->sys_powerboard->led.period = set_led_effect_ack.period;
@@ -2610,6 +2611,7 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                 {
                     ROS_ERROR("wifi status parameter error: %s", wifi_status.c_str());
                     status.response = "parameter err";
+                    status.success = false;
                     ROS_ERROR("led ctrl response parameter err");
                     return true;
                 }
@@ -2650,6 +2652,7 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                 {
                     ROS_ERROR("trans status parameter error: %s", trans_status.c_str());
                     status.response = "parameter err";
+                    status.success = false;
                     ROS_ERROR("led ctrl response parameter err");
                     return true;
                 }
@@ -2692,6 +2695,7 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                     ROS_ERROR("battery status parameter error: %s", battery_status.c_str());
                     ROS_ERROR("led ctrl response parameter err");
                     status.response = "parameter err";
+                    status.success = false;
                     return true;
                 }
                 do
@@ -2725,6 +2729,7 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                 {
                     ROS_ERROR("led ctrl response parameter err");
                     status.response = "parameter err";
+                    status.success = false;
                     return true;
                 }
                 if(j["data"]["color"].find("g") != j["data"]["color"].end())
@@ -2736,6 +2741,7 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                 {
                     ROS_ERROR("led ctrl response parameter err");
                     status.response = "parameter err";
+                    status.success = false;
                     return true;
                 }
                 if(j["data"]["color"].find("b") != j["data"]["color"].end())
@@ -2747,6 +2753,7 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                 {
                     ROS_ERROR("led ctrl response parameter err");
                     status.response = "parameter err";
+                    status.success = false;
                     return true;
                 }
 
@@ -2777,12 +2784,14 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
     {
         ROS_INFO("led ctrl response ok");
         status.response = "ok";
+        status.success = true;
         return true;
     }
     else
     {
         ROS_ERROR("led ctrl response timeout");
         status.response = "timeout";
+        status.success = false;
         return true;
     }
 }
