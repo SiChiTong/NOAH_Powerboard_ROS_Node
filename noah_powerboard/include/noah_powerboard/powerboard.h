@@ -222,7 +222,7 @@ typedef struct
     uint8_t reserve;
     uint8_t bat_percent;
     uint16_t bat_vol;
-    uint16_t pack_current;
+    int16_t pack_current;
     uint32_t pack_current_soc;
     uint32_t pack_totoal_soc;
     uint16_t pack_recharge_cycle;

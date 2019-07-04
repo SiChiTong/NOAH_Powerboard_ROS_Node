@@ -3119,7 +3119,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::Cons
         get_bat_info_ack.bat_percent = msg->Data[3];
         if(msg->DataLen > 3)
         {
-            get_bat_info_ack.pack_current = *(uint16_t *)&msg->Data[4];
+            get_bat_info_ack.pack_current = *(int16_t *)&msg->Data[4];
             get_bat_info_ack.pack_current_soc = *(uint16_t *)&msg->Data[6];
             get_bat_info_ack.pack_totoal_soc = *(uint16_t *)&msg->Data[8];
             get_bat_info_ack.pack_recharge_cycle = *(uint16_t *)&msg->Data[10];
