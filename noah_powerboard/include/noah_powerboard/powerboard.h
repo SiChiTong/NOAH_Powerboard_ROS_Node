@@ -286,7 +286,8 @@ typedef struct
 {
     uint8_t               reserve;
     uint8_t               mode;
-    color_t               color;
+#define SETTING_COLOR_NUM_MAX       2
+    color_t               color[SETTING_COLOR_NUM_MAX];
     uint8_t               period;
 }set_leds_effect_t;
 
@@ -497,7 +498,7 @@ typedef struct
 #define VBAT_POWER_CHARGING_FULL            100
 typedef struct
 {
-    led_t                       led;
+    //led_t                       led;
     set_leds_effect_t           led_set;
     rcv_serial_leds_frame_t     rcv_serial_leds_frame;
     bat_info_t                  bat_info;
@@ -612,7 +613,7 @@ class NoahPowerboard
             led_ctrl_ack_flag = 0;
         }
         int PowerboardParamInit(void);
-        int SetLedEffect(powerboard_t *powerboard);
+        int SetLedEffect(set_leds_effect_t effect);
         int GetBatteryInfo(powerboard_t *sys);
         int GetAdcData(powerboard_t *sys);
         int GetVersion(powerboard_t *sys);
@@ -704,12 +705,14 @@ class NoahPowerboard
         bool is_log_on;
 
     private:
-        uint8_t CalCheckSum(uint8_t *data, uint8_t len);
-        int handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf);
+        //uint8_t CalCheckSum(uint8_t *data, uint8_t len);
+        //int handle_rev_frame(powerboard_t *sys,unsigned char * frame_buf);
         bool service_remote_power_ctrl(noah_powerboard::remote_power_ctrl_srv::Request  &ctrl, noah_powerboard::remote_power_ctrl_srv::Response &status);
         bool service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrobot_srvs::JString::Response &status);
         void pub_battery_info(get_bat_info_ack_t *bat_info);
         void set_machine_type_by_dev_id(uint16_t dev_id);
+        int Can_TX(ros::Publisher pub, uint32_t canx_id, uint8_t* pdata, uint16_t len);
+
 
         ros::NodeHandle n;
         ros::Publisher noah_powerboard_pub;

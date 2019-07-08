@@ -1016,10 +1016,13 @@ set_leds_effect_restart:
                 ROS_INFO("set led effect :send cmd to mcu");
             }
             pNoahPowerboard->sys_powerboard->led_set.mode = set_led_effect.mode;
-            pNoahPowerboard->sys_powerboard->led_set.color = set_led_effect.color;
+            for(uint8_t i = 0; i < SETTING_COLOR_NUM_MAX; i++)
+            {
+                pNoahPowerboard->sys_powerboard->led_set.color[i] = set_led_effect.color[i];
+            }
             pNoahPowerboard->sys_powerboard->led_set.period = set_led_effect.period;
 
-            pNoahPowerboard->SetLedEffect(pNoahPowerboard->sys_powerboard);
+            pNoahPowerboard->SetLedEffect(pNoahPowerboard->sys_powerboard->led_set);
             bool set_led_effect_ack_flag = 0;
             set_leds_effect_ack_t set_led_effect_ack;
             while(time_out_cnt < SET_LED_EFFECT_TIME_OUT/10)
@@ -1063,13 +1066,20 @@ set_leds_effect_restart:
                         ROS_INFO("get right set led effect ack");
                     }
                     pNoahPowerboard->led_ctrl_ack_flag |= 1 << LED_CTRL_FLAG_SERIAL_BIT;
-                    pNoahPowerboard->sys_powerboard->led.mode = set_led_effect_ack.mode;
-                    pNoahPowerboard->sys_powerboard->led.color = set_led_effect_ack.color;
-                    pNoahPowerboard->sys_powerboard->led.period = set_led_effect_ack.period;
+                    //pNoahPowerboard->sys_powerboard->led.mode = set_led_effect_ack.mode;
+
+                    for(uint8_t i = 0; i < SETTING_COLOR_NUM_MAX; i++)
+                    {
+                        //pNoahPowerboard->sys_powerboard->led.color[i] = set_led_effect_ack.color[i];
+                    }
+                    //pNoahPowerboard->sys_powerboard->led.period = set_led_effect_ack.period;
                     if(pNoahPowerboard->is_log_on == true)
                     {
                         ROS_INFO("get led mode:%d",set_led_effect_ack.mode);
-                        ROS_INFO("get led color:r=%d,g=%d,b=%d",set_led_effect_ack.color.r,set_led_effect_ack.color.g,set_led_effect_ack.color.b);
+                        for(uint8_t i = 0; i < SETTING_COLOR_NUM_MAX; i++)
+                        {
+                            ROS_INFO("get led color[%d]:r=%d,g=%d,b=%d",i, set_led_effect_ack.color[i].r, set_led_effect_ack.color[i].g, set_led_effect_ack.color[i].b);
+                        }
                         ROS_INFO("get led period:%d",set_led_effect_ack.period);
                     }
                     break;
@@ -1755,11 +1765,92 @@ int NoahPowerboard::PowerboardParamInit(void)
 
 
 
-int NoahPowerboard::SetLedEffect(powerboard_t *powerboard)     // done
+
+
+int CAN_Transmit(ros::Publisher pub, uint32_t id, uint8_t *data, uint8_t len)
 {
     int error = 0;
     mrobot_msgs::vci_can can_msg;
+
+    can_msg.ID = id;
+    can_msg.DataLen = len;
+    can_msg.Data.resize(len);
+    memcpy(&can_msg.Data[0], data, len);
+    pub.publish(can_msg);
+    return error;
+}
+
+#define SEG_POLO_ONLYONCE       0x00
+#define SEG_POLO_BEGIN          0x01
+#define SEG_POLO_TRANSING       0x02
+#define SEG_POLO_END            0x03
+
+int NoahPowerboard::Can_TX(ros::Publisher pub, uint32_t canx_id, uint8_t* pdata, uint16_t len)
+{
+    uint16_t t_len;
+    uint16_t round_count;
+    uint8_t mod_count;
+    can_data_union tx_msg = {0};
+    t_len = len;
+    round_count = t_len / 7;
+    mod_count = t_len % 7;
+
+    if(t_len <= 7)
+    {
+        tx_msg.can_data_stru.SegPolo = SEG_POLO_ONLYONCE;
+        //TxMessage.DLC = t_len + 1;
+
+        memcpy(&tx_msg.CanData[1], pdata, t_len);
+
+        CAN_Transmit(pub, canx_id, tx_msg.CanData, t_len + 1);//
+        return 0;
+    }
+
+    //int num = 0;
+    for(uint8_t num = 0; num < round_count; num++)
+    {
+        //SET SEGPOLO
+        if( num == 0)
+        {
+            tx_msg.can_data_stru.SegPolo = SEG_POLO_BEGIN;
+        }
+        else
+        {
+            tx_msg.can_data_stru.SegPolo = SEG_POLO_TRANSING;
+        }
+
+        if( mod_count == 0 && num == round_count - 1)
+        {
+            tx_msg.can_data_stru.SegPolo = SEG_POLO_END;
+        }
+
+        tx_msg.can_data_stru.SegNum = num;
+        memcpy(tx_msg.can_data_stru.Data, &pdata[num * 7], 7);
+
+
+        CAN_Transmit(pub, canx_id, tx_msg.CanData, 8);//
+
+        //TRANSMIT LAST MSG
+        if( mod_count != 0 && num == round_count - 1 )
+        {
+            num++;
+            tx_msg.can_data_stru.SegPolo = END;
+            tx_msg.can_data_stru.SegNum = num;
+            memcpy(tx_msg.can_data_stru.Data, &pdata[num * 7], mod_count);
+
+            CAN_Transmit(pub, canx_id, tx_msg.CanData, mod_count + 1);//
+        }
+    }
+}
+
+
+int NoahPowerboard::SetLedEffect(set_leds_effect_t effect)     // done
+{
+    int error = 0;
+    //mrobot_msgs::vci_can can_msg;
     CAN_ID_UNION id;
+    uint8_t data[10] = {0};
+    uint8_t len = 0;
     memset(&id, 0x0, sizeof(CAN_ID_UNION));
     id.CanID_Struct.SourceID = CAN_SOURCE_ID_SET_LED_EFFECT;
     id.CanID_Struct.SrcMACID = 0;//CAN_SUB_PB_SRC_ID;
@@ -1768,15 +1859,18 @@ int NoahPowerboard::SetLedEffect(powerboard_t *powerboard)     // done
     id.CanID_Struct.ACK = 0;
     id.CanID_Struct.res = 0;
 
-    can_msg.ID = id.CANx_ID;
-    can_msg.DataLen = 7;
-    can_msg.Data.resize(7);
-    can_msg.Data[0] = 0x00;
-    can_msg.Data[1] = 0;//reserve
-    can_msg.Data[2] = powerboard->led_set.mode;
-    *(color_t*)&can_msg.Data[3] = powerboard->led_set.color;
-    can_msg.Data[6] = powerboard->led_set.period;
-    this->pub_to_can_node.publish(can_msg);
+    //can_msg.ID = id.CANx_ID;
+    len = 9;
+    //can_msg.Data.resize(9);
+    //can_msg.Data[0] = 0x00;
+    data[0] = 0;//reserve
+    data[1] = effect.mode;
+    *(color_t*)&data[2] = effect.color[0];
+    *(color_t*)&data[5] = effect.color[1];
+    data[8] = effect.period;
+    //Can_TX(pub_to_can_node, id.CANx_ID, can_msg.Data, can_msg.DataLen);
+    Can_TX(pub_to_can_node, id.CANx_ID, data, 9);
+    //this->pub_to_can_node.publish(can_msg);
     return error;
 }
 int NoahPowerboard::GetBatteryInfo(powerboard_t *sys)      // done
@@ -2513,19 +2607,21 @@ void NoahPowerboard::leds_ctrl_callback(const std_msgs::String::ConstPtr &msg)
         if(j["pub_name"] == "serial_leds_ctrl")
         {
             int period = 0;
-            color_t color = {0};
+            color_t color_1 = {0};
+            color_t color_2 = {0};
+            color_t color[2];
             if(j["data"].find("period") != j["data"].end())
             {
                 period = j["data"]["period"];
                 ROS_INFO("get period: %d", period);
             }
 
-            if(j["data"].find("color") != j["data"].end())
+            if(j["data"].find("color_1") != j["data"].end())
             {
-                if(j["data"]["color"].find("r") != j["data"]["color"].end())
+                if(j["data"]["color_1"].find("r") != j["data"]["color_1"].end())
                 {
-                    color.r = j["data"]["color"]["r"];
-                    ROS_INFO("get r: %d", color.r);
+                    color_1.r = j["data"]["color_1"]["r"];
+                    ROS_INFO("get r: %d", color_1.r);
                 }
                 else
                 {
@@ -2533,10 +2629,10 @@ void NoahPowerboard::leds_ctrl_callback(const std_msgs::String::ConstPtr &msg)
                     TODO: parameter error
                     */
                 }
-                if(j["data"]["color"].find("g") != j["data"]["color"].end())
+                if(j["data"]["color_1"].find("g") != j["data"]["color_1"].end())
                 {
-                    color.g = j["data"]["color"]["g"];
-                    ROS_INFO("get g: %d", color.g);
+                    color_1.g = j["data"]["color_1"]["g"];
+                    ROS_INFO("get g: %d", color_1.g);
                 }
                 else
                 {
@@ -2544,10 +2640,46 @@ void NoahPowerboard::leds_ctrl_callback(const std_msgs::String::ConstPtr &msg)
                     TODO: parameter error
                     */
                 }
-                if(j["data"]["color"].find("b") != j["data"]["color"].end())
+                if(j["data"]["color_1"].find("b") != j["data"]["color_1"].end())
                 {
-                    color.b = j["data"]["color"]["b"];
-                    ROS_INFO("get b: %d", color.b);
+                    color_1.b = j["data"]["color_1"]["b"];
+                    ROS_INFO("get b: %d", color_1.b);
+                }
+                else
+                {
+                    /*
+                    TODO: parameter error
+                    */
+                }
+            }
+            if(j["data"].find("color_2") != j["data"].end())
+            {
+                if(j["data"]["color_2"].find("r") != j["data"]["color_2"].end())
+                {
+                    color_2.r = j["data"]["color_2"]["r"];
+                    ROS_INFO("get r: %d", color_2.r);
+                }
+                else
+                {
+                    /*
+                    TODO: parameter error
+                    */
+                }
+                if(j["data"]["color_2"].find("g") != j["data"]["color_2"].end())
+                {
+                    color_2.g = j["data"]["color_2"]["g"];
+                    ROS_INFO("get g: %d", color_2.g);
+                }
+                else
+                {
+                    /*
+                    TODO: parameter error
+                    */
+                }
+                if(j["data"]["color_2"].find("b") != j["data"]["color_2"].end())
+                {
+                    color_2.b = j["data"]["color_2"]["b"];
+                    ROS_INFO("get b: %d", color_2.b);
                 }
                 else
                 {
@@ -2557,13 +2689,16 @@ void NoahPowerboard::leds_ctrl_callback(const std_msgs::String::ConstPtr &msg)
                 }
 
                 //set_leds_effect_vector
-                set_leds_effect_t set_led_effect;
-                set_led_effect.reserve = 0;
-                set_led_effect.mode = LIGHTS_MODE_SETTING;
-                set_led_effect.period = period;
-                set_led_effect.color = color;
-                this->set_leds_effect_vector.push_back(set_led_effect);
             }
+            color[0] = color_1;
+            color[1] = color_2;
+            set_leds_effect_t set_led_effect;
+            set_led_effect.reserve = 0;
+            set_led_effect.mode = LIGHTS_MODE_SETTING;
+            set_led_effect.period = period;
+            set_led_effect.color[0] = color_1;
+            set_led_effect.color[1] = color_2;
+            this->set_leds_effect_vector.push_back(set_led_effect);
         }
     }
 }
@@ -2711,19 +2846,20 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
         if(j["pub_name"] == "serial_leds_ctrl")
         {
             int period = 0;
-            color_t color = {0};
+            color_t color_1 = {0};
+            color_t color_2 = {0};
             if(j["data"].find("period") != j["data"].end())
             {
                 period = j["data"]["period"];
                 ROS_INFO("get period: %d", period);
             }
 
-            if(j["data"].find("color") != j["data"].end())
+            if(j["data"].find("color_1") != j["data"].end())
             {
-                if(j["data"]["color"].find("r") != j["data"]["color"].end())
+                if(j["data"]["color_1"].find("r") != j["data"]["color_1"].end())
                 {
-                    color.r = j["data"]["color"]["r"];
-                    ROS_INFO("get r: %d", color.r);
+                    color_1.r = j["data"]["color_1"]["r"];
+                    ROS_INFO("get color_1 r: %d", color_1.r);
                 }
                 else
                 {
@@ -2732,10 +2868,10 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                     status.success = false;
                     return true;
                 }
-                if(j["data"]["color"].find("g") != j["data"]["color"].end())
+                if(j["data"]["color_1"].find("g") != j["data"]["color_1"].end())
                 {
-                    color.g = j["data"]["color"]["g"];
-                    ROS_INFO("get g: %d", color.g);
+                    color_1.g = j["data"]["color_1"]["g"];
+                    ROS_INFO("get color_1 g: %d", color_1.g);
                 }
                 else
                 {
@@ -2744,10 +2880,10 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                     status.success = false;
                     return true;
                 }
-                if(j["data"]["color"].find("b") != j["data"]["color"].end())
+                if(j["data"]["color_1"].find("b") != j["data"]["color_1"].end())
                 {
-                    color.b = j["data"]["color"]["b"];
-                    ROS_INFO("get b: %d", color.b);
+                    color_1.b = j["data"]["color_1"]["b"];
+                    ROS_INFO("get color_1 b: %d", color_1.b);
                 }
                 else
                 {
@@ -2756,20 +2892,66 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                     status.success = false;
                     return true;
                 }
-
-                do
-                {
-                    boost::mutex::scoped_lock(this->mtx);
-                    set_leds_effect_t set_led_effect;
-                    set_led_effect.reserve = 0;
-                    set_led_effect.mode = LIGHTS_MODE_SETTING;
-                    set_led_effect.period = period;
-                    set_led_effect.color = color;
-                    this->set_leds_effect_vector.push_back(set_led_effect);
-                    led_ctrl_ack_flag = 0;
-                    led_ctrl_set_flag |= 1 << LED_CTRL_FLAG_SERIAL_BIT;
-                }while(0);
             }
+
+
+
+            if(j["data"].find("color_2") != j["data"].end())
+            {
+                if(j["data"]["color_2"].find("r") != j["data"]["color_2"].end())
+                {
+                    color_2.r = j["data"]["color_2"]["r"];
+                    ROS_INFO("get color_2 r: %d", color_2.r);
+                }
+                else
+                {
+                    ROS_ERROR("led ctrl response parameter err");
+                    status.response = "parameter err";
+                    status.success = false;
+                    return true;
+                }
+                if(j["data"]["color_2"].find("g") != j["data"]["color_2"].end())
+                {
+                    color_2.g = j["data"]["color_2"]["g"];
+                    ROS_INFO("get color_2 g: %d", color_2.g);
+                }
+                else
+                {
+                    ROS_ERROR("led ctrl response parameter err");
+                    status.response = "parameter err";
+                    status.success = false;
+                    return true;
+                }
+                if(j["data"]["color_2"].find("b") != j["data"]["color_2"].end())
+                {
+                    color_2.b = j["data"]["color_2"]["b"];
+                    ROS_INFO("get color_2 b: %d", color_2.b);
+                }
+                else
+                {
+                    ROS_ERROR("led ctrl response parameter err");
+                    status.response = "parameter err";
+                    status.success = false;
+                    return true;
+                }
+            }
+
+
+
+
+            do
+            {
+                boost::mutex::scoped_lock(this->mtx);
+                set_leds_effect_t set_led_effect;
+                set_led_effect.reserve = 0;
+                set_led_effect.mode = LIGHTS_MODE_SETTING;
+                set_led_effect.period = period;
+                set_led_effect.color[0] = color_1;
+                set_led_effect.color[1] = color_2;
+                this->set_leds_effect_vector.push_back(set_led_effect);
+                led_ctrl_ack_flag = 0;
+                led_ctrl_set_flag |= 1 << LED_CTRL_FLAG_SERIAL_BIT;
+            }while(0);
         }
     }
 
@@ -2934,11 +3116,18 @@ void NoahPowerboard::ack_serial_led_ctrl(set_leds_effect_t effect, uint8_t err_c
                 "data",
                 {
                     {"period", effect.period},
-                    {"color",
+                    {"color_1",
                         {
-                            {"r", effect.color.r},
-                            {"g", effect.color.g},
-                            {"b", effect.color.b},
+                            {"r", effect.color[0].r},
+                            {"g", effect.color[0].g},
+                            {"b", effect.color[0].b},
+                        }
+                    },
+                    {"color_2",
+                        {
+                            {"r", effect.color[1].r},
+                            {"g", effect.color[1].g},
+                            {"b", effect.color[1].b},
                         }
                     },
                 }
@@ -3296,7 +3485,8 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::Cons
         set_leds_effect_t set_led_effect_ack;
 
         set_led_effect_ack.mode = msg->Data[2];
-        set_led_effect_ack.color = *(color_t *)&msg->Data[3];
+        set_led_effect_ack.color[0] = *(color_t *)&msg->Data[3];
+        set_led_effect_ack.color[1] = *(color_t *)&msg->Data[6];
         set_led_effect_ack.period = msg->Data[6];
         if(this->is_log_on == true)
         {
@@ -3469,6 +3659,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::Cons
 
 void NoahPowerboard::update_sys_status(void)
 {
+    return ;
     uint16_t sys_status = this->sys_powerboard->sys_status;
     uint8_t  power_percent = this->sys_powerboard->bat_info.bat_percent;
     static uint8_t prv_led_effect = LIGHTS_MODE_NONE;
