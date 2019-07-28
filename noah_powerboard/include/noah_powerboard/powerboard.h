@@ -561,6 +561,20 @@ typedef enum
     LIGHTS_MODE_SETTING                 = 0xff,
 }light_mode_t;
 
+
+
+#define MACHINE_TYPE_M30            "m30"
+#define MACHINE_TYPE_NOAH           "noah"
+
+#define SONAR_TYPE_M30              "m30_8"
+#define SONAR_TYPE_NOAH_1           "noah_14"
+#define SONAR_TYPE_NOAH_2           "noah_16"
+
+
+
+
+
+
 extern powerboard_t    *sys_powerboard;
 
 class NoahPowerboard
@@ -609,8 +623,10 @@ class NoahPowerboard
             get_adc_vector.clear();
             set_leds_effect_vector.clear();
             get_serials_leds_version_vector.clear();
-            led_ctrl_set_flag = 0;
-            led_ctrl_ack_flag = 0;
+            status_led_ctrl_set_flag = 0;
+            status_led_ctrl_ack_flag = 0;
+            serial_led_ctrl_set_flag = 0;
+            serial_led_ctrl_ack_flag = 0;
         }
         int PowerboardParamInit(void);
         int SetLedEffect(set_leds_effect_t effect);
@@ -659,8 +675,10 @@ class NoahPowerboard
 #define LED_CTRL_FLAG_BAT_BIT           2
 #define LED_CTRL_FLAG_TRANS_BIT         3
 #define LED_CTRL_FLAG_SERIAL_BIT        4
-        uint32_t led_ctrl_ack_flag;
-        uint32_t led_ctrl_set_flag;
+        uint32_t serial_led_ctrl_ack_flag;
+        uint32_t status_led_ctrl_ack_flag;
+        uint32_t status_led_ctrl_set_flag;
+        uint32_t serial_led_ctrl_set_flag;
 
         void update_sys_status(void);
 
@@ -711,6 +729,7 @@ class NoahPowerboard
         bool service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrobot_srvs::JString::Response &status);
         void pub_battery_info(get_bat_info_ack_t *bat_info);
         void set_machine_type_by_dev_id(uint16_t dev_id);
+        std::string get_machine_type(void);
         int Can_TX(ros::Publisher pub, uint32_t canx_id, uint8_t* pdata, uint16_t len);
 
 

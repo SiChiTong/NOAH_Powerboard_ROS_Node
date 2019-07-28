@@ -1065,7 +1065,7 @@ set_leds_effect_restart:
                     {
                         ROS_INFO("get right set led effect ack");
                     }
-                    pNoahPowerboard->led_ctrl_ack_flag |= 1 << LED_CTRL_FLAG_SERIAL_BIT;
+                    pNoahPowerboard->serial_led_ctrl_ack_flag |= 1 << LED_CTRL_FLAG_SERIAL_BIT;
                     //pNoahPowerboard->sys_powerboard->led.mode = set_led_effect_ack.mode;
 
                     for(uint8_t i = 0; i < SETTING_COLOR_NUM_MAX; i++)
@@ -1465,15 +1465,15 @@ set_led_status_restart:
                         boost::mutex::scoped_lock(mtx);
                         if(status_led_ack.led == LED_WIFI)
                         {
-                            pNoahPowerboard->led_ctrl_ack_flag |= 1 << LED_CTRL_FLAG_WIFI_BIT;
+                            pNoahPowerboard->status_led_ctrl_ack_flag |= 1 << LED_CTRL_FLAG_WIFI_BIT;
                         }
                         else if(status_led_ack.led == LED_TRANS)
                         {
-                            pNoahPowerboard->led_ctrl_ack_flag |= 1 << LED_CTRL_FLAG_TRANS_BIT;
+                            pNoahPowerboard->status_led_ctrl_ack_flag |= 1 << LED_CTRL_FLAG_TRANS_BIT;
                         }
                         else if(status_led_ack.led == LED_BATTERY)
                         {
-                            pNoahPowerboard->led_ctrl_ack_flag |= 1 << LED_CTRL_FLAG_BAT_BIT;
+                            pNoahPowerboard->status_led_ctrl_ack_flag |= 1 << LED_CTRL_FLAG_BAT_BIT;
                         }
                     }while(0);
                     pNoahPowerboard->ack_status_led_ctrl(status_led_ack, LED_STATUS_ACK_OK);
@@ -1764,7 +1764,21 @@ int NoahPowerboard::PowerboardParamInit(void)
 }
 
 
-
+std::string NoahPowerboard::get_machine_type(void)
+{
+    std::string machine_type = MACHINE_TYPE_M30; //default value
+    std::string sonar_type = SONAR_TYPE_M30; //default value
+    if(ros::param::has("/sonar_type"))
+    {
+        ros::param::get("/sonar_type",sonar_type);
+        ROS_INFO("get sonar type: %s",sonar_type.c_str());
+        if((sonar_type == SONAR_TYPE_NOAH_1) || (sonar_type == SONAR_TYPE_NOAH_2))
+        {
+            machine_type = MACHINE_TYPE_NOAH;
+        }
+    }
+    return machine_type;
+}
 
 
 int CAN_Transmit(ros::Publisher pub, uint32_t id, uint8_t *data, uint8_t len)
@@ -1846,6 +1860,7 @@ int NoahPowerboard::Can_TX(ros::Publisher pub, uint32_t canx_id, uint8_t* pdata,
 
 int NoahPowerboard::SetLedEffect(set_leds_effect_t effect)     // done
 {
+    ROS_INFO("start to set serial led effect . . .");
     int error = 0;
     //mrobot_msgs::vci_can can_msg;
     CAN_ID_UNION id;
@@ -2747,15 +2762,15 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                     ROS_ERROR("wifi status parameter error: %s", wifi_status.c_str());
                     status.response = "parameter err";
                     status.success = false;
-                    ROS_ERROR("led ctrl response parameter err");
+                    ROS_ERROR("service: led status ctrl response parameter err");
                     return true;
                 }
                 do
                 {
                     boost::mutex::scoped_lock(this->mtx);
                     this->set_led_status_vector.push_back(set_led_status);
-                    led_ctrl_ack_flag = 0;
-                    led_ctrl_set_flag |= 1 << LED_CTRL_FLAG_WIFI_BIT;
+                    status_led_ctrl_ack_flag = 0;
+                    status_led_ctrl_set_flag |= 1 << LED_CTRL_FLAG_WIFI_BIT;
                 }while(0);
             }
 
@@ -2788,15 +2803,15 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                     ROS_ERROR("trans status parameter error: %s", trans_status.c_str());
                     status.response = "parameter err";
                     status.success = false;
-                    ROS_ERROR("led ctrl response parameter err");
+                    ROS_ERROR("service: led status ctrl response parameter err");
                     return true;
                 }
                 do
                 {
                     boost::mutex::scoped_lock(this->mtx);
                     this->set_led_status_vector.push_back(set_led_status);
-                    led_ctrl_ack_flag = 0;
-                    led_ctrl_set_flag |= 1 << LED_CTRL_FLAG_TRANS_BIT;
+                    status_led_ctrl_ack_flag = 0;
+                    status_led_ctrl_set_flag |= 1 << LED_CTRL_FLAG_TRANS_BIT;
                 }while(0);
             }
 
@@ -2828,7 +2843,7 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                 else
                 {
                     ROS_ERROR("battery status parameter error: %s", battery_status.c_str());
-                    ROS_ERROR("led ctrl response parameter err");
+                    ROS_ERROR("service: led status ctrl response parameter err");
                     status.response = "parameter err";
                     status.success = false;
                     return true;
@@ -2837,13 +2852,38 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                 {
                     boost::mutex::scoped_lock(this->mtx);
                     this->set_led_status_vector.push_back(set_led_status);
-                    led_ctrl_ack_flag = 0;
-                    led_ctrl_set_flag |= 1 << LED_CTRL_FLAG_BAT_BIT;
+                    status_led_ctrl_ack_flag = 0;
+                    status_led_ctrl_set_flag |= 1 << LED_CTRL_FLAG_BAT_BIT;
                 }while(0);
+
+
+                uint32_t cnt = 0;
+                while((status_led_ctrl_ack_flag != status_led_ctrl_set_flag) && (cnt < 200))
+                {
+                    cnt++;
+                    usleep(10*1000);
+                    ros::spinOnce();
+                }
+                if(cnt < 200)
+                {
+                    ROS_INFO("service: led status ctrl response ok");
+                    status.response = "ok";
+                    status.success = true;
+                    status_led_ctrl_set_flag = 0;
+                    return true;
+                }
+                else
+                {
+                    ROS_ERROR("service: led status ctrl response timeout");
+                    status.response = "timeout";
+                    status.success = false;
+                    status_led_ctrl_set_flag = 0;
+                    return true;
+                }
             }
         }
 
-        if(j["pub_name"] == "serial_leds_ctrl")
+        else if(j["pub_name"] == "serial_leds_ctrl")
         {
             int period = 0;
             color_t color_1 = {0};
@@ -2863,7 +2903,7 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                 }
                 else
                 {
-                    ROS_ERROR("led ctrl response parameter err");
+                    ROS_ERROR("service: serial led ctrl response parameter err");
                     status.response = "parameter err";
                     status.success = false;
                     return true;
@@ -2875,7 +2915,7 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                 }
                 else
                 {
-                    ROS_ERROR("led ctrl response parameter err");
+                    ROS_ERROR("service: serial led ctrl response parameter err");
                     status.response = "parameter err";
                     status.success = false;
                     return true;
@@ -2887,7 +2927,7 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                 }
                 else
                 {
-                    ROS_ERROR("led ctrl response parameter err");
+                    ROS_ERROR("service: serial led ctrl response parameter err");
                     status.response = "parameter err";
                     status.success = false;
                     return true;
@@ -2905,7 +2945,7 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                 }
                 else
                 {
-                    ROS_ERROR("led ctrl response parameter err");
+                    ROS_ERROR("service: serial led ctrl response parameter err");
                     status.response = "parameter err";
                     status.success = false;
                     return true;
@@ -2917,7 +2957,7 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                 }
                 else
                 {
-                    ROS_ERROR("led ctrl response parameter err");
+                    ROS_ERROR("service: serial led ctrl response parameter err");
                     status.response = "parameter err";
                     status.success = false;
                     return true;
@@ -2929,14 +2969,12 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                 }
                 else
                 {
-                    ROS_ERROR("led ctrl response parameter err");
+                    ROS_ERROR("service: serial led ctrl response parameter err");
                     status.response = "parameter err";
                     status.success = false;
                     return true;
                 }
             }
-
-
 
 
             do
@@ -2949,33 +2987,43 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                 set_led_effect.color[0] = color_1;
                 set_led_effect.color[1] = color_2;
                 this->set_leds_effect_vector.push_back(set_led_effect);
-                led_ctrl_ack_flag = 0;
-                led_ctrl_set_flag |= 1 << LED_CTRL_FLAG_SERIAL_BIT;
+                serial_led_ctrl_ack_flag = 0;
+                serial_led_ctrl_set_flag |= 1 << LED_CTRL_FLAG_SERIAL_BIT;
             }while(0);
+
+            uint32_t cnt = 0;
+            while((serial_led_ctrl_ack_flag != serial_led_ctrl_set_flag) && (cnt < 200))
+            {
+                cnt++;
+                usleep(10*1000);
+                ros::spinOnce();
+            }
+            if(cnt < 200)
+            {
+                ROS_INFO("service: serial led ctrl response ok");
+                status.response = "ok";
+                status.success = true;
+                serial_led_ctrl_set_flag = 0;
+                return true;
+            }
+            else
+            {
+                ROS_ERROR("service: serial led ctrl response timeout");
+                status.response = "timeout";
+                status.success = false;
+                serial_led_ctrl_set_flag = 0;
+                return true;
+            }
         }
+        else
+        {
+            status.response = "parameter err";
+            status.success = false;
+            return true;
+        }
+
     }
 
-    uint32_t cnt = 0;
-    while((led_ctrl_ack_flag != led_ctrl_set_flag) && (cnt < 200))
-    {
-        cnt++;
-        usleep(10*1000);
-        ros::spinOnce();
-    }
-    if(cnt < 200)
-    {
-        ROS_INFO("led ctrl response ok");
-        status.response = "ok";
-        status.success = true;
-        return true;
-    }
-    else
-    {
-        ROS_ERROR("led ctrl response timeout");
-        status.response = "timeout";
-        status.success = false;
-        return true;
-    }
 }
 
 
@@ -3260,6 +3308,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::Cons
     mrobot_msgs::vci_can* msg = &long_msg;
     if( msg->ID == 0 )
     {
+        ROS_WARN("CAN ID is 0, maybe wait for other CAN msgs");
         return;
     }
     if(this->is_log_on == true)
@@ -3482,6 +3531,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::Cons
 
     if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_SET_LED_EFFECT)
     {
+        ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_SET_LED_EFFECT");
         set_leds_effect_t set_led_effect_ack;
 
         set_led_effect_ack.mode = msg->Data[2];

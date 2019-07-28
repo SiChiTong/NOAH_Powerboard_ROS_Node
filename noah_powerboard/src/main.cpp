@@ -124,7 +124,7 @@ int main(int argc, char **argv)
             do
             {
                 boost::mutex::scoped_lock(powerboard->mtx);
-                powerboard->get_sys_status_vector.push_back(get_sys_status);
+                //powerboard->get_sys_status_vector.push_back(get_sys_status);
             }while(0);
         }
 
@@ -134,7 +134,7 @@ int main(int argc, char **argv)
             do
             {
                 boost::mutex::scoped_lock(powerboard->mtx);
-                powerboard->get_bat_info_vector.push_back(get_bat_info);
+                //powerboard->get_bat_info_vector.push_back(get_bat_info);
             }while(0);
         }
 
