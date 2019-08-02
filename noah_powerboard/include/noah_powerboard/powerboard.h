@@ -7,6 +7,7 @@
 #include <boost/thread/mutex.hpp>
 #include <noah_powerboard/remote_power_ctrl_srv.h>
 #include <mrobot_srvs/JString.h>
+#include <atomic>
 using json = nlohmann::json;
 #ifndef LED_H
 #define LED_H
@@ -675,10 +676,12 @@ class NoahPowerboard
 #define LED_CTRL_FLAG_BAT_BIT           2
 #define LED_CTRL_FLAG_TRANS_BIT         3
 #define LED_CTRL_FLAG_SERIAL_BIT        4
-        uint32_t serial_led_ctrl_ack_flag;
-        uint32_t status_led_ctrl_ack_flag;
-        uint32_t status_led_ctrl_set_flag;
-        uint32_t serial_led_ctrl_set_flag;
+
+        std::atomic<uint32_t> serial_led_ctrl_ack_flag;
+        std::atomic<uint32_t> status_led_ctrl_ack_flag;
+        std::atomic<uint32_t> status_led_ctrl_set_flag;
+        std::atomic<uint32_t> serial_led_ctrl_set_flag;
+
 
         void update_sys_status(void);
 

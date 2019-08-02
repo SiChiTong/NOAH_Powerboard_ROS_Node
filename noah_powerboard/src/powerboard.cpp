@@ -1460,22 +1460,20 @@ set_led_status_restart:
                     {
                             ROS_INFO("get ack of set status led is: led:%d, status:%d", status_led_ack.led, status_led_ack.status);
                     }
-                    do
+
+                    if(status_led_ack.led == LED_WIFI)
                     {
-                        boost::mutex::scoped_lock(mtx);
-                        if(status_led_ack.led == LED_WIFI)
-                        {
-                            pNoahPowerboard->status_led_ctrl_ack_flag |= 1 << LED_CTRL_FLAG_WIFI_BIT;
-                        }
-                        else if(status_led_ack.led == LED_TRANS)
-                        {
-                            pNoahPowerboard->status_led_ctrl_ack_flag |= 1 << LED_CTRL_FLAG_TRANS_BIT;
-                        }
-                        else if(status_led_ack.led == LED_BATTERY)
-                        {
-                            pNoahPowerboard->status_led_ctrl_ack_flag |= 1 << LED_CTRL_FLAG_BAT_BIT;
-                        }
-                    }while(0);
+                        pNoahPowerboard->status_led_ctrl_ack_flag |= 1 << LED_CTRL_FLAG_WIFI_BIT;
+                    }
+                    else if(status_led_ack.led == LED_TRANS)
+                    {
+                        pNoahPowerboard->status_led_ctrl_ack_flag |= 1 << LED_CTRL_FLAG_TRANS_BIT;
+                    }
+                    else if(status_led_ack.led == LED_BATTERY)
+                    {
+                        pNoahPowerboard->status_led_ctrl_ack_flag |= 1 << LED_CTRL_FLAG_BAT_BIT;
+                    }
+
                     pNoahPowerboard->ack_status_led_ctrl(status_led_ack, LED_STATUS_ACK_OK);
                     break;
                 }
@@ -2765,12 +2763,14 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                     ROS_ERROR("service: led status ctrl response parameter err");
                     return true;
                 }
+
+                status_led_ctrl_ack_flag = 0;
+                status_led_ctrl_set_flag |= 1 << LED_CTRL_FLAG_WIFI_BIT;
+
                 do
                 {
                     boost::mutex::scoped_lock(this->mtx);
                     this->set_led_status_vector.push_back(set_led_status);
-                    status_led_ctrl_ack_flag = 0;
-                    status_led_ctrl_set_flag |= 1 << LED_CTRL_FLAG_WIFI_BIT;
                 }while(0);
             }
 
@@ -2806,12 +2806,14 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                     ROS_ERROR("service: led status ctrl response parameter err");
                     return true;
                 }
+
+                status_led_ctrl_ack_flag = 0;
+                status_led_ctrl_set_flag |= 1 << LED_CTRL_FLAG_TRANS_BIT;
+
                 do
                 {
                     boost::mutex::scoped_lock(this->mtx);
                     this->set_led_status_vector.push_back(set_led_status);
-                    status_led_ctrl_ack_flag = 0;
-                    status_led_ctrl_set_flag |= 1 << LED_CTRL_FLAG_TRANS_BIT;
                 }while(0);
             }
 
@@ -2848,12 +2850,14 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                     status.success = false;
                     return true;
                 }
+
+                status_led_ctrl_ack_flag = 0;
+                status_led_ctrl_set_flag |= 1 << LED_CTRL_FLAG_BAT_BIT;
+
                 do
                 {
                     boost::mutex::scoped_lock(this->mtx);
                     this->set_led_status_vector.push_back(set_led_status);
-                    status_led_ctrl_ack_flag = 0;
-                    status_led_ctrl_set_flag |= 1 << LED_CTRL_FLAG_BAT_BIT;
                 }while(0);
 
 
@@ -2977,19 +2981,22 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
             }
 
 
+            serial_led_ctrl_ack_flag = 0;
+            serial_led_ctrl_set_flag |= 1 << LED_CTRL_FLAG_SERIAL_BIT;
+
+            set_leds_effect_t set_led_effect;
+            set_led_effect.reserve = 0;
+            set_led_effect.mode = LIGHTS_MODE_SETTING;
+            set_led_effect.period = period;
+            set_led_effect.color[0] = color_1;
+            set_led_effect.color[1] = color_2;
+
             do
             {
                 boost::mutex::scoped_lock(this->mtx);
-                set_leds_effect_t set_led_effect;
-                set_led_effect.reserve = 0;
-                set_led_effect.mode = LIGHTS_MODE_SETTING;
-                set_led_effect.period = period;
-                set_led_effect.color[0] = color_1;
-                set_led_effect.color[1] = color_2;
                 this->set_leds_effect_vector.push_back(set_led_effect);
-                serial_led_ctrl_ack_flag = 0;
-                serial_led_ctrl_set_flag |= 1 << LED_CTRL_FLAG_SERIAL_BIT;
             }while(0);
+
 
             uint32_t cnt = 0;
             while((serial_led_ctrl_ack_flag != serial_led_ctrl_set_flag) && (cnt < 200))
@@ -3308,7 +3315,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::Cons
     mrobot_msgs::vci_can* msg = &long_msg;
     if( msg->ID == 0 )
     {
-        ROS_WARN("CAN ID is 0, maybe wait for other CAN msgs");
+        //ROS_WARN("CAN ID is 0, maybe wait for other CAN msgs");
         return;
     }
     if(this->is_log_on == true)
