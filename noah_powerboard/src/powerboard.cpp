@@ -2328,7 +2328,7 @@ void NoahPowerboard::from_app_rcv_callback(const std_msgs::String::ConstPtr &msg
                                 break;
                             default :
                                 ROS_ERROR("door ctrl id  error !");
-                                break;
+                                return;
                         }
                         ROS_INFO("set door %d ctrl %d",door_id, param.on_off);
                         this->module_set_vector.push_back(param);
@@ -2723,7 +2723,7 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
 {
     auto j = json::parse(ctrl.request.c_str());
     std::string j_str = j.dump();
-    ROS_WARN("service: led_ctrl, json data: %s",j_str.data());
+    ROS_INFO("service: led_ctrl, json data: %s",j_str.data());
     ROS_INFO("%s: srv call",__func__);
     if(j.find("pub_name") != j.end())
     {
@@ -3435,18 +3435,19 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::Cons
             {
                 if(this->sys_powerboard->sys_status & STATE_IS_RECHARGE_IN)
                 {
-                    ROS_INFO("recharge plug in");
+                    ROS_WARN("recharge plug in");
                 }
                 if(this->sys_powerboard->sys_status & STATE_IS_CHARGER_IN)
                 {
-                    ROS_INFO("charge plug in");
+                    ROS_WARN("charge plug in");
                 }
             }
             else
             {
-                ROS_INFO("charge not plug in");
-                ROS_INFO("recharge not plug in");
+                ROS_WARN("charge not plug in");
+                ROS_WARN("recharge not plug in");
             }
+            this->PubPower(this->sys_powerboard);   //pub charge state immediately
         }
     }
 
