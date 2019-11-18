@@ -2774,6 +2774,7 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                 }while(0);
             }
 
+
             if(j["data"].find(STR_LED_TRANS) != j["data"].end())
             {
                 std::string trans_status = j["data"][STR_LED_TRANS];
@@ -2859,34 +2860,32 @@ bool NoahPowerboard::service_led_ctrl(mrobot_srvs::JString::Request  &ctrl, mrob
                     boost::mutex::scoped_lock(this->mtx);
                     this->set_led_status_vector.push_back(set_led_status);
                 }while(0);
+            }
 
-
-                uint32_t cnt = 0;
-                while((status_led_ctrl_ack_flag != status_led_ctrl_set_flag) && (cnt < 200))
-                {
-                    cnt++;
-                    usleep(10*1000);
-                    ros::spinOnce();
-                }
-                if(cnt < 200)
-                {
-                    ROS_INFO("service: led status ctrl response ok");
-                    status.response = "ok";
-                    status.success = true;
-                    status_led_ctrl_set_flag = 0;
-                    return true;
-                }
-                else
-                {
-                    ROS_ERROR("service: led status ctrl response timeout");
-                    status.response = "timeout";
-                    status.success = false;
-                    status_led_ctrl_set_flag = 0;
-                    return true;
-                }
+            uint32_t cnt = 0;
+            while((status_led_ctrl_ack_flag != status_led_ctrl_set_flag) && (cnt < 200))
+            {
+                cnt++;
+                usleep(10*1000);
+                ros::spinOnce();
+            }
+            if(cnt < 200)
+            {
+                ROS_INFO("service: led status ctrl response ok");
+                status.response = "ok";
+                status.success = true;
+                status_led_ctrl_set_flag = 0;
+                return true;
+            }
+            else
+            {
+                ROS_ERROR("service: led status ctrl response timeout");
+                status.response = "timeout";
+                status.success = false;
+                status_led_ctrl_set_flag = 0;
+                return true;
             }
         }
-
         else if(j["pub_name"] == "serial_leds_ctrl")
         {
             int period = 0;
@@ -3251,7 +3250,7 @@ void NoahPowerboard::pub_battery_info(get_bat_info_ack_t *bat_info)
     j.clear();
     j =
     {
-        {"pub_name","test_battery_info"},
+        {"pub_name","battery_info"},
         {
             "data",
             {
@@ -3261,6 +3260,8 @@ void NoahPowerboard::pub_battery_info(get_bat_info_ack_t *bat_info)
                 {"current_soc", bat_info->pack_current_soc},
                 {"totoal_soc", bat_info->pack_totoal_soc},
                 {"recharge_cycle", bat_info->pack_recharge_cycle},
+                {"max_temperature", bat_info->max_temp},
+                {"min_temperature", bat_info->min_temp},
                 {"com_status", bat_info->com_status},
             }
         },
@@ -3360,41 +3361,56 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::Cons
     if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_GET_BAT_STATE)
     {
         get_bat_info_ack_t get_bat_info_ack;
-        get_bat_info_ack.bat_vol = *(uint16_t *)&msg->Data[1];
         get_bat_info_ack.bat_percent = msg->Data[3];
         if(msg->DataLen > 3)
         {
-            get_bat_info_ack.pack_current = *(int16_t *)&msg->Data[4];
-            get_bat_info_ack.pack_current_soc = *(uint16_t *)&msg->Data[6];
-            get_bat_info_ack.pack_totoal_soc = *(uint16_t *)&msg->Data[8];
-            get_bat_info_ack.pack_recharge_cycle = *(uint16_t *)&msg->Data[10];
-            get_bat_info_ack.com_status = msg->Data[12];
-            if(this->is_log_on == true)
+            get_bat_info_ack.com_status = msg->Data[16];
+            if(get_bat_info_ack.com_status == 0)
             {
-                ROS_INFO("battery voltage: %d,  percentage: %d", get_bat_info_ack.bat_vol, get_bat_info_ack.bat_percent);
-                ROS_INFO("battery current: %d", get_bat_info_ack.pack_current);
-                ROS_INFO("battery recharge cycle: %d", get_bat_info_ack.pack_recharge_cycle);
-                ROS_INFO("battery current soc: %d, totoal soc: %d", get_bat_info_ack.pack_current_soc, get_bat_info_ack.pack_totoal_soc);
-                ROS_INFO("battery com status: %d", get_bat_info_ack.com_status);
+                ROS_ERROR("mcu not communicate with battery yet");
             }
-            pub_battery_info(&get_bat_info_ack);
+            else
+            {
+                get_bat_info_ack.bat_vol = *(uint16_t *)&msg->Data[1];
+                get_bat_info_ack.pack_current = *(int16_t *)&msg->Data[4];
+                get_bat_info_ack.pack_current_soc = *(uint16_t *)&msg->Data[6];
+                get_bat_info_ack.pack_totoal_soc = *(uint16_t *)&msg->Data[8];
+                get_bat_info_ack.pack_recharge_cycle = *(uint16_t *)&msg->Data[10];
+                uint16_t max_temp = *(uint16_t *)&msg->Data[12];
+                uint16_t min_temp = *(uint16_t *)&msg->Data[14];
+                get_bat_info_ack.max_temp = (float)max_temp / 10 - 273.0;
+                get_bat_info_ack.min_temp = (float)min_temp / 10 - 273.0;
+                if(this->is_log_on == true)
+                {
+                    ROS_INFO("battery voltage: %d,  percentage: %d", get_bat_info_ack.bat_vol, get_bat_info_ack.bat_percent);
+                    ROS_INFO("battery current: %d", get_bat_info_ack.pack_current);
+                    ROS_INFO("battery recharge cycle: %d", get_bat_info_ack.pack_recharge_cycle);
+                    ROS_INFO("battery current soc: %d, totoal soc: %d", get_bat_info_ack.pack_current_soc, get_bat_info_ack.pack_totoal_soc);
+                    ROS_INFO("battery max temperature: %f", get_bat_info_ack.max_temp);
+                    ROS_INFO("battery min temperature: %f", get_bat_info_ack.min_temp);
+                    ROS_INFO("battery com status: %d", get_bat_info_ack.com_status);
+                }
+                pub_battery_info(&get_bat_info_ack);
+
+
+                do
+                {
+                    boost::mutex::scoped_lock(this->mtx);
+                    this->get_bat_info_ack_vector.push_back(get_bat_info_ack);
+                }while(0);
+
+                if(this->is_log_on == true)
+                {
+                    ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_BAT_STATE");
+                    ROS_INFO("receive bat vol : %d",get_bat_info_ack.bat_vol);
+                    ROS_INFO("receive bat percent : %d",get_bat_info_ack.bat_percent);
+                }
+                this->sys_powerboard->bat_info.bat_vol = get_bat_info_ack.bat_vol;
+                this->sys_powerboard->bat_info.bat_percent = get_bat_info_ack.bat_percent;
+                //this->PubPower(this->sys_powerboard);
+            }
         }
 
-        do
-        {
-            boost::mutex::scoped_lock(this->mtx);
-            this->get_bat_info_ack_vector.push_back(get_bat_info_ack);
-        }while(0);
-
-        if(this->is_log_on == true)
-        {
-            ROS_INFO("rcv from mcu,source id CAN_SOURCE_ID_GET_BAT_STATE");
-            ROS_INFO("receive bat vol : %d",get_bat_info_ack.bat_vol);
-            ROS_INFO("receive bat percent : %d",get_bat_info_ack.bat_percent);
-        }
-        this->sys_powerboard->bat_info.bat_vol = get_bat_info_ack.bat_vol;
-        this->sys_powerboard->bat_info.bat_percent = get_bat_info_ack.bat_percent;
-        //this->PubPower(this->sys_powerboard);
     }
 
     if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_GET_SYS_STATE)
@@ -3413,7 +3429,7 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::Cons
                 this->get_sys_status_ack_vector.push_back(get_sys_status_ack);
             }while(0);
 
-            //this->PubPower(this->sys_powerboard);
+            this->PubPower(this->sys_powerboard);
         }
         if(id.CanID_Struct.ACK == 0)
         {

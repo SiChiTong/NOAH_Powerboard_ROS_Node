@@ -227,6 +227,8 @@ typedef struct
     uint32_t pack_current_soc;
     uint32_t pack_totoal_soc;
     uint16_t pack_recharge_cycle;
+    float max_temp;
+    float min_temp;
     uint8_t com_status;
 }get_bat_info_ack_t;
 
@@ -605,7 +607,7 @@ class NoahPowerboard
             led_ctrl_sub = n.subscribe("led_ctrl", 10, &NoahPowerboard::leds_ctrl_callback,this);
 
             status_led_ctrl_ack_pub = n.advertise<std_msgs::String>("led_ctrl_ack", 10);
-            battery_test_pub = n.advertise<std_msgs::String>("test_battery_info", 10);
+            battery_test_pub = n.advertise<std_msgs::String>("/power/battery_info", 10);
 
             sys_powerboard = &sys_powerboard_ram;
             sys_powerboard->sys_status = 0;
@@ -628,6 +630,7 @@ class NoahPowerboard
             status_led_ctrl_ack_flag = 0;
             serial_led_ctrl_set_flag = 0;
             serial_led_ctrl_ack_flag = 0;
+            sys_powerboard->bat_info.bat_percent = 100;
         }
         int PowerboardParamInit(void);
         int SetLedEffect(set_leds_effect_t effect);
@@ -769,6 +772,8 @@ class NoahPowerboard
         std::string serials_leds_mcu_version_param = "mcu_serials_leds_version";
         std::string hardware_dev_id = "hardware_dev_id";
         std::string hardware_dev_type = "hardware_dev_type";
+
+        bool mcu_bat_com_state = false;
 
 };
 int handle_receive_data(powerboard_t *sys);

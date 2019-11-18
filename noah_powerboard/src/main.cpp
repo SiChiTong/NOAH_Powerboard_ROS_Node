@@ -63,7 +63,6 @@ int main(int argc, char **argv)
     get_version_t get_version;
     get_serials_leds_version_t get_serials_leds_version;
     dev_id_t get_dev_id = {0};
-    //conveyor_belt_t set_conveyor_belt_work_mode;
 
     get_version.get_version_type = 1;
 
@@ -75,7 +74,6 @@ int main(int argc, char **argv)
     get_sys_status.reserve = 0;
     get_serials_leds_version.reserve = 0;
 
-    //set_conveyor_belt_work_mode.set_work_mode = CONVEYOR_BELT_STATUS_LOAD;
 
     while (ros::ok())
     {
@@ -97,7 +95,6 @@ int main(int argc, char **argv)
                     powerboard->get_version_vector.push_back(get_version);
 
                     powerboard->get_serials_leds_version_vector.push_back(get_serials_leds_version);
-                    //powerboard->set_conveyor_belt_work_mode_vector.push_back(set_conveyor_belt_work_mode);
 
                     powerboard->get_dev_id_vector.push_back(get_dev_id);
 
@@ -119,7 +116,6 @@ int main(int argc, char **argv)
         }
 
         if(cnt % (uint32_t)(rate / 2) == 0)
-        //if(cnt % (uint32_t)(rate / 30) == 0)
         {
             do
             {
@@ -128,8 +124,7 @@ int main(int argc, char **argv)
             }while(0);
         }
 
-        if(cnt % (uint32_t)(rate * 5) == rate / 4)
-        //if(cnt % (uint32_t)(rate / 30) == (uint32_t)(rate / 60))
+        if(cnt % (uint32_t)(rate * 5) == 0)
         {
             do
             {
@@ -145,10 +140,6 @@ int main(int argc, char **argv)
         if(cnt % (uint32_t)(rate * 5) == 0)
         {
             powerboard->get_ir_duty_param();
-        }
-        if(cnt % (uint32_t)(rate / 2) == 0)
-        {
-            powerboard->PubPower(powerboard->sys_powerboard);
         }
         cnt++;
         ros::spinOnce();
