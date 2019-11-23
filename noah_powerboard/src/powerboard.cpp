@@ -3276,6 +3276,132 @@ void NoahPowerboard::pub_battery_info(get_bat_info_ack_t *bat_info)
 }
 
 
+void NoahPowerboard::pub_bat_err_info(bat_err_t *err)
+{
+    json j;
+    json j_err;
+    j.clear();
+    j_err.clear();
+    if(err->hw_err.hw_err > 0)
+    {
+        json j_hw_err;
+        j_hw_err.clear();
+
+        if(err->hw_err.hw_err_t.discharge_fet_err)
+        {
+            j_hw_err["discharge_fet_err"] = true;
+        }
+        if(err->hw_err.hw_err_t.charge_fet_err)
+        {
+            j_hw_err["charge_fet_err"] = true;
+        }
+        if(err->hw_err.hw_err_t.ntc_err)
+        {
+            j_hw_err["ntc_err"] = true;
+        }
+        if(err->hw_err.hw_err_t.cell_err)
+        {
+            j_hw_err["cell_err"] = true;
+        }
+        if(err->hw_err.hw_err_t.sample_err)
+        {
+            j_hw_err["sample_err"] = true;
+        }
+        if(err->hw_err.hw_err_t.limit_current_board_err)
+        {
+            j_hw_err["limit_current_board_err"] = true;
+        }
+
+        j_err["hw_err"] = j_hw_err;
+    }
+
+    if(err->temp_err.temp_err > 0)
+    {
+        json j_temp_err;
+        j_temp_err.clear();
+
+        if(err->temp_err.temp_err_t.env_high_temp)
+        {
+            j_temp_err["env_high_temp"] = true;
+        }
+        if(err->temp_err.temp_err_t.bat_high_temp)
+        {
+            j_temp_err["bat_high_temp"] = true;
+        }
+        if(err->temp_err.temp_err_t.mos_high_temp)
+        {
+            j_temp_err["mos_high_temp"] = true;
+        }
+        if(err->temp_err.temp_err_t.env_low_temp)
+        {
+            j_temp_err["env_low_temp"] = true;
+        }
+        if(err->temp_err.temp_err_t.bat_low_temp)
+        {
+            j_temp_err["bat_low_temp"] = true;
+        }
+
+        j_err["temp_err"] = j_temp_err;
+    }
+
+    if(err->voltage_err.voltage_err > 0)
+    {
+        json j_voltage_err;
+        j_voltage_err.clear();
+
+        if(err->voltage_err.voltage_err_t.total_over_voltage)
+        {
+            j_voltage_err["total_over_voltage"] = true;
+        }
+        if(err->voltage_err.voltage_err_t.single_over_voltage)
+        {
+            j_voltage_err["single_over_voltage"] = true;
+        }
+        if(err->voltage_err.voltage_err_t.total_under_voltage)
+        {
+            j_voltage_err["total_under_voltage"] = true;
+        }
+        if(err->voltage_err.voltage_err_t.single_under_voltage)
+        {
+            j_voltage_err["single_under_voltage"] = true;
+        }
+
+        j_err["voltage_err"] = j_voltage_err;
+    }
+
+    if(err->current_err.current_err > 0)
+    {
+        json j_current_err;
+        j_current_err.clear();
+
+        if(err->current_err.current_err_t.charge_over_current)
+        {
+            j_current_err["charge_over_current"] = true;
+        }
+        if(err->current_err.current_err_t.discharge_over_current)
+        {
+            j_current_err["discharge_over_current"] = true;
+        }
+
+        j_err["current_err"] = j_current_err;
+    }
+
+
+    j =
+    {
+        {"pub_name","battery_err_info"},
+        {"data", j_err},
+    };
+
+    std_msgs::String pub_json_msg;
+    std::stringstream ss;
+    ss.clear();
+    ss << j;
+    pub_json_msg.data.clear();
+    pub_json_msg.data = ss.str();
+    battery_err_pub.publish(pub_json_msg);
+}
+
 void NoahPowerboard::set_machine_type_by_dev_id(uint16_t dev_id)
 {
     if(dev_id & 0x0001)
@@ -3412,6 +3538,45 @@ void NoahPowerboard::rcv_from_can_node_callback(const mrobot_msgs::vci_can::Cons
         }
 
     }
+
+
+    if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_GET_BAT_ERR_INFO)
+    {
+        if(id.CanID_Struct.ACK == 0)
+        {
+            this->sys_powerboard->bat_err = *(bat_err_t *)(&msg->Data[0]);
+            bat_err_t bat_err = this->sys_powerboard->bat_err;
+            ROS_ERROR("[voltage] [over] total over voltage: %d", bat_err.voltage_err.voltage_err_t.total_over_voltage);
+            ROS_ERROR("[voltage] [over] single over voltage: %d", bat_err.voltage_err.voltage_err_t.single_over_voltage);
+            ROS_ERROR("[voltage] [under] total under voltage: %d", bat_err.voltage_err.voltage_err_t.total_under_voltage);
+            ROS_ERROR("[voltage] [under] single under voltage: %d", bat_err.voltage_err.voltage_err_t.single_under_voltage);
+
+            ROS_ERROR("[temperature] [high] env: %d", bat_err.temp_err.temp_err_t.env_high_temp);
+            ROS_ERROR("[temperature] [high] bat: %d", bat_err.temp_err.temp_err_t.bat_high_temp);
+            ROS_ERROR("[temperature] [high] mos: %d", bat_err.temp_err.temp_err_t.mos_high_temp);
+            ROS_ERROR("[temperature] [low] env: %d", bat_err.temp_err.temp_err_t.env_low_temp);
+            ROS_ERROR("[temperature] [low] bat: %d", bat_err.temp_err.temp_err_t.bat_low_temp);
+
+            ROS_ERROR("[current] [charge] over current: %d", bat_err.current_err.current_err_t.charge_over_current);
+            ROS_ERROR("[current] [discharge] over current: %d", bat_err.current_err.current_err_t.discharge_over_current);
+
+            ROS_ERROR("[hardware]  discharge_mos_err: %d", bat_err.hw_err.hw_err_t.discharge_fet_err);
+            ROS_ERROR("[hardware]  charge_mos_err: %d", bat_err.hw_err.hw_err_t.charge_fet_err);
+            ROS_ERROR("[hardware]  ntc_err: %d", bat_err.hw_err.hw_err_t.ntc_err);
+            ROS_ERROR("[hardware]  cell_err: %d", bat_err.hw_err.hw_err_t.cell_err);
+            ROS_ERROR("[hardware]  sample_err: %d", bat_err.hw_err.hw_err_t.sample_err);
+            ROS_ERROR("[hardware]  limit_current_board: %d", bat_err.hw_err.hw_err_t.limit_current_board_err);
+
+            can_upload_ack_t can_upload_ack = {0};
+            can_upload_ack.serial_num = msg->Data[msg->DataLen - 1];
+            can_upload_ack.id.CanID_Struct.ACK = 1;
+            can_upload_ack.id.CanID_Struct.SourceID = CAN_SOURCE_ID_GET_BAT_ERR_INFO;
+            this->ack_mcu_upload(can_upload_ack.id, can_upload_ack.serial_num);
+            ROS_INFO("serial num: %d", can_upload_ack.serial_num);
+            this->pub_bat_err_info(&bat_err);
+        }
+    }
+
 
     if(id.CanID_Struct.SourceID == CAN_SOURCE_ID_GET_SYS_STATE)
     {

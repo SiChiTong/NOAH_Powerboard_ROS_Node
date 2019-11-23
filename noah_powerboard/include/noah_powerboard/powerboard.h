@@ -60,6 +60,7 @@ using json = nlohmann::json;
 #define CAN_SOURCE_ID_EVENT_BUTTON                  0x8d
 #define CAN_SOURCE_ID_SET_LED_STATUS                0x8e
 #define CAN_SOURCE_ID_GET_DEV_ID                    0x8f
+#define CAN_SOURCE_ID_GET_BAT_ERR_INFO              0x90
 
 #define CAN_SOURCE_ID_SET_CONVEYOR_BELT_WORK_MODE   0xa0
 
@@ -493,6 +494,77 @@ typedef struct
     uint16_t dev_id;
 }dev_id_t;
 
+
+
+typedef union
+{
+    struct
+    {
+        uint8_t res                             : 2;
+        uint8_t total_over_voltage              : 1;
+        uint8_t single_over_voltage             : 1;
+        uint8_t reserve_2                       : 2;
+        uint8_t total_under_voltage             : 1;
+        uint8_t single_under_voltage            : 1;
+    }voltage_err_t;
+    uint8_t voltage_err;
+}bat_voltage_err_t;
+
+
+typedef union
+{
+    struct
+    {
+        uint8_t res                             : 3;
+        uint8_t charge_over_current             : 1;
+        uint8_t res_2                           : 3;
+        uint8_t discharge_over_current          : 1;
+    }current_err_t;
+    uint8_t current_err;
+}bat_current_err_t;
+
+
+typedef union
+{
+    struct
+    {
+        uint8_t env_high_temp               : 1;
+        uint8_t bat_high_temp               : 1;
+        uint8_t mos_high_temp               : 1;
+        uint8_t reserve                     : 1;
+        uint8_t env_low_temp                : 1;
+        uint8_t bat_low_temp                : 1;
+        uint8_t res_2                       : 2;
+    }temp_err_t;
+    uint8_t temp_err;
+}bat_temp_err_t;
+
+
+typedef union
+{
+    struct
+    {
+        uint8_t discharge_fet_err               : 1;
+        uint8_t charge_fet_err                  : 1;
+        uint8_t ntc_err                         : 1;
+        uint8_t res_1                           : 1;
+        uint8_t cell_err                        : 1;
+        uint8_t sample_err                      : 1;
+        uint8_t limit_current_board_err         : 1;
+        uint8_t res_2                           : 1;
+    }hw_err_t;
+    uint8_t hw_err;
+}bat_hw_err_t;
+
+typedef struct
+{
+    bat_temp_err_t temp_err;
+    bat_voltage_err_t voltage_err;
+    bat_current_err_t current_err;
+    bat_hw_err_t hw_err;
+}bat_err_t;
+
+
 #define VBAT_POWER_OFF_PERCENTAGE           10  // %
 #define VBAT_POWER_LOW_WARNING_PERCENTAGE   20  // %
 
@@ -541,9 +613,7 @@ typedef struct
     status_led_t                status_led_set;
     dev_id_t                    dev_id;
     dev_id_t                    dev_id_ack;
-
-#define SEND_DATA_BUF_LEN           255
-    uint8_t                     send_data_buf[SEND_DATA_BUF_LEN];
+    bat_err_t                   bat_err;
 }powerboard_t;
 
 typedef enum
@@ -608,6 +678,7 @@ class NoahPowerboard
 
             status_led_ctrl_ack_pub = n.advertise<std_msgs::String>("led_ctrl_ack", 10);
             battery_test_pub = n.advertise<std_msgs::String>("/power/battery_info", 10);
+            battery_err_pub = n.advertise<std_msgs::String>("/power/battery_err_info", 10);
 
             sys_powerboard = &sys_powerboard_ram;
             sys_powerboard->sys_status = 0;
@@ -656,6 +727,7 @@ class NoahPowerboard
         void PubPower(powerboard_t *sys);
         void PubChargeStatus(uint8_t status);
         void pub_event_key_value(uint8_t value);
+        void pub_bat_err_info(bat_err_t *err);
 
         void rcv_from_can_node_callback(const mrobot_msgs::vci_can::ConstPtr &c_msg);
         void basestate_callback(std_msgs::UInt8MultiArray data);
@@ -755,6 +827,7 @@ class NoahPowerboard
         ros::Subscriber led_ctrl_sub;
         ros::Publisher status_led_ctrl_ack_pub;
         ros::Publisher battery_test_pub;
+        ros::Publisher battery_err_pub;
 
 
         ros::Publisher pub_event_key;
